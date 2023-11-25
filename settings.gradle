@@ -1,0 +1,2 @@
+rootProject.name = "VScan"
+include ':app'
