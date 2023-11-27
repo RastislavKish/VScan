@@ -1,0 +1,1 @@
+- Fix versioning of the Android app to start by 0.1, in sync with the repository

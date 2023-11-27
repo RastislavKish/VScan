@@ -16,6 +16,12 @@ If You didn't use any prompt, you get a description of the scene you have captur
 
 Before starting a GPT session in the app, you need to setup the OpenAI API key to be used. See the API key section of the [Vision project](https://github.com/RastislavKish/vision) for detailed instructions on optaining the key and an approximate information on pricing. When you do have the key, all you need to do is to insert it into the respective text entry in the app and press the Apply button, your key will be saved and erased from the field for security reasons.
 
+## Attributions
+
+Asset | Author | Source
+--- | --- | ---
+Icon | <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a> | [Flaticon](https://www.flaticon.com/free-icon/scanning_7698853?term=scanner&page=1&position=3&origin=search&related_id=7698853)
+
 ## License
 
 Copyright (C) 2023 Rastislav Kish
