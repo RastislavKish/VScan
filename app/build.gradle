@@ -13,8 +13,8 @@ namespace 'com.rastislavkish.vscan'
         applicationId "com.rastislavkish.vscan"
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 1
-        versionName "1.0"
+        versionCode 10
+        versionName "0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
