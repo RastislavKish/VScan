@@ -1,9 +1,9 @@
 <p>
-OpenAi's GPT is notoriously known for its good role-playing skills. You can tell it it's a teapod and it will act like a teapod, you can specify exact behavior, output etc. GPT 4 vision is no different in this regard.
+OpenAI's GPT is notoriously known for its good role-playing skills. You can tell it it's a teapot and it will act like a teapot, you can specify exact behavior, output etc. GPT 4 vision is no different in this regard.
 </p>
 
 <p>
-VScan allows you to tell GPT 4V it's an accessibility aid, or to simply just give it instructions how to behave. Then you can just take pictures, GPT will always act in the way you configured it on the primary screen. If you tell it it's a color detector that should respond by writing down the color your index finger is pointing to, you can afterwards just repeatedly press the Take a picture button and pointing your finger to various items, GPT will respond in style "brown... white... green..." etc.
+VScan allows you to tell GPT 4V it's an accessibility aid, or to simply just give it instructions on how to behave. Then you can just take pictures, GPT will always act in the way you configured it on the primary screen. If you tell it it's a color detector that should respond by writing down the color your index finger is pointing to, you can afterwards just repeatedly press the Take a picture button and pointing your finger to various items, GPT will respond in style "brown... white... green..." etc.
 </p>
 
 <p>
@@ -15,7 +15,7 @@ If no input configuration is entered, the app uses "What's in the image?" prompt
 </p>
 
 <p>
-Note: VScan uses api of OpenAI, a third-party service. In order to make it work, you need to optain an api key from <a href="https://platform.openai.com">platform.openai.com</a>. See VScan's readme for more information on instructions and approximate pricing.
+Note: VScan uses the OpenAI API, a third-party service. In order to make it work, you need to obtain an API key from <a href="https://platform.openai.com">platform.openai.com</a>. See VScan's readme for more information on instructions and approximate pricing.
 </p>
 
 <p>
