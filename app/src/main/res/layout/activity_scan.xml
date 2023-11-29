@@ -8,8 +8,8 @@
 
     <Button
         android:id="@+id/scanButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:text="Take a picture"
         android:onClick="scanButtonClick"
         app:layout_constraintTop_toTopOf="parent"
