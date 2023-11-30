@@ -139,7 +139,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                     }
 
                 override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing an image")
+                    toast("Error capturing the image")
                     }
                 },
             )
@@ -152,7 +152,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                     }
 
                 override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing an image")
+                    toast("Error capturing the image")
                     }
                 },
             )
