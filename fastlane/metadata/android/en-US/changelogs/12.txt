@@ -1,0 +1,5 @@
+- Added Camera shutter sound
+- Replaced TTS messages with toasts, improving communication integration
+- The camera shutter button on the scanning screen has been made to fill all available space, making it easy to find using Explore by touch
+- Sending messages and setting the API key can be now done by submitting from the keyboard
+- Various minor bug-fixes 

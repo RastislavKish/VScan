@@ -1,0 +1,6 @@
+- Pridaný zvuk spúšte fotoaparátu
+- Komunikácia syntézou TTS nahradená toastovými správami, výsledkom by mala byť lepšia integrácia s prostredím
+- Tlačidlo spúšte na skenovacej obrazovke teraz zaberá všetko voľné miesto, zjednodušujúc nájdenie pomocou Prieskumu dotykom
+- Posielanie správ a nastavenie API kľúča je teraz možné potvrdiť z klávesnice
+- Viaceré menšie bug-fixy
+
