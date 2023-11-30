@@ -18,9 +18,13 @@ package com.rastislavkish.vscan.ui.mainactivity
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
+
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.KeyEvent
 
 import android.content.Intent
 import android.content.SharedPreferences
@@ -44,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userPromptInput: EditText;
 
     private lateinit var apiKeyInput: EditText
+    private lateinit var apiKeyApplyButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +65,9 @@ class MainActivity : AppCompatActivity() {
         userPromptInput=findViewById(R.id.userPromptInput)
 
         apiKeyInput=findViewById(R.id.apiKeyInput)
+        apiKeyInput.setOnEditorActionListener(this::onApiKeyEditorAction)
+
+        apiKeyApplyButton=findViewById(R.id.apiKeyApplyButton)
         }
 
     fun startButtonClick(v: View) {
@@ -95,6 +103,17 @@ class MainActivity : AppCompatActivity() {
         settings.save()
 
         apiKeyInput.text.clear()
+
+        toast("API key set")
+        }
+
+    fun onApiKeyEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
+        if (actionId==EditorInfo.IME_ACTION_DONE) {
+            apiKeyApplyButton.performClick()
+            return true
+            }
+
+        return false
         }
 
     fun startScan(systemPrompt: String, userPrompt: String, apiKey: String) {
