@@ -163,6 +163,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
         launch {
             conversationMutex.withLock {
                 val message=messageInput.text.toString()
+                messageInput.text.clear()
 
                 if (message=="") return@launch
 
