@@ -30,6 +30,8 @@ import android.widget.Button
 import android.widget.ToggleButton
 import android.widget.EditText
 import android.view.View
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
@@ -109,6 +111,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
         scanButton=findViewById(R.id.scanButton)
         sendButton=findViewById(R.id.sendButton)
         messageInput=findViewById(R.id.messageInput)
+        messageInput.setOnEditorActionListener(this::onEditorAction)
         highResToggle=findViewById(R.id.highResToggle)
         highRes=highResToggle.isChecked()
 
@@ -207,6 +210,14 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
         camera=cameraProvider?.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, highResImageCapture)
         }
 
+    fun onEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
+        if (actionId==EditorInfo.IME_ACTION_DONE) {
+            sendButton.performClick()
+            return true
+            }
+
+        return false
+        }
     fun onPicture(imageProxy: ImageProxy) {
         val mediaImage=imageProxy.image
         if (mediaImage!=null) {

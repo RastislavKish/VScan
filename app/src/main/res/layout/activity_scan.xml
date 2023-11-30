@@ -33,6 +33,7 @@
             android:layout_height="wrap_content"
             android:hint="Send a message"
             android:inputType="text"
+            android:imeOptions="actionDone"
             android:layout_weight="1"/>
 
         <Button
