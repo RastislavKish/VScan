@@ -29,6 +29,7 @@ import android.content.ClipDescription
 import android.widget.Button
 import android.widget.ToggleButton
 import android.widget.EditText
+import android.widget.Toast
 import android.view.View
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -50,8 +51,6 @@ import kotlin.coroutines.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 
-import com.rastislavkish.rtk.Speech
-
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.openai.*
@@ -65,7 +64,6 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
     private lateinit var config: ScanConfig
     private var highRes=false
-    private lateinit var speech: Speech
 
     private lateinit var conversation: Conversation
     private var conversationMutex=Mutex()
@@ -106,8 +104,6 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
             return
             }
 
-        speech=Speech(this)
-
         scanButton=findViewById(R.id.scanButton)
         sendButton=findViewById(R.id.sendButton)
         messageInput=findViewById(R.id.messageInput)
@@ -143,7 +139,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                     }
 
                 override fun onError(error: ImageCaptureException) {
-                    speech.speak("Error capturing an image")
+                    toast("Error capturing an image")
                     }
                 },
             )
@@ -156,7 +152,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                     }
 
                 override fun onError(error: ImageCaptureException) {
-                    speech.speak("Error capturing an image")
+                    toast("Error capturing an image")
                     }
                 },
             )
@@ -175,7 +171,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                     conversation.generateResponse()
                     }
 
-                speech.speak(response)
+                toast(response)
                 }
             }
         }
@@ -191,10 +187,10 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
                     clipboard.setPrimaryClip(clip)
 
-                    speech.speak("Copied")
+                    toast("Copied")
                     }
                 else
-                speech.speak("Nothing to copy")
+                toast("Nothing to copy")
 
                 }
             }
@@ -233,15 +229,19 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                         val image=LocalImage(encodedImage)
                         conversation.addMessage(ImageMessage(config.userPrompt, image))
                         val response=conversation.generateResponse()
-                        speech.speak(response)
+                        toast(response)
                         }
                     }
-                speech.speak("Image taken")
+                toast("Image taken")
                 }
             else {
-                speech.speak("Error: The camera returned an unsupported image type")
+                toast("Error: The camera returned an unsupported image type")
                 }
             }
         imageProxy.close()
+        }
+
+    fun toast(text: String) {
+        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
         }
     }
