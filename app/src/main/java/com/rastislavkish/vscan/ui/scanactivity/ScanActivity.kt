@@ -53,6 +53,7 @@ import kotlinx.coroutines.sync.*
 
 import com.rastislavkish.vscan.R
 
+import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.openai.*
 
 class ScanActivity : AppCompatActivity(), CoroutineScope {
@@ -63,6 +64,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var job: Job
 
     private lateinit var config: ScanConfig
+    private lateinit var resources: Resources
     private var highRes=false
 
     private lateinit var conversation: Conversation
@@ -103,6 +105,8 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
             finish()
             return
             }
+
+        resources=Resources.getInstance(this)
 
         scanButton=findViewById(R.id.scanButton)
         sendButton=findViewById(R.id.sendButton)
@@ -223,6 +227,8 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                 buffer.get(bytes)
                 val encodedImage=Base64.getEncoder().encodeToString(bytes)
 
+                resources.shutterSound.play()
+
                 launch {
                     conversationMutex.withLock {
                         conversation.reset()
@@ -232,7 +238,6 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                         toast(response)
                         }
                     }
-                toast("Image taken")
                 }
             else {
                 toast("Error: The camera returned an unsupported image type")

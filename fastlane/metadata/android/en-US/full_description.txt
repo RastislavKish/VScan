@@ -21,3 +21,7 @@ Note: VScan uses the OpenAI API, a third-party service. In order to make it work
 <p>
 Icon <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a>
 </p>
+<p>
+Shutter sound by <a href="https://freesound.org/people/InspectorJ/">InspectorJ</a> of <a href="https://freesound.org/people/InspectorJ/sounds/360329/">FreeSound</a>
+</p>
+

@@ -19,6 +19,9 @@ Poznámka: VScan používa api OpenAI, externej služby. Aby mohol fungovať, po
 </p>
 
 <p>
-Icon <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a>
+Ikona <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a>
+</p>
+<p>
+Zvuk spúšte <a href="https://freesound.org/people/InspectorJ/">InspectorJ</a> z <a href="https://freesound.org/people/InspectorJ/sounds/360329/">FreeSound</a>
 </p>
 
