@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
+import android.widget.Toast
 
 import android.content.Intent
 import android.content.SharedPreferences
@@ -85,7 +86,10 @@ class MainActivity : AppCompatActivity() {
     fun apiKeyApplyButtonClick(v: View) {
         val apiKey=apiKeyInput.text.toString()
 
-        if (apiKey=="") return
+        if (apiKey=="") {
+            toast("Error: OpenAI API key not set. You need dto configure your OpenAI API key. See the project's readme for more details.")
+            return
+            }
 
         settings.apiKey=apiKey
         settings.save()
@@ -100,5 +104,9 @@ class MainActivity : AppCompatActivity() {
         intent.putExtra("config", Json.encodeToString(config))
 
         startActivity(intent)
+        }
+
+    fun toast(text: String) {
+        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
         }
     }
