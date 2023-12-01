@@ -33,6 +33,7 @@ import android.widget.Toast
 import android.view.View
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
+import android.view.OrientationEventListener
 
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
@@ -41,6 +42,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.UseCase
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -65,6 +67,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
     private lateinit var config: ScanConfig
     private lateinit var resources: Resources
+    private lateinit var orientationEventListener: OrientationEventListener
     private var highRes=false
 
     private lateinit var conversation: Conversation
@@ -108,6 +111,13 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
         resources=Resources.getInstance(this)
 
+        orientationEventListener=object : OrientationEventListener(this) {
+
+            override fun onOrientationChanged(orientation: Int) {
+                onOrientationChange(orientation)
+                }
+            }
+
         scanButton=findViewById(R.id.scanButton)
         sendButton=findViewById(R.id.sendButton)
         messageInput=findViewById(R.id.messageInput)
@@ -127,6 +137,14 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
         val systemPrompt=if (config.systemPrompt!="") SystemMessage(config.systemPrompt) else null
         conversation=Conversation(config.apiKey, "gpt-4-vision-preview", systemPrompt)
+        }
+    override fun onResume() {
+        orientationEventListener.enable()
+        super.onResume()
+        }
+    override fun onPause() {
+        orientationEventListener.disable()
+        super.onPause()
         }
     override fun onDestroy() {
         job.cancel()
@@ -217,6 +235,21 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
             }
 
         return false
+        }
+    var lastRotationValue=-1
+    fun onOrientationChange(orientation: Int) {
+        if (orientation==OrientationEventListener.ORIENTATION_UNKNOWN) {
+            return
+            }
+
+        val rotation=UseCase.snapToSurfaceRotation(orientation)
+
+        if (rotation!=lastRotationValue) {
+            imageCapture.setTargetRotation(rotation)
+            highResImageCapture.setTargetRotation(rotation)
+
+            lastRotationValue=rotation
+            }
         }
     fun onPicture(imageProxy: ImageProxy) {
         val mediaImage=imageProxy.image

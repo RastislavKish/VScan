@@ -24,8 +24,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 </intent-filter>
             </activity>
-        <activity android:name=".ui.scanactivity.ScanActivity"
-            android:screenOrientation="landscape"
-            />
+        <activity android:name=".ui.scanactivity.ScanActivity" />
         </application>
     </manifest>
