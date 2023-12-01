@@ -1,0 +1,47 @@
+[versions]
+
+rtkKotlinAndroid="v1.0"
+
+cameraX="1.4.0-alpha02"
+ktor="2.3.6"
+kotlinxCoroutines="1.7.3"
+kotlinxSerialization="1.6.2"
+
+agp = "8.3.0-alpha16"
+kotlin = "1.9.0"
+coreKtx = "1.12.0"
+junit = "4.13.2"
+junitVersion = "1.1.5"
+espressoCore = "3.5.1"
+appcompat = "1.6.1"
+material = "1.10.0"
+activity = "1.8.0"
+constraintlayout = "2.1.4"
+
+[libraries]
+
+rtk-kotlin-android={group="com.github.RastislavKish", name="RtkKotlinAndroid", version.ref="rtkKotlinAndroid"}
+
+camera-core={group="androidx.camera", name="camera-core", version.ref="cameraX"}
+camera-lifecycle={group="androidx.camera", name="camera-lifecycle", version.ref="cameraX"}
+camera-camera2={group="androidx.camera", name="camera-camera2", version.ref="cameraX"}
+camera-view={group="androidx.camera", name="camera-view", version.ref="cameraX"}
+ktor-client-core={group="io.ktor", name="ktor-client-core", version.ref="ktor"}
+ktor-client-okhttp={group="io.ktor", name="ktor-client-okhttp", version.ref="ktor"}
+kotlinx-coroutines-core={group="org.jetbrains.kotlinx", name="kotlinx-coroutines-core", version.ref="kotlinxCoroutines"}
+kotlinx-serialization-json={group="org.jetbrains.kotlinx", name="kotlinx-serialization-json", version.ref="kotlinxSerialization"}
+
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+jetbrainsKotlinSerialization={id="org.jetbrains.kotlin.plugin.serialization", version.ref="kotlin"}
+
