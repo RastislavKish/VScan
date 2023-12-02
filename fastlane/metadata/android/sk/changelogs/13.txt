@@ -1,0 +1,2 @@
+- Kamera teraz zachytáva snímky podľa aktuálnej orientácie zariadenia
+- Orientácia scanovacej obrazovky nastavená na systémovú orientáciu

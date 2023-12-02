@@ -1,0 +1,2 @@
+- Updated camera to take pictures matching the device orientation
+- Scan screen orientation changed to match the system requested orientation
