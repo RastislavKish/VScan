@@ -45,6 +45,8 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import java.util.concurrent.Executors
@@ -84,14 +86,22 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var highResToggle: ToggleButton
 
     init {
+        val resolutionSelector=ResolutionSelector.Builder()
+        .setResolutionStrategy(ResolutionStrategy(Size(512, 512), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+        .build()
+
+        val highResResolutionSelector=ResolutionSelector.Builder()
+        .setResolutionStrategy(ResolutionStrategy(Size(1024, 1024), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+        .build()
+
         imageCapture=ImageCapture.Builder()
+        .setResolutionSelector(resolutionSelector)
         .setFlashMode(ImageCapture.FLASH_MODE_ON)
-        .setTargetResolution(Size(512, 512))
         .build()
 
         highResImageCapture=ImageCapture.Builder()
+        .setResolutionSelector(highResResolutionSelector)
         .setFlashMode(ImageCapture.FLASH_MODE_ON)
-        .setTargetResolution(Size(1024, 1024))
         .build()
         }
 
