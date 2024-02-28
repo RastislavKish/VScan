@@ -45,7 +45,7 @@ implementation(libs.camera.lifecycle)
 implementation(libs.camera.camera2)
 implementation(libs.camera.view)
 implementation(libs.ktor.client.core)
-implementation(libs.ktor.client.okhttp)
+implementation(libs.ktor.client.cio)
 implementation(libs.kotlinx.coroutines.core)
 implementation(libs.kotlinx.serialization.json)
 

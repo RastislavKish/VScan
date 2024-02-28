@@ -17,6 +17,7 @@
 package com.rastislavkish.vscan.core.openai
 
 import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.HttpResponse
@@ -71,7 +72,11 @@ class Conversation(
 
         val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
 
-        val client=HttpClient()
+        val client=HttpClient(CIO) {
+            engine {
+                requestTimeout=300000
+                }
+            }
         val response: HttpResponse=client.post("https://api.openai.com/v1/chat/completions") {
             header("Content-Type", "application/json")
             bearerAuth(apiKey)

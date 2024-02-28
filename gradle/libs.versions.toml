@@ -27,7 +27,7 @@ camera-lifecycle={group="androidx.camera", name="camera-lifecycle", version.ref=
 camera-camera2={group="androidx.camera", name="camera-camera2", version.ref="cameraX"}
 camera-view={group="androidx.camera", name="camera-view", version.ref="cameraX"}
 ktor-client-core={group="io.ktor", name="ktor-client-core", version.ref="ktor"}
-ktor-client-okhttp={group="io.ktor", name="ktor-client-okhttp", version.ref="ktor"}
+ktor-client-cio={group="io.ktor", name="ktor-client-cio", version.ref="ktor"}
 kotlinx-coroutines-core={group="org.jetbrains.kotlinx", name="kotlinx-coroutines-core", version.ref="kotlinxCoroutines"}
 kotlinx-serialization-json={group="org.jetbrains.kotlinx", name="kotlinx-serialization-json", version.ref="kotlinxSerialization"}
 
