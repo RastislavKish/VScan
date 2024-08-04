@@ -68,5 +68,12 @@
             android:textOn="High res"
             android:onClick="highResToggleClick"
             />
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save the image"
+            android:onClick="saveButtonClick"
+            />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>

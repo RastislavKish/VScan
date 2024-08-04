@@ -18,13 +18,25 @@ package com.rastislavkish.vscan.ui.scanactivity
 
 import androidx.appcompat.app.AppCompatActivity
 import android.graphics.ImageFormat
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.util.Size
+import java.io.File
+import java.io.OutputStream
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Base64
 
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.ContentValues
+import android.content.Intent
+
+import android.net.Uri
+
+import android.provider.MediaStore
 
 import android.widget.Button
 import android.widget.ToggleButton
@@ -79,6 +91,9 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
     private var cameraProvider: ProcessCameraProvider?=null
     private val imageCapture: ImageCapture
     private val highResImageCapture: ImageCapture
+
+    private var lastTakenImage: ByteArray?=null;
+    private var lastTakenImageTimestamp: LocalDateTime?=null;
 
     private lateinit var scanButton: Button
     private lateinit var sendButton: Button
@@ -227,6 +242,31 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                 }
             }
         }
+    fun saveButtonClick(v: View) {
+        val image=lastTakenImage ?: return
+        val timestamp=lastTakenImageTimestamp ?: return
+
+        launch {
+            val connection=Conversation(config.apiKey, "gpt-4o", null)
+
+            val encodedImage=Base64.getEncoder().encodeToString(image)
+            connection.addMessage(ImageMessage(
+                "Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.",
+                LocalImage(encodedImage),
+                ))
+            val response=connection.generateResponse()
+
+            val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+
+            try {
+                saveToGallery(fileName, image)
+                toast("Saved as $fileName")
+                }
+            catch (e: Exception) {
+                toast("Saving failed: ${e.message}")
+                }
+            }
+        }
     fun highResToggleClick(v: View) {
         highRes=highResToggle.isChecked()
 
@@ -268,6 +308,8 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
                 val buffer=mediaImage.planes[0].buffer //ByteBuffer
                 val bytes=ByteArray(buffer.remaining())
                 buffer.get(bytes)
+                lastTakenImage=bytes
+                lastTakenImageTimestamp=LocalDateTime.now()
                 val encodedImage=Base64.getEncoder().encodeToString(bytes)
 
                 resources.shutterSound.play()
@@ -291,5 +333,58 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
 
     fun toast(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+        }
+    fun createImageFile(fileName: String): File {
+        val storageDir: File = if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q) Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) else getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: throw Exception("Failed to optain the Pictures folder path")
+        val imageFile=File("$storageDir/$fileName")
+        imageFile.createNewFile()
+        return imageFile
+        }
+    fun saveToGallery(fileName: String, image: ByteArray) {
+        val imageFile=createImageFile(fileName)
+
+        if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q) {
+            val intent=Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+            intent.setData(Uri.parse("file://${imageFile.absolutePath}"))
+            sendBroadcast(intent)
+            }
+        else {
+            val contentValues=ContentValues()
+            contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, imageFile.name)
+            contentValues.put(MediaStore.Images.Media.MIME_TYPE, "image/*")
+            val contentUri: Uri=if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED))
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            else
+            MediaStore.Images.Media.INTERNAL_CONTENT_URI
+
+            contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 1)
+            val uri: Uri=getContentResolver().insert(contentUri, contentValues) ?: throw Exception("Unable to obtain uri for writing")
+
+            var os: OutputStream?=null
+            try {
+                os=getContentResolver().openOutputStream(uri)
+                os?.write(image)
+                contentValues.clear()
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                getContentResolver().update(uri, contentValues, null, null)
+                }
+            catch (e: Exception) {
+                getContentResolver().delete(uri, null, null)
+                throw Exception("Unable to write to the output file")
+                }
+            finally {
+                try {
+                    os?.close()
+                    }
+                catch (e: Exception) {
+                    throw Exception("Unable to close the output stream")
+                    }
+                }
+
+            val mediaScanIntent=Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+            mediaScanIntent.setData(contentUri)
+            sendBroadcast(mediaScanIntent)
+            }
         }
     }
