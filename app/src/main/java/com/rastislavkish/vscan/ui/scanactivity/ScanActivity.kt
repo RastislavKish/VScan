@@ -146,7 +146,7 @@ class ScanActivity : AppCompatActivity(), CoroutineScope {
             }, ContextCompat.getMainExecutor(this))
 
         val systemPrompt=if (config.systemPrompt!="") SystemMessage(config.systemPrompt) else null
-        conversation=Conversation(config.apiKey, "gpt-4-vision-preview", systemPrompt)
+        conversation=Conversation(config.apiKey, "gpt-4o", systemPrompt)
         }
     override fun onResume() {
         orientationEventListener.enable()

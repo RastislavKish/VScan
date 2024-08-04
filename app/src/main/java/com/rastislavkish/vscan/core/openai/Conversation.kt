@@ -44,7 +44,7 @@ class Conversation(
     get private set
 
     val totalPrice: Double
-    get() = 0.01*(totalUsedInputTokens/1000)+0.03*(totalUsedOutputTokens/1000)
+    get() = 0.005*(totalUsedInputTokens/1000)+0.015*(totalUsedOutputTokens/1000)
 
     val messages=mutableListOf<Message>()
 
