@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAlSTORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAlSTORAGE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />

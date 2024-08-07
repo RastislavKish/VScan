@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/scanFragment">
+
+    <fragment
+        android:id="@+id/scanFragment"
+        android:name="com.rastislavkish.vscan.ui.mainactivity.ScanFragment"
+        android:label="Scan"
+        tools:layout="@layout/fragment_scan" />
+    <fragment
+        android:id="@+id/configListFragment"
+        android:name="com.rastislavkish.vscan.ui.mainactivity.ConfigListFragment"
+        android:label="Config list"
+        tools:layout="@layout/fragment_config_list" />
+    <fragment
+        android:id="@+id/optionsFragment"
+        android:name="com.rastislavkish.vscan.ui.mainactivity.OptionsFragment"
+        android:label="Options"
+        tools:layout="@layout/fragment_options" />
+    </navigation>
