@@ -36,7 +36,7 @@ class TabAdapter(context: Context) {
 
     var conversation: Conversation=Conversation(
         settings.apiKey,
-        activeConfig.model,
+        activeConfig.model.identifier,
         if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
         )
     get set
@@ -50,7 +50,7 @@ class TabAdapter(context: Context) {
     fun resetConversation() {
         conversation=Conversation(
             settings.apiKey,
-            activeConfig.model,
+            activeConfig.model.identifier,
             if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
             )
         }

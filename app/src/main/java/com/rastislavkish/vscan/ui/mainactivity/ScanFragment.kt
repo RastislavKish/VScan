@@ -72,6 +72,7 @@ import kotlinx.coroutines.sync.*
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
@@ -83,7 +84,6 @@ class ScanFragment: Fragment(), CoroutineScope {
     get() = Dispatchers.Main+job
 
     private lateinit var job: Job
-
 
     private lateinit var askSTT: STT
     private lateinit var systemPromptSTT: STT
@@ -101,6 +101,8 @@ class ScanFragment: Fragment(), CoroutineScope {
 
     private var lastTakenImage: ByteArray?=null;
     private var lastTakenImageTimestamp: LocalDateTime?=null;
+
+    private var configUsedByCamera: Config?=null
 
     private lateinit var scanButton: Button
 
@@ -167,10 +169,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             launch { adapter.mutex.withLock {
                 cameraProvider=cameraProviderFuture.get()
 
-                if (!adapter.activeConfig.highRes)
-                camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, imageCapture)
-                else
-                camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, highResImageCapture)
+                bindCamera(adapter)
                 }}
             }, ContextCompat.getMainExecutor(context!!))
         }
@@ -178,6 +177,14 @@ class ScanFragment: Fragment(), CoroutineScope {
     override fun onResume() {
         orientationEventListener.enable()
         super.onResume()
+
+        launch { adapter.mutex.withLock {
+            if (cameraConfigurationChanged(adapter)) {
+                cameraProvider?.unbindAll()
+
+                bindCamera(adapter)
+                }
+            }}
         }
     override fun onPause() {
         orientationEventListener.disable()
@@ -261,7 +268,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         val timestamp=lastTakenImageTimestamp ?: return
 
         launch {
-            val connection=Conversation(settings.apiKey, "gpt-4o", null)
+            val connection=Conversation(settings.apiKey, LLM.GPT_4O.identifier, null)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             connection.addMessage(ImageMessage(
@@ -337,6 +344,20 @@ class ScanFragment: Fragment(), CoroutineScope {
         imageProxy.close()
         }
 
+    fun bindCamera(adapter: TabAdapter) {
+        if (!adapter.activeConfig.highRes)
+        camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, imageCapture)
+        else
+        camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, highResImageCapture)
+
+        configUsedByCamera=adapter.activeConfig
+        }
+    fun cameraConfigurationChanged(adapter: TabAdapter): Boolean {
+        if (configUsedByCamera==null)
+        return false
+
+        return adapter.activeConfig.highRes!=configUsedByCamera!!.highRes || adapter.activeConfig.camera!=configUsedByCamera!!.camera
+        }
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
