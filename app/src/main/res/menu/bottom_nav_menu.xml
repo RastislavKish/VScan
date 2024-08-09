@@ -9,4 +9,7 @@
     <item
         android:id="@+id/optionsFragment"
         android:title="Options" />
+    <item
+        android:id="@+id/conversationFragment"
+        android:title="Conversation" />
     </menu>

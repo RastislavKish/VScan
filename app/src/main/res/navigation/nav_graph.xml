@@ -19,4 +19,9 @@
         android:name="com.rastislavkish.vscan.ui.mainactivity.OptionsFragment"
         android:label="Options"
         tools:layout="@layout/fragment_options" />
+    <fragment
+        android:id="@+id/conversationFragment"
+        android:name="com.rastislavkish.vscan.ui.mainactivity.ConversationFragment"
+        android:label="Conversation"
+        tools:layout="@layout/fragment_conversation" />
     </navigation>
