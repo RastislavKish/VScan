@@ -245,7 +245,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             if (enquiry!=null && !enquiry.isEmpty()) {
                 adapter.mutex.withLock {
-                    adapter.activeConfig=adapter.activeConfig.withSystemPrompt(enquiry!!)
+                    adapter.activeConfig=adapter.activeConfig.withSystemPrompt(enquiry)
                     toast("${enquiry} set as system prompt")
                     }
                 }
@@ -257,7 +257,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             if (enquiry!=null && !enquiry.isEmpty()) {
                 adapter.mutex.withLock {
-                    adapter.activeConfig=adapter.activeConfig.withUserPrompt(enquiry!!)
+                    adapter.activeConfig=adapter.activeConfig.withUserPrompt(enquiry)
                     toast("${enquiry} set as user prompt")
                     }
                 }
