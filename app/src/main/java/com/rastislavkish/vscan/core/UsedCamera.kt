@@ -6,12 +6,12 @@ import kotlinx.serialization.*
 
 @Serializable
 enum class UsedCamera {
-    BACK,
-    FRONT;
+    BACK_CAMERA,
+    FRONT_CAMERA;
 
     val selector: CameraSelector
     get() = when (this) {
-        UsedCamera.BACK -> CameraSelector.DEFAULT_BACK_CAMERA
-        UsedCamera.FRONT -> CameraSelector.DEFAULT_FRONT_CAMERA
+        UsedCamera.BACK_CAMERA -> CameraSelector.DEFAULT_BACK_CAMERA
+        UsedCamera.FRONT_CAMERA -> CameraSelector.DEFAULT_FRONT_CAMERA
         }
     }

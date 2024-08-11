@@ -38,14 +38,21 @@ class ConfigManager(
     private var configurations=mutableListOf(Config())
     private val configurationsMutex=Mutex()
 
-    fun addConfig(config: Config) {
+    fun addConfig(config: Config): Config {
+        val result: Config
         runBlocking{ configurationsMutex.withLock {
-            addConfigImplementation(config)
+            result=addConfigImplementation(config)
             }}
+        return result
         }
     fun updateConfig(config: Config) {
         runBlocking{ configurationsMutex.withLock {
             updateConfigImplementation(config)
+            }}
+        }
+    fun deleteConfig(config: Config) {
+        runBlocking{ configurationsMutex.withLock {
+            deleteConfigImplementation(config)
             }}
         }
 
@@ -82,9 +89,11 @@ class ConfigManager(
 
     // The implementations of the public methods without locks
 
-    private fun addConfigImplementation(config: Config) {
-        configurations.add(config.withId(getFreeId()))
+    private fun addConfigImplementation(config: Config): Config {
+        val newConfig=config.withId(getFreeId())
+        configurations.add(newConfig)
         saveImplementation()
+        return newConfig
         }
     private fun updateConfigImplementation(config: Config) {
         for (i in 0 until configurations.size) {
@@ -99,6 +108,14 @@ class ConfigManager(
 
         configurations.add(config)
         saveImplementation()
+        }
+    private fun deleteConfigImplementation(config: Config) {
+        for (i in 0 until configurations.size) {
+            if (configurations[i].id==config.id) {
+                configurations.removeAt(i)
+                return
+                }
+            }
         }
 
     private fun loadImplementation() {

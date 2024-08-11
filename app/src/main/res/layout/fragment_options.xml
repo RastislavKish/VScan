@@ -1,15 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context=".ui.mainactivity.OptionsFragment">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
+    <EditText
+        android:id="@+id/systemPromptInput"
+        android:hint="System prompt"
         android:layout_height="wrap_content"
-        android:text="Hello world!"
+        android:layout_width="match_parent"
         />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    <EditText
+        android:id="@+id/userPromptInput"
+        android:hint="User prompt"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        />
+
+    <Switch
+        android:id="@+id/highResSwitch"
+        android:text="High res"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Camera"
+            />
+        <Spinner
+            android:id="@+id/cameraSpinner"
+            android:hint="Camera"
+            android:spinnerMode="dropdown"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Model"
+            />
+        <Spinner
+            android:id="@+id/modelSpinner"
+            android:hint="Model"
+            android:spinnerMode="dropdown"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            />
+        </LinearLayout>
+
+    <EditText
+        android:id="@+id/nameInput"
+        android:hint="Config name"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        />
+
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+        <Button
+            android:id="@+id/updateButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Update"
+            />
+        <Button
+            android:id="@+id/createButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Create"
+            />
+        <Button
+            android:id="@+id/deleteButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete"
+            />
+        </LinearLayout>
+    </LinearLayout>

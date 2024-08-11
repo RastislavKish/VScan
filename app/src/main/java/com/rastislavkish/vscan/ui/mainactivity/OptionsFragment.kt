@@ -22,9 +22,48 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Spinner
+import android.widget.Switch
+import android.widget.Toast
+
+import kotlin.coroutines.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.*
+
 import com.rastislavkish.vscan.R
 
-class OptionsFragment: Fragment() {
+import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.ConfigManager
+import com.rastislavkish.vscan.core.TextController
+import com.rastislavkish.vscan.core.LLM
+import com.rastislavkish.vscan.core.UsedCamera
+
+class OptionsFragment: Fragment(), CoroutineScope {
+
+    override val coroutineContext: CoroutineContext
+    get() = Dispatchers.Main+job
+
+    private lateinit var job: Job
+
+    private lateinit var adapter: TabAdapter
+
+    private lateinit var systemPromptInput: EditText
+    private lateinit var userPromptInput: EditText
+
+    private lateinit var highResSwitch: Switch
+
+    private lateinit var cameraSpinner: Spinner
+    private lateinit var modelSpinner: Spinner
+
+    private lateinit var nameInput: EditText
+
+    private lateinit var updateButton: Button
+    private lateinit var createButton: Button
+    private lateinit var deleteButton: Button
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,6 +74,199 @@ class OptionsFragment: Fragment() {
         }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        job=Job()
 
+        adapter=TabAdapter.getInstance(context!!)
+
+        systemPromptInput=view.findViewById(R.id.systemPromptInput)
+        TextController(systemPromptInput).setTextChangeListener(this::onSystemPromptInputTextChange)
+        userPromptInput=view.findViewById(R.id.userPromptInput)
+        TextController(userPromptInput).setTextChangeListener(this::onUserPromptInputTextChange)
+
+        highResSwitch=view.findViewById(R.id.highResSwitch)
+        highResSwitch.setOnCheckedChangeListener(this::onHighResSwitchCheckedChange)
+
+        cameraSpinner=view.findViewById(R.id.cameraSpinner)
+        val cameraSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, cameraSpinnerOptions)
+        cameraSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        cameraSpinner.setAdapter(cameraSpinnerAdapter)
+        cameraSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
+                onCameraSpinnerItemSelected(v, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+            })
+
+        modelSpinner=view.findViewById(R.id.modelSpinner)
+        val modelSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, modelSpinnerOptions)
+        modelSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        modelSpinner.setAdapter(modelSpinnerAdapter)
+        modelSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
+                onModelSpinnerItemSelected(v, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+            })
+
+        nameInput=view.findViewById(R.id.nameInput)
+        TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
+
+        updateButton=view.findViewById(R.id.updateButton)
+        updateButton.setOnClickListener(this::onUpdateButtonClick)
+        createButton=view.findViewById(R.id.createButton)
+        createButton.setOnClickListener(this::onCreateButtonClick)
+        deleteButton=view.findViewById(R.id.deleteButton)
+        deleteButton.setOnClickListener(this::onDeleteButtonClick)
+        }
+
+    override fun onResume() {
+        launch { adapter.mutex.withLock {
+            val uiConfig=getUIConfig(adapter)
+
+            val activeConfig=adapter.activeConfig
+
+            if (uiConfig.systemPrompt!=activeConfig.systemPrompt)
+            systemPromptInput.setText(activeConfig.systemPrompt)
+
+            if (uiConfig.userPrompt!=activeConfig.userPrompt)
+            userPromptInput.setText(activeConfig.userPrompt)
+
+            if (uiConfig.highRes!=activeConfig.highRes)
+            highResSwitch.setChecked(activeConfig.highRes)
+
+            if (uiConfig.camera!=activeConfig.camera)
+            setSelectedCamera(activeConfig.camera)
+
+            if (uiConfig.model!=activeConfig.model)
+            setSelectedModel(activeConfig.model)
+
+            if (uiConfig.name!=activeConfig.name)
+            nameInput.setText(activeConfig.name)
+
+            updateButton.setClickable(activeConfig.id>=0)
+            deleteButton.setClickable(activeConfig.id>=0)
+            }}
+
+        super.onResume()
+        }
+
+    fun onSystemPromptInputTextChange(text: String) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val systemPrompt=systemPromptInput.text.toString()
+            if (systemPrompt!=activeConfig.systemPrompt)
+            adapter.activeConfig=activeConfig.withSystemPrompt(systemPrompt)
+            }}
+        }
+    fun onUserPromptInputTextChange(text: String) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val userPrompt=userPromptInput.text.toString()
+            if (userPrompt!=activeConfig.userPrompt)
+            adapter.activeConfig=activeConfig.withUserPrompt(userPrompt)
+            }}
+        }
+
+    fun onHighResSwitchCheckedChange(v: View, checked: Boolean) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            if (checked!=activeConfig.highRes)
+            adapter.activeConfig=activeConfig.withHighRes(checked)
+            }}
+        }
+
+    fun onCameraSpinnerItemSelected(v: View, position: Int) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val camera=getSelectedCamera()
+            if (camera!=activeConfig.camera)
+            adapter.activeConfig=activeConfig.withCamera(camera)
+            }}
+        }
+    fun onModelSpinnerItemSelected(v: View, position: Int) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val model=getSelectedModel()
+            if (model!=activeConfig.model)
+            adapter.activeConfig=activeConfig.withModel(model)
+            }}
+        }
+
+    fun onNameInputTextChange(text: String) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val name=nameInput.text.toString()
+            if (name!=activeConfig.name)
+            adapter.activeConfig=activeConfig.withName(name)
+            }}
+        }
+
+    fun onUpdateButtonClick(v: View) {
+        launch { adapter.mutex.withLock {
+            val originalConfig=adapter.activeConfig
+            ConfigManager.getInstance(context!!).updateConfig(adapter.activeConfig)
+            toast("Updated config ${originalConfig.name}")
+            }}
+        }
+    fun onCreateButtonClick(v: View) {
+        launch { adapter.mutex.withLock {
+            val newConfig=ConfigManager.getInstance(context!!).addConfig(adapter.activeConfig)
+            adapter.activeConfig=newConfig
+            toast("created a new config called ${newConfig.name}")
+            }}
+        }
+    fun onDeleteButtonClick(v: View) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            ConfigManager.getInstance(context!!).deleteConfig(activeConfig)
+            toast("Config ${activeConfig.name} deleted")
+            }}
+        }
+
+    fun toast(text: String) {
+        Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
+        }
+
+    fun getUIConfig(adapter: TabAdapter): Config {
+        return Config(
+            adapter.activeConfig.id,
+            nameInput.toString(),
+            systemPromptInput.toString(),
+            userPromptInput.toString(),
+            highResSwitch.isChecked(),
+            getSelectedCamera(),
+            getSelectedModel(),
+
+            )
+        }
+
+    val cameraSpinnerOptions=arrayOf("Back camera", "Front camera")
+    fun getSelectedCamera(): UsedCamera {
+        return when (cameraSpinner.selectedItemPosition) {
+            0 -> UsedCamera.BACK_CAMERA
+            1 -> UsedCamera.FRONT_CAMERA
+            else -> throw Exception("Unknown camera ${cameraSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedCamera(camera: UsedCamera) {
+        cameraSpinner.setSelection(when (camera) {
+            UsedCamera.BACK_CAMERA -> 0
+            UsedCamera.FRONT_CAMERA -> 1
+            })
+        }
+
+    val modelSpinnerOptions=arrayOf("GPT 4O", "GPT 4O Mini")
+    fun getSelectedModel(): LLM {
+        return when (modelSpinner.selectedItemPosition) {
+            0 -> LLM.GPT_4O
+            1 -> LLM.GPT_4O_MINI
+            else -> throw Exception("Unknown model ${modelSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedModel(model: LLM) {
+        modelSpinner.setSelection(when (model) {
+            LLM.GPT_4O -> 0
+            LLM.GPT_4O_MINI -> 1
+            })
         }
     }

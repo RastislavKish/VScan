@@ -25,11 +25,20 @@ data class Config(
     val systemPrompt: String="",
     val userPrompt: String="What's in the image?",
     val highRes: Boolean=false,
-    val camera: UsedCamera=UsedCamera.BACK,
+    val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: LLM=LLM.GPT_4O,
     ) {
 
     fun withId(id: Int): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        camera,
+        model,
+        )
+    fun withName(name: String): Config = Config(
         id,
         name,
         systemPrompt,
@@ -56,4 +65,34 @@ data class Config(
         camera,
         model,
         )
+
+    fun withHighRes(highRes: Boolean): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        camera,
+        model,
+        )
+
+    fun withCamera(camera: UsedCamera): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        camera,
+        model,
+        )
+    fun withModel(model: LLM): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        camera,
+        model,
+        )
+
     }
