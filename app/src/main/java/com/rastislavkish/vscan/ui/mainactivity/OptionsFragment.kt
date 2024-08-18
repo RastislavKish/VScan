@@ -93,8 +93,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         flashlightModeSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         flashlightModeSpinner.setAdapter(flashlightModeSpinnerAdapter)
         flashlightModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
-                onFlashlightModeSpinnerItemSelected(v, position)
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onFlashlightModeSpinnerItemSelected(v ?: return, position)
                 }
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
@@ -104,8 +104,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         cameraSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         cameraSpinner.setAdapter(cameraSpinnerAdapter)
         cameraSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
-                onCameraSpinnerItemSelected(v, position)
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onCameraSpinnerItemSelected(v ?: return, position)
                 }
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
@@ -115,8 +115,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         modelSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modelSpinner.setAdapter(modelSpinnerAdapter)
         modelSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
-                onModelSpinnerItemSelected(v, position)
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onModelSpinnerItemSelected(v ?: return, position)
                 }
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
