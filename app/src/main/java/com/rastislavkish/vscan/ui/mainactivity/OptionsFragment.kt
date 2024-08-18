@@ -22,6 +22,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 
+import android.content.Intent
+
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -42,6 +44,8 @@ import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.UsedCamera
+
+import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
 
 class OptionsFragment: Fragment(), CoroutineScope {
 
@@ -130,6 +134,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
         createButton.setOnClickListener(this::onCreateButtonClick)
         deleteButton=view.findViewById(R.id.deleteButton)
         deleteButton.setOnClickListener(this::onDeleteButtonClick)
+
+        val settingsButton: Button=view.findViewById(R.id.settingsButton)
+        settingsButton.setOnClickListener(this::onSettingsButtonClick)
         }
 
     override fun onResume() {
@@ -245,6 +252,11 @@ class OptionsFragment: Fragment(), CoroutineScope {
             ConfigManager.getInstance(context!!).deleteConfig(activeConfig)
             toast("Config ${activeConfig.name} deleted")
             }}
+        }
+
+    fun onSettingsButtonClick(v: View) {
+        val intent=Intent(context!!, SettingsActivity::class.java)
+        startActivity(intent)
         }
 
     fun toast(text: String) {
