@@ -24,13 +24,16 @@ class Settings(
     ) {
 
     var apiKey=""
+    var useFlashlight=true
 
     fun load() {
         apiKey=preferences.getString("apiKey", "") ?: ""
+        useFlashlight=preferences.getBoolean("useFlashlight", true)
         }
     fun save() {
         preferences.edit()
         .putString("apiKey", apiKey)
+        .putBoolean("useFlashlight", useFlashlight)
         .commit()
         }
 

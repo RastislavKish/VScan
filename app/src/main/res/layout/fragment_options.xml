@@ -34,6 +34,24 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="Flashlight mode"
+            />
+        <Spinner
+            android:id="@+id/flashlightModeSpinner"
+            android:hint="Flashlight mode"
+            android:spinnerMode="dropdown"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Camera"
             />
         <Spinner

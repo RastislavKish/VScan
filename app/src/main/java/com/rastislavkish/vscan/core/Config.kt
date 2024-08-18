@@ -25,6 +25,7 @@ data class Config(
     val systemPrompt: String="",
     val userPrompt: String="What's in the image?",
     val highRes: Boolean=false,
+    val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: LLM=LLM.GPT_4O,
     ) {
@@ -35,6 +36,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -44,6 +46,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -53,6 +56,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -62,6 +66,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -72,6 +77,17 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
+        camera,
+        model,
+        )
+    fun withFlashlightMode(flashlightMode: FlashlightMode): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -82,6 +98,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )
@@ -91,6 +108,7 @@ data class Config(
         systemPrompt,
         userPrompt,
         highRes,
+        flashlightMode,
         camera,
         model,
         )

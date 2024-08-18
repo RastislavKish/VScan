@@ -72,6 +72,7 @@ import kotlinx.coroutines.sync.*
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
@@ -197,6 +198,14 @@ class ScanFragment: Fragment(), CoroutineScope {
 
     fun scanButtonClick(v: View) {
         launch { adapter.mutex.withLock {
+            val flashMode=when (shouldUseFlashlight(adapter)) {
+                true -> ImageCapture.FLASH_MODE_ON
+                false -> ImageCapture.FLASH_MODE_OFF
+                }
+
+            imageCapture.setFlashMode(flashMode)
+            highResImageCapture.setFlashMode(flashMode)
+
             if (!adapter.activeConfig.highRes)
             imageCapture.takePicture(
                 ContextCompat.getMainExecutor(context!!),
@@ -357,6 +366,13 @@ class ScanFragment: Fragment(), CoroutineScope {
         return false
 
         return adapter.activeConfig.highRes!=configUsedByCamera!!.highRes || adapter.activeConfig.camera!=configUsedByCamera!!.camera
+        }
+    fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
+        return when (adapter.activeConfig.flashlightMode) {
+            FlashlightMode.DEFAULT -> settings.useFlashlight
+            FlashlightMode.ON -> true
+            FlashlightMode.OFF -> false
+            }
         }
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()

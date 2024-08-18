@@ -39,6 +39,7 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
+import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.UsedCamera
 
@@ -55,6 +56,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var userPromptInput: EditText
 
     private lateinit var highResSwitch: Switch
+    private lateinit var flashlightModeSpinner: Spinner
 
     private lateinit var cameraSpinner: Spinner
     private lateinit var modelSpinner: Spinner
@@ -85,6 +87,17 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         highResSwitch=view.findViewById(R.id.highResSwitch)
         highResSwitch.setOnCheckedChangeListener(this::onHighResSwitchCheckedChange)
+
+        flashlightModeSpinner=view.findViewById(R.id.flashlightModeSpinner)
+        val flashlightModeSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, flashlightModeSpinnerOptions)
+        flashlightModeSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        flashlightModeSpinner.setAdapter(flashlightModeSpinnerAdapter)
+        flashlightModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View, position: Int, id: Long) {
+                onFlashlightModeSpinnerItemSelected(v, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+            })
 
         cameraSpinner=view.findViewById(R.id.cameraSpinner)
         val cameraSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, cameraSpinnerOptions)
@@ -134,6 +147,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
             if (uiConfig.highRes!=activeConfig.highRes)
             highResSwitch.setChecked(activeConfig.highRes)
 
+            if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
+            setSelectedFlashlightMode(activeConfig.flashlightMode)
+
             if (uiConfig.camera!=activeConfig.camera)
             setSelectedCamera(activeConfig.camera)
 
@@ -172,6 +188,14 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val activeConfig=adapter.activeConfig
             if (checked!=activeConfig.highRes)
             adapter.activeConfig=activeConfig.withHighRes(checked)
+            }}
+        }
+    fun onFlashlightModeSpinnerItemSelected(v: View, position: Int) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val flashlightMode=getSelectedFlashlightMode()
+            if (flashlightMode!=activeConfig.flashlightMode)
+            adapter.activeConfig=activeConfig.withFlashlightMode(flashlightMode)
             }}
         }
 
@@ -234,10 +258,28 @@ class OptionsFragment: Fragment(), CoroutineScope {
             systemPromptInput.toString(),
             userPromptInput.toString(),
             highResSwitch.isChecked(),
+            getSelectedFlashlightMode(),
             getSelectedCamera(),
             getSelectedModel(),
 
             )
+        }
+
+    val flashlightModeSpinnerOptions=arrayOf("Default", "On", "Off")
+    fun getSelectedFlashlightMode(): FlashlightMode {
+        return when (flashlightModeSpinner.selectedItemPosition) {
+            0 -> FlashlightMode.DEFAULT
+            1 -> FlashlightMode.ON
+            2 -> FlashlightMode.OFF
+            else -> throw Exception("Unknown flashlight mode ${flashlightModeSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedFlashlightMode(flashlightMode: FlashlightMode) {
+        flashlightModeSpinner.setSelection(when (flashlightMode) {
+            FlashlightMode.DEFAULT -> 0
+            FlashlightMode.ON -> 1
+            FlashlightMode.OFF -> 2
+            })
         }
 
     val cameraSpinnerOptions=arrayOf("Back camera", "Front camera")
