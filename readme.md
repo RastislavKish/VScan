@@ -23,6 +23,10 @@ Asset | Author | Source
 Icon | <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a> | [Flaticon](https://www.flaticon.com/free-icon/scanning_7698853?term=scanner&page=1&position=3&origin=search&related_id=7698853)
 Shutter sound | [InspectorJ](https://freesound.org/people/InspectorJ/) | [FreeSound](https://freesound.org/people/InspectorJ/sounds/360329/)
 
+## Privacy policy
+
+VScan does not collect any personal information. Photos and chats the users create and share with the app are processed by OpenAI through the OpenAI APi under the terms of the [API privacy policy](https://openai.com/enterprise-privacy/).
+
 ## License
 
 Copyright (C) 2023 Rastislav Kish
