@@ -17,6 +17,60 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         >
+        <TextView
+            android:id="@+id/defaultConfigLabel"
+            android:text="Default config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/defaultConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onDefaultConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/shareConfigLabel"
+            android:text="Share config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/shareConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onShareConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/fileDescriptionConfigLabel"
+            android:text="File description config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/fileDescriptionConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onFileDescriptionConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
         <EditText
             android:id="@+id/apiKeyInput"
             android:hint="API key"

@@ -31,7 +31,7 @@ class TabAdapter(context: Context) {
     private val settings=Settings.getInstance(context)
     private val configManager=ConfigManager.getInstance(context)
 
-    var activeConfig: Config=Config()
+    var activeConfig: Config=settings.getDefaultConfig(configManager)
     get set
 
     var conversation: Conversation=Conversation(

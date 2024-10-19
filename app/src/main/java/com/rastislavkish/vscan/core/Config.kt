@@ -18,6 +18,8 @@ package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 
+import com.rastislavkish.vscan.core.openai.SystemMessage
+
 @Serializable
 data class Config(
     val id: Int=-1,
@@ -29,6 +31,9 @@ data class Config(
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: LLM=LLM.GPT_4O,
     ) {
+
+    val systemPromptOrNull: SystemMessage?
+    get() = if (!systemPrompt.isEmpty()) SystemMessage(systemPrompt) else null
 
     fun withId(id: Int): Config = Config(
         id,

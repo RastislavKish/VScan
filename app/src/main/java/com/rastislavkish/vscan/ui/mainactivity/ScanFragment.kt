@@ -72,6 +72,7 @@ import kotlinx.coroutines.sync.*
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
@@ -93,6 +94,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var adapter: TabAdapter
     private lateinit var resources: Resources
     private lateinit var settings: Settings
+    private lateinit var configManager: ConfigManager
     private lateinit var orientationEventListener: OrientationEventListener
 
     private var camera: Camera?=null
@@ -140,6 +142,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         adapter=TabAdapter.getInstance(context!!)
         resources=Resources.getInstance(context!!)
         settings=Settings.getInstance(context!!)
+        configManager=ConfigManager.getInstance(context!!)
         orientationEventListener=object : OrientationEventListener(context!!) {
 
             override fun onOrientationChanged(orientation: Int) {
@@ -277,11 +280,12 @@ class ScanFragment: Fragment(), CoroutineScope {
         val timestamp=lastTakenImageTimestamp ?: return
 
         launch {
-            val connection=Conversation(settings.apiKey, LLM.GPT_4O.identifier, null)
+            val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
+            val connection=Conversation(settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             connection.addMessage(ImageMessage(
-                "Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.",
+                fileDescriptionConfig.userPrompt,
                 LocalImage(encodedImage),
                 ))
             val response=connection.generateResponse()

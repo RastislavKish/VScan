@@ -76,6 +76,9 @@ class ConfigManager(
         return result
         }
 
+    fun getBaseConfig(): Config = baseConfig()
+    fun getFileDescriptionConfig(): Config = fileDescriptionConfig()
+
     fun load() {
         runBlocking{ configurationsMutex.withLock {
             loadImplementation()
@@ -127,7 +130,8 @@ class ConfigManager(
         configurations=Json.decodeFromString(serializedList)
 
         //In case the base config was out of date or missing
-        updateConfigImplementation(Config())
+        updateConfigImplementation(baseConfig())
+        updateConfigImplementation(fileDescriptionConfig())
         }
     private fun saveImplementation() {
         preferences.edit()
@@ -142,6 +146,15 @@ class ConfigManager(
             maxUsedId=config.id
             }
         return maxUsedId+1
+        }
+
+    private fun baseConfig(): Config = Config()
+    private fun fileDescriptionConfig(): Config {
+        return Config()
+        .withId(-3)
+        .withUserPrompt("Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.")
+        .withModel(LLM.GPT_4O_MINI)
+        .withName("File description")
         }
 
     companion object {
