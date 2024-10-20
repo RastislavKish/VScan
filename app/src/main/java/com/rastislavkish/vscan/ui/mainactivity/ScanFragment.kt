@@ -102,9 +102,6 @@ class ScanFragment: Fragment(), CoroutineScope {
     private val imageCapture: ImageCapture
     private val highResImageCapture: ImageCapture
 
-    private var lastTakenImage: ByteArray?=null;
-    private var lastTakenImageTimestamp: LocalDateTime?=null;
-
     private var configUsedByCamera: Config?=null
 
     private lateinit var scanButton: Button
@@ -276,10 +273,10 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
     fun saveButtonClick(v: View) {
-        val image=lastTakenImage ?: return
-        val timestamp=lastTakenImageTimestamp ?: return
+        launch { adapter.mutex.withLock {
+            val image=adapter.lastTakenImage ?: return@launch
+            val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
 
-        launch {
             val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
             val connection=Conversation(settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
 
@@ -299,14 +296,14 @@ class ScanFragment: Fragment(), CoroutineScope {
             catch (e: Exception) {
                 toast("Saving failed: ${e.message}")
                 }
-            }
+            }}
         }
     fun resetConfigButtonClick(v: View) {
         launch { adapter.mutex.withLock {
             adapter.resetActiveConfig()
             adapter.resetConversation()
-            lastTakenImage=null
-            lastTakenImageTimestamp=null
+            adapter.lastTakenImage=null
+            adapter.lastTakenImageTimestamp=null
 
             toast("Reset to ${adapter.activeConfig.name}")
             }}
@@ -334,14 +331,15 @@ class ScanFragment: Fragment(), CoroutineScope {
                 val buffer=mediaImage.planes[0].buffer //ByteBuffer
                 val bytes=ByteArray(buffer.remaining())
                 buffer.get(bytes)
-                lastTakenImage=bytes
-                lastTakenImageTimestamp=LocalDateTime.now()
-                val encodedImage=Base64.getEncoder().encodeToString(bytes)
 
                 resources.shutterSound.play()
 
                 launch {
                     adapter.mutex.withLock {
+                        adapter.lastTakenImage=bytes
+                        adapter.lastTakenImageTimestamp=LocalDateTime.now()
+                        val encodedImage=Base64.getEncoder().encodeToString(bytes)
+
                         adapter.resetConversation()
                         val image=LocalImage(encodedImage)
                         adapter.conversation.addMessage(ImageMessage(adapter.activeConfig.userPrompt, image))

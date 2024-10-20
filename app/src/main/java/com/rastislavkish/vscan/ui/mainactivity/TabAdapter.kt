@@ -16,6 +16,8 @@
 
 package com.rastislavkish.vscan.ui.mainactivity
 
+import java.time.LocalDateTime
+
 import android.content.Context
 
 import kotlinx.coroutines.sync.Mutex
@@ -39,6 +41,12 @@ class TabAdapter(context: Context) {
         activeConfig.model.identifier,
         if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
         )
+    get set
+
+    var lastTakenImage: ByteArray?=null
+    get set
+
+    var lastTakenImageTimestamp: LocalDateTime?=null
     get set
 
     val mutex: Mutex=Mutex()

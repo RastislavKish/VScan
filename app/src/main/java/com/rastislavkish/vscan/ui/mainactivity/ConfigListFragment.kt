@@ -16,6 +16,8 @@
 
 package com.rastislavkish.vscan.ui.mainactivity
 
+import java.util.Base64
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -23,6 +25,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 
 import android.widget.EditText
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import androidx.navigation.fragment.NavHostFragment
 
@@ -32,8 +35,12 @@ import kotlinx.coroutines.sync.*
 
 import com.rastislavkish.vscan.R
 
+import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.openai.Conversation
+import com.rastislavkish.vscan.core.openai.LocalImage
+import com.rastislavkish.vscan.core.openai.ImageMessage
 
 class ConfigListFragment: Fragment(), CoroutineScope {
 
@@ -42,6 +49,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     private lateinit var job: Job
 
+    private lateinit var settings: Settings
     private lateinit var tabAdapter: TabAdapter
     private lateinit var configListAdapter: ConfigListAdapter
 
@@ -55,9 +63,11 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         job=Job()
+        settings=Settings.getInstance(context!!)
         tabAdapter=TabAdapter.getInstance(context!!)
         configListAdapter=ConfigListAdapter(context!!)
         configListAdapter.setItemClickListener(this::configClick)
+        configListAdapter.setItemLongClickListener(this::configLongClick)
         val configList: RecyclerView=view.findViewById(R.id.configList)
         configList.adapter=configListAdapter
 
@@ -79,7 +89,26 @@ class ConfigListFragment: Fragment(), CoroutineScope {
             navController.navigateUp()
             }}
         }
+    fun configLongClick(config: Config) {
+        launch { tabAdapter.mutex.withLock {
+            val image=tabAdapter.lastTakenImage ?: return@launch
+
+            tabAdapter.conversation=Conversation(settings.apiKey, config.model.identifier, config.systemPromptOrNull)
+
+            val encodedImage=Base64.getEncoder().encodeToString(image)
+            tabAdapter.conversation.addMessage(ImageMessage(
+                config.userPrompt,
+                LocalImage(encodedImage),
+                ))
+            val response=tabAdapter.conversation.generateResponse()
+            toast(response)
+            }}
+        }
     fun searchInputTextChange(text: String) {
         configListAdapter.setFilter(text)
+        }
+
+    fun toast(text: String) {
+        Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
     }

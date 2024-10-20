@@ -34,6 +34,7 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
     private var configList=configManager.getList()
     private var filter=""
     private var itemClickListener: ((Config) -> Unit)?=null
+    private var itemLongClickListener: ((Config) -> Unit)?=null
 
     class ConfigViewHolder(view: View): RecyclerView.ViewHolder(view) {
 
@@ -41,6 +42,7 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
 
         init {
             itemTextView.setOnClickListener(this::itemTextView_click)
+            itemTextView.setOnLongClickListener(this::itemTextView_longClick)
             }
 
         private var config: Config?=null
@@ -53,6 +55,10 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
 
         fun itemTextView_click(view: View) {
             (bindingAdapter as ConfigListAdapter?)?.onItemClick(config!!)
+            }
+        fun itemTextView_longClick(view: View): Boolean {
+            (bindingAdapter as ConfigListAdapter?)?.onItemLongClick(config!!)
+            return true
             }
         }
 
@@ -90,4 +96,10 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
         itemClickListener?.invoke(item)
         }
 
+    fun setItemLongClickListener(listener: ((Config) -> Unit)?) {
+        itemLongClickListener=listener
+        }
+    fun onItemLongClick(item: Config) {
+        itemLongClickListener?.invoke(item)
+        }
     }
