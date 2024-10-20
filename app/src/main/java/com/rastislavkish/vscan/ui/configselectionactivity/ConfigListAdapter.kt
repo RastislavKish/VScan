@@ -71,10 +71,10 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
         configList=configManager.getList()
 
         if (!filter.isEmpty()) {
-            val filterProcessed=filter.toLowerCase()
+            val filterProcessed=filter.lowercase()
 
             configList=configList
-            .filter({ item -> item.name.toLowerCase().contains(filterProcessed) })
+            .filter({ item -> item.name.lowercase().contains(filterProcessed) })
             }
 
         notifyDataSetChanged()
