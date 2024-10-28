@@ -332,6 +332,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                 val bytes=ByteArray(buffer.remaining())
                 buffer.get(bytes)
 
+                if (settings.useSounds)
                 resources.shutterSound.play()
 
                 launch {

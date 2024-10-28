@@ -47,6 +47,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var settings: Settings
 
     private lateinit var flashlightSwitch: Switch
+    private lateinit var soundsSwitch: Switch
     private lateinit var defaultConfigSelector: TextView
     private lateinit var shareConfigSelector: TextView
     private lateinit var fileDescriptionConfigSelector: TextView
@@ -64,6 +65,7 @@ class SettingsActivity : AppCompatActivity() {
         settings=Settings.getInstance(this)
 
         flashlightSwitch=findViewById(R.id.flashlightSwitch)
+        soundsSwitch=findViewById(R.id.soundsSwitch)
         defaultConfigSelector=findViewById(R.id.defaultConfigSelector)
         shareConfigSelector=findViewById(R.id.shareConfigSelector)
         fileDescriptionConfigSelector=findViewById(R.id.fileDescriptionConfigSelector)
@@ -76,6 +78,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         flashlightSwitch.setChecked(settings.useFlashlight)
+        soundsSwitch.setChecked(settings.useSounds)
 
         refreshSelectors()
 
@@ -83,6 +86,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     override fun onPause() {
         settings.useFlashlight=flashlightSwitch.isChecked()
+        settings.useSounds=soundsSwitch.isChecked()
 
         settings.save()
 

@@ -25,6 +25,7 @@ class Settings(
 
     var apiKey=""
     var useFlashlight=true
+    var useSounds=true
 
     var defaultConfigId: Int=-1
     var shareConfigId: Int=-1
@@ -33,6 +34,7 @@ class Settings(
     fun load() {
         apiKey=preferences.getString("apiKey", "") ?: ""
         useFlashlight=preferences.getBoolean("useFlashlight", true)
+        useSounds=preferences.getBoolean("useSounds", true)
 
         defaultConfigId=preferences.getInt("defaultConfigId", -1)
         shareConfigId=preferences.getInt("shareConfigId", -1)
@@ -42,6 +44,7 @@ class Settings(
         preferences.edit()
         .putString("apiKey", apiKey)
         .putBoolean("useFlashlight", useFlashlight)
+        .putBoolean("useSounds", useSounds)
         .putInt("defaultConfigId", defaultConfigId)
         .putInt("shareConfigId", shareConfigId)
         .putInt("fileDescriptionConfigId", fileDescriptionConfigId)
