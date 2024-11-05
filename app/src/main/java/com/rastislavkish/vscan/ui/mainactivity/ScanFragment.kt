@@ -74,6 +74,7 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
+import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
@@ -179,13 +180,6 @@ class ScanFragment: Fragment(), CoroutineScope {
         orientationEventListener.enable()
         super.onResume()
 
-        launch { adapter.mutex.withLock {
-            if (cameraConfigurationChanged(adapter)) {
-                cameraProvider?.unbindAll()
-
-                bindCamera(adapter)
-                }
-            }}
         }
     override fun onPause() {
         orientationEventListener.disable()
@@ -356,19 +350,20 @@ class ScanFragment: Fragment(), CoroutineScope {
         imageProxy.close()
         }
 
-    fun bindCamera(adapter: TabAdapter) {
+    suspend fun bindCamera(adapter: TabAdapter) {
+        cameraProvider?.unbindAll()
+
+        val cameraSelector=when (adapter.activeConfig.camera) {
+            UsedCamera.BACK_CAMERA -> CameraSelector.DEFAULT_BACK_CAMERA
+            UsedCamera.FRONT_CAMERA -> CameraSelector.DEFAULT_FRONT_CAMERA
+            }
+
         if (!adapter.activeConfig.highRes)
-        camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, imageCapture)
+        camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, imageCapture)
         else
-        camera=cameraProvider?.bindToLifecycle(activity!!, CameraSelector.DEFAULT_BACK_CAMERA, highResImageCapture)
+        camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, highResImageCapture)
 
         configUsedByCamera=adapter.activeConfig
-        }
-    fun cameraConfigurationChanged(adapter: TabAdapter): Boolean {
-        if (configUsedByCamera==null)
-        return false
-
-        return adapter.activeConfig.highRes!=configUsedByCamera!!.highRes || adapter.activeConfig.camera!=configUsedByCamera!!.camera
         }
     fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
         return when (adapter.activeConfig.flashlightMode) {
