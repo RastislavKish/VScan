@@ -180,6 +180,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         orientationEventListener.enable()
         super.onResume()
 
+        checkShareBox()
         }
     override fun onPause() {
         orientationEventListener.disable()
@@ -364,6 +365,28 @@ class ScanFragment: Fragment(), CoroutineScope {
         camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, highResImageCapture)
 
         configUsedByCamera=adapter.activeConfig
+        }
+    fun checkShareBox() {
+        val shareBox=ShareBox.getInstance(context!!)
+        val image=shareBox.popImage() ?: return
+        val timestamp=LocalDateTime.now()
+
+        launch { adapter.mutex.withLock {
+            adapter.lastTakenImage=image
+            adapter.lastTakenImageTimestamp=timestamp
+
+            val config=settings.getShareConfig(configManager)
+
+            adapter.conversation=Conversation(settings.apiKey, config.model.identifier, config.systemPromptOrNull)
+
+            val encodedImage=Base64.getEncoder().encodeToString(image)
+            adapter.conversation.addMessage(ImageMessage(
+                config.userPrompt,
+                LocalImage(encodedImage),
+                ))
+            val response=adapter.conversation.generateResponse()
+            toast(response)
+            }}
         }
     fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
         return when (adapter.activeConfig.flashlightMode) {
