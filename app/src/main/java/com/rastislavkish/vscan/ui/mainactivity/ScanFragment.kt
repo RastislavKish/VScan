@@ -23,6 +23,7 @@ import android.graphics.ImageFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
 import androidx.fragment.app.Fragment
 import android.util.Size
 import java.io.File
@@ -48,6 +49,7 @@ import android.widget.Toast
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.OrientationEventListener
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
@@ -68,6 +70,9 @@ import java.util.concurrent.Executors
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
+
+import com.rastislavkish.rtk.TouchWrapper
+import com.rastislavkish.rtk.GestureEventArgs
 
 import com.rastislavkish.vscan.R
 
@@ -97,6 +102,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var settings: Settings
     private lateinit var configManager: ConfigManager
     private lateinit var orientationEventListener: OrientationEventListener
+    private lateinit var touchWrapper: TouchWrapper
 
     private var camera: Camera?=null
     private var cameraProvider: ProcessCameraProvider?=null
@@ -147,9 +153,15 @@ class ScanFragment: Fragment(), CoroutineScope {
                 onOrientationChange(orientation)
                 }
             }
+        touchWrapper=TouchWrapper()
+        touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
+        touchWrapper.addSwipeRightListener(this::onSwipeRight)
+        touchWrapper.addSwipeUpListener(this::onSwipeUp)
+        touchWrapper.addTapListener(this::onTap)
 
-        val scanButton: Button=view.findViewById(R.id.scanButton)
+        scanButton=view.findViewById(R.id.scanButton)
         scanButton.setOnClickListener(this::scanButtonClick)
+        scanButton.setOnTouchListener(this::onTouch)
 
         askSTT=STT(context!!)
         systemPromptSTT=STT(context!!)
@@ -304,6 +316,22 @@ class ScanFragment: Fragment(), CoroutineScope {
             }}
         }
 
+    fun onSwipeLeft(args: GestureEventArgs) {
+        val navBar: BottomNavigationView=activity!!.findViewById(R.id.bottomNavigationView)
+        navBar.setSelectedItemId(R.id.optionsFragment)
+        }
+    fun onSwipeRight(args: GestureEventArgs) {
+        val navBar: BottomNavigationView=activity!!.findViewById(R.id.bottomNavigationView)
+        navBar.setSelectedItemId(R.id.configListFragment)
+        }
+    fun onSwipeUp(args: GestureEventArgs) {
+        val navBar: BottomNavigationView=activity!!.findViewById(R.id.bottomNavigationView)
+        navBar.setSelectedItemId(R.id.conversationFragment)
+        }
+    fun onTap(args: GestureEventArgs) {
+        scanButtonClick(scanButton)
+        }
+
     var lastRotationValue=-1
     fun onOrientationChange(orientation: Int) {
         if (orientation==OrientationEventListener.ORIENTATION_UNKNOWN) {
@@ -349,6 +377,12 @@ class ScanFragment: Fragment(), CoroutineScope {
                 }
             }
         imageProxy.close()
+        }
+
+    fun onTouch(v: View, event: MotionEvent): Boolean {
+        touchWrapper.update(event)
+
+        return true
         }
 
     suspend fun bindCamera(adapter: TabAdapter) {
