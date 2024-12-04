@@ -46,9 +46,6 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.PermissionRequester
 import com.rastislavkish.vscan.core.Settings
 
-import com.rastislavkish.vscan.ui.scanactivity.ScanActivity
-import com.rastislavkish.vscan.ui.scanactivity.ScanConfig
-
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI

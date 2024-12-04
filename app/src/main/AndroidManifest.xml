@@ -33,7 +33,6 @@
             </activity>
         <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
         <activity android:name=".ui.settingsactivity.SettingsActivity" />
-        <activity android:name=".ui.scanactivity.ScanActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
