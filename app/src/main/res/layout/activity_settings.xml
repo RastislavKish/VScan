@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.settingsactivity.SettingsActivity">
+    <Switch
+        android:id="@+id/flashlightSwitch"
+        android:text="Use flashlight by default"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <Switch
+        android:id="@+id/soundsSwitch"
+        android:text="Use sounds"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/defaultConfigLabel"
+            android:text="Default config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/defaultConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onDefaultConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/shareConfigLabel"
+            android:text="Share config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/shareConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onShareConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/fileDescriptionConfigLabel"
+            android:text="File description config:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <TextView
+            android:id="@+id/fileDescriptionConfigSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onFileDescriptionConfigSelectorClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <EditText
+            android:id="@+id/apiKeyInput"
+            android:hint="API key"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        <Button
+            android:id="@+id/applyKeyButton"
+            android:hint="Apply key"
+            android:onClick="onApplyKeyButtonClick"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+        </LinearLayout>
+    </LinearLayout>

@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAlSTORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAlSTORAGE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
@@ -22,11 +23,16 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
                 </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                </intent-filter>
             </activity>
-        <activity android:name=".ui.scanactivity.ScanActivity" />
+        <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
+        <activity android:name=".ui.settingsactivity.SettingsActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

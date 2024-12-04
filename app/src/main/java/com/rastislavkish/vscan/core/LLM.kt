@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2023 Rastislav Kish
+* Copyright (C) 2024 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -14,15 +14,19 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.ui.scanactivity
+package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 
 @Serializable
-class ScanConfig(
-    val systemPrompt: String,
-    val userPrompt: String,
-    val apiKey: String,
-    ) {
+enum class LLM {
+    GPT_4O,
+    GPT_4O_MINI;
+
+    val identifier: String
+    get() = when (this) {
+        LLM.GPT_4O -> "gpt-4o"
+        LLM.GPT_4O_MINI -> "gpt-4o-mini"
+        }
 
     }

@@ -24,14 +24,59 @@ class Settings(
     ) {
 
     var apiKey=""
+    var useFlashlight=true
+    var useSounds=true
+
+    var defaultConfigId: Int=-1
+    var shareConfigId: Int=-1
+    var fileDescriptionConfigId: Int=-3
 
     fun load() {
         apiKey=preferences.getString("apiKey", "") ?: ""
+        useFlashlight=preferences.getBoolean("useFlashlight", true)
+        useSounds=preferences.getBoolean("useSounds", true)
+
+        defaultConfigId=preferences.getInt("defaultConfigId", -1)
+        shareConfigId=preferences.getInt("shareConfigId", -1)
+        fileDescriptionConfigId=preferences.getInt("fileDescriptionConfigId", -3)
         }
     fun save() {
         preferences.edit()
         .putString("apiKey", apiKey)
+        .putBoolean("useFlashlight", useFlashlight)
+        .putBoolean("useSounds", useSounds)
+        .putInt("defaultConfigId", defaultConfigId)
+        .putInt("shareConfigId", shareConfigId)
+        .putInt("fileDescriptionConfigId", fileDescriptionConfigId)
         .commit()
+        }
+
+    fun getDefaultConfig(configManager: ConfigManager): Config {
+        val result=configManager.getConfig(defaultConfigId)
+
+        if (result!=null) {
+            return result!!
+            }
+
+        return configManager.getBaseConfig()
+        }
+    fun getShareConfig(configManager: ConfigManager): Config {
+        val result=configManager.getConfig(shareConfigId)
+
+        if (result!=null) {
+            return result!!
+            }
+
+        return configManager.getBaseConfig()
+        }
+    fun getFileDescriptionConfig(configManager: ConfigManager): Config {
+        val result=configManager.getConfig(fileDescriptionConfigId)
+
+        if (result!=null) {
+            return result!!
+            }
+
+        return configManager.getFileDescriptionConfig()
         }
 
     companion object {

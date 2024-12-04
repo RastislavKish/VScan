@@ -28,6 +28,9 @@ class PermissionRequester(context: Context) {
     val cameraPermission: Boolean
     get() = ContextCompat.checkSelfPermission(context, "android.permission.CAMERA")==PackageManager.PERMISSION_GRANTED
 
+    val recordAudioPermission: Boolean
+    get() = ContextCompat.checkSelfPermission(context, "android.permission.RECORD_AUDIO")==PackageManager.PERMISSION_GRANTED
+
     val readExternalStoragePermission: Boolean
     get() = ContextCompat.checkSelfPermission(context, "android.permission.READ_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED
 
@@ -36,13 +39,17 @@ class PermissionRequester(context: Context) {
 
     val permissionsGranted: Boolean
     get() = if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q)
-    cameraPermission && readExternalStoragePermission && writeExternalStoragePermission
+    cameraPermission && recordAudioPermission && readExternalStoragePermission && writeExternalStoragePermission
     else
-    cameraPermission
+    cameraPermission && recordAudioPermission
 
     private val context=context
 
     fun requestPermissions(activity: Activity) {
-        ActivityCompat.requestPermissions(activity, arrayOf("android.permission.CAMERA", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"), 1)
+        ActivityCompat.requestPermissions(activity, arrayOf(
+            "android.permission.CAMERA",
+            "android.permission.RECORD_AUDIO",
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE"), 1)
         }
     }

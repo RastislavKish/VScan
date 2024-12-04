@@ -63,6 +63,13 @@ class Conversation(
         messages.add(systemMessage)
         }
 
+    fun getLastMessage(): Message? {
+        if (messages.size==0)
+        return null
+
+        return messages.last()
+        }
+
     suspend fun generateResponse(): String {
         val messages=mutableListOf<Msg>()
         for (message in this.messages) {
@@ -115,6 +122,10 @@ class Conversation(
             }
 
         return "Error: Unknown error"
+        }
+
+    fun toMessageList(): List<Message> {
+        return messages.toList()
         }
 
     }
