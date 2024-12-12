@@ -51,6 +51,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     private lateinit var settings: Settings
     private lateinit var tabAdapter: TabAdapter
+    private lateinit var configSorter: ConfigSorter
     private lateinit var configListAdapter: ConfigListAdapter
 
     override fun onCreateView(
@@ -65,7 +66,8 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         job=Job()
         settings=Settings.getInstance(context!!)
         tabAdapter=TabAdapter.getInstance(context!!)
-        configListAdapter=ConfigListAdapter(context!!)
+        configSorter=ConfigSorter.getInstance(context!!)
+        configListAdapter=ConfigListAdapter(context!!, configSorter)
         configListAdapter.setItemClickListener(this::configClick)
         configListAdapter.setItemLongClickListener(this::configLongClick)
         val configList: RecyclerView=view.findViewById(R.id.configList)
@@ -83,6 +85,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
     fun configClick(config: Config) {
         launch { tabAdapter.mutex.withLock {
             tabAdapter.activeConfig=config
+            configSorter.markSelection(config.id)
 
             val navHostFragment = activity!!.supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
             val navController = navHostFragment.navController

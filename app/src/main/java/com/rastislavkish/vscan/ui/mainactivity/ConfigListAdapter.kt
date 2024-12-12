@@ -28,9 +28,10 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 
-class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapter.ConfigViewHolder>() {
+class ConfigListAdapter(context: Context, configSorter: ConfigSorter): RecyclerView.Adapter<ConfigListAdapter.ConfigViewHolder>() {
 
     private val configManager=ConfigManager.getInstance(context)
+    private val configSorter=configSorter
     private var configList=configManager.getList()
     private var filter=""
     private var itemClickListener: ((Config) -> Unit)?=null
@@ -74,7 +75,7 @@ class ConfigListAdapter(context: Context): RecyclerView.Adapter<ConfigListAdapte
     override fun getItemCount() = configList.size
 
     fun refresh() {
-        configList=configManager.getList()
+        configList=configSorter.sortConfigList(configManager.getList())
 
         if (!filter.isEmpty()) {
             val filterProcessed=filter.lowercase()
