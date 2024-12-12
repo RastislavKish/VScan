@@ -28,6 +28,7 @@ import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.SystemMessage
 import com.rastislavkish.vscan.core.Settings
 
+// Everything in this class is supposed dto be used only while holding its mutex property
 class TabAdapter(context: Context) {
 
     private val settings=Settings.getInstance(context)
