@@ -1,0 +1,9 @@
+- Rewamped the user interface
+- Added saving configuration profiles for various purposes
+- Added support for sharing pictures with the app
+- added support for the front camera
+- Added an option to select GPT model per configuration
+- Added captured image saving capability with auto-description
+- Added conversation list with message copying capabilities
+- Added an option to consult the captured image with various configurations
+- Added support for asking questions and setting system / user prompt using voice from the main screen

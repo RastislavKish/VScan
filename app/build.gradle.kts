@@ -12,8 +12,8 @@ android {
         applicationId = "com.rastislavkish.vscan"
         minSdk = 24
         targetSdk = 34
-        versionCode = 13
-        versionName = "0.1.3"
+        versionCode = 20
+        versionName = "0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
