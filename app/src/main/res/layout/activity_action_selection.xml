@@ -5,19 +5,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.settingsactivity.SettingsActivity">
-    <Switch
-        android:id="@+id/flashlightSwitch"
-        android:text="Use flashlight by default"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        />
-    <Switch
-        android:id="@+id/soundsSwitch"
-        android:text="Use sounds"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        />
+    tools:context=".ui.actionselectionactivity.ActionSelectionActivity">
 
     <LinearLayout
         android:orientation="horizontal"
@@ -25,16 +13,11 @@
         android:layout_height="wrap_content"
         >
         <TextView
-            android:id="@+id/defaultConfigLabel"
-            android:text="Default config:"
+            android:id="@+id/scanWithActiveConfigLabel"
+            android:text="Scan with active config"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            />
-        <TextView
-            android:id="@+id/defaultConfigSelector"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="onDefaultConfigSelectorClick"
+            android:onClick="onScanWithActiveConfigClick"
             />
         </LinearLayout>
     <LinearLayout
@@ -43,59 +26,17 @@
         android:layout_height="wrap_content"
         >
         <TextView
-            android:id="@+id/shareConfigLabel"
-            android:text="Share config:"
+            android:id="@+id/scanWithConfigLabel"
+            android:text="Scan with config"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:onClick="onScanWithConfigClick"
             />
         <TextView
-            android:id="@+id/shareConfigSelector"
+            android:id="@+id/scanWithConfigConfigSelector"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="onShareConfigSelectorClick"
-            />
-        </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        >
-        <TextView
-            android:id="@+id/fileDescriptionConfigLabel"
-            android:text="File description config:"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <TextView
-            android:id="@+id/fileDescriptionConfigSelector"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="onFileDescriptionConfigSelectorClick"
-            />
-        </LinearLayout>
-
-    <TextView
-        android:text="Event actions"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        />
-
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        >
-        <TextView
-            android:id="@+id/shakeActionLabel"
-            android:text="Shake:"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <TextView
-            android:id="@+id/shakeActionSelector"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="onShakeActionSelectorClick"
+            android:onClick="onScanWithConfigConfigSelectorClick"
             />
         </LinearLayout>
     <LinearLayout
@@ -104,34 +45,17 @@
         android:layout_height="wrap_content"
         >
         <TextView
-            android:id="@+id/volumeUpPressActionLabel"
-            android:text="Volume up press:"
+            android:id="@+id/consultConfigLabel"
+            android:text="Consult config"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:onClick="onConsultConfigClick"
             />
         <TextView
-            android:id="@+id/volumeUpPressActionSelector"
+            android:id="@+id/consultConfigConfigSelector"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="onVolumeUpPressActionSelectorClick"
-            />
-        </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        >
-        <TextView
-            android:id="@+id/volumeDownPressActionLabel"
-            android:text="Volume down press:"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <TextView
-            android:id="@+id/volumeDownPressActionSelector"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="onVolumeDownPressActionSelectorClick"
+            android:onClick="onConsultConfigConfigSelectorClick"
             />
         </LinearLayout>
 
@@ -140,18 +64,53 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         >
-        <EditText
-            android:id="@+id/apiKeyInput"
-            android:hint="API key"
+        <TextView
+            android:id="@+id/askLabel"
+            android:text="Ask"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            />
-        <Button
-            android:id="@+id/applyKeyButton"
-            android:hint="Apply key"
-            android:onClick="onApplyKeyButtonClick"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:onClick="onAskClick"
             />
         </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/setSystemPromptLabel"
+            android:text="Set system prompt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onSetSystemPromptClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/setUserPromptLabel"
+            android:text="Set user prompt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onSetUserPromptClick"
+            />
+        </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/noneLabel"
+            android:text="None"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onNoneClick"
+            />
+        </LinearLayout>
+
     </LinearLayout>

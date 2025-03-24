@@ -32,6 +32,7 @@
                 </intent-filter>
             </activity>
         <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
+        <activity android:name=".ui.actionselectionactivity.ActionSelectionActivity" />
         <activity android:name=".ui.settingsactivity.SettingsActivity" />
 
         <provider

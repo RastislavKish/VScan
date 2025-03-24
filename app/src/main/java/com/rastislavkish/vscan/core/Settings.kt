@@ -19,6 +19,10 @@ package com.rastislavkish.vscan.core
 import android.content.Context
 import android.content.SharedPreferences
 
+import kotlinx.serialization.*
+import kotlinx.serialization.json.Json
+
+
 class Settings(
     val preferences: SharedPreferences
     ) {
@@ -31,6 +35,10 @@ class Settings(
     var shareConfigId: Int=-1
     var fileDescriptionConfigId: Int=-3
 
+    var shakeAction: Action? = null
+    var volumeUpPressAction: Action? = null
+    var volumeDownPressAction: Action? = null
+
     fun load() {
         apiKey=preferences.getString("apiKey", "") ?: ""
         useFlashlight=preferences.getBoolean("useFlashlight", true)
@@ -39,6 +47,10 @@ class Settings(
         defaultConfigId=preferences.getInt("defaultConfigId", -1)
         shareConfigId=preferences.getInt("shareConfigId", -1)
         fileDescriptionConfigId=preferences.getInt("fileDescriptionConfigId", -3)
+
+        shakeAction=getAction("shakeAction")
+        volumeUpPressAction=getAction("volumeUpPressAction")
+        volumeDownPressAction=getAction("volumeDownPressAction")
         }
     fun save() {
         preferences.edit()
@@ -48,6 +60,9 @@ class Settings(
         .putInt("defaultConfigId", defaultConfigId)
         .putInt("shareConfigId", shareConfigId)
         .putInt("fileDescriptionConfigId", fileDescriptionConfigId)
+        .putString("shakeAction", Json.encodeToString(shakeAction))
+        .putString("volumeUpPressAction", Json.encodeToString(volumeUpPressAction))
+        .putString("volumeDownPressAction", Json.encodeToString(volumeDownPressAction))
         .commit()
         }
 
@@ -77,6 +92,13 @@ class Settings(
             }
 
         return configManager.getFileDescriptionConfig()
+        }
+
+    private fun getAction(key: String): Action? {
+        val serialized=preferences.getString(key, null) ?: return null
+        val action: Action = Json.decodeFromString(serialized) ?: return null
+
+        return action
         }
 
     companion object {

@@ -40,6 +40,8 @@ import com.rastislavkish.vscan.core.Settings
 
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivity
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivityOutput
+import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivity
+import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivityOutput
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -48,14 +50,22 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var flashlightSwitch: Switch
     private lateinit var soundsSwitch: Switch
+
     private lateinit var defaultConfigSelector: TextView
     private lateinit var shareConfigSelector: TextView
     private lateinit var fileDescriptionConfigSelector: TextView
+
+    private lateinit var shakeActionSelector: TextView
+    private lateinit var volumeUpPressActionSelector: TextView
+    private lateinit var volumeDownPressActionSelector: TextView
+
     private lateinit var apiKeyInput: EditText
     private lateinit var applyKeyButton: Button
 
     private var lastActivatedConfigSelector: View?=null
+    private var lastActivatedActionSelector: View?=null
     private lateinit var configSelectionActivityLauncher: ActivityResultLauncher<Intent>
+    private lateinit var actionSelectionActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,14 +76,21 @@ class SettingsActivity : AppCompatActivity() {
 
         flashlightSwitch=findViewById(R.id.flashlightSwitch)
         soundsSwitch=findViewById(R.id.soundsSwitch)
+
         defaultConfigSelector=findViewById(R.id.defaultConfigSelector)
         shareConfigSelector=findViewById(R.id.shareConfigSelector)
         fileDescriptionConfigSelector=findViewById(R.id.fileDescriptionConfigSelector)
+
+        shakeActionSelector=findViewById(R.id.shakeActionSelector)
+        volumeUpPressActionSelector=findViewById(R.id.volumeUpPressActionSelector)
+        volumeDownPressActionSelector=findViewById(R.id.volumeDownPressActionSelector)
+
         apiKeyInput=findViewById(R.id.apiKeyInput)
         apiKeyInput.setOnEditorActionListener(this::onApiKeyInputEditorAction)
         applyKeyButton=findViewById(R.id.applyKeyButton)
 
         configSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::configSelectionActivityResult)
+        actionSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::actionSelectionActivityResult)
         }
 
     override fun onResume() {
@@ -106,6 +123,19 @@ class SettingsActivity : AppCompatActivity() {
         startConfigSelectionActivity()
         }
 
+    fun onShakeActionSelectorClick(v: View) {
+        lastActivatedActionSelector=shakeActionSelector
+        startActionSelectionActivity()
+        }
+    fun onvolumeUpPressActionSelectorClick(v: View) {
+        lastActivatedActionSelector=volumeUpPressActionSelector
+        startActionSelectionActivity()
+        }
+    fun onvolumeDownPressActionSelectorClick(v: View) {
+        lastActivatedActionSelector=volumeDownPressActionSelector
+        startActionSelectionActivity()
+        }
+
     fun onApiKeyInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
         if (actionId==EditorInfo.IME_ACTION_DONE) {
             applyKeyButton.performClick()
@@ -133,10 +163,18 @@ class SettingsActivity : AppCompatActivity() {
         defaultConfigSelector.text=defaultConfig.name
         shareConfigSelector.text=shareConfig.name
         fileDescriptionConfigSelector.text=fileDescriptionConfig.name
+
+        shakeActionSelector.text=settings.shakeAction?.toString(configManager) ?: "None"
+        volumeUpPressActionSelector.text=settings.volumeUpPressAction?.toString(configManager) ?: "None"
+        volumeDownPressActionSelector.text=settings.volumeDownPressAction?.toString(configManager) ?: "None"
         }
     private fun startConfigSelectionActivity() {
         val intent=Intent(this, ConfigSelectionActivity::class.java)
         configSelectionActivityLauncher.launch(intent)
+        }
+    private fun startActionSelectionActivity() {
+        val intent=Intent(this, ActionSelectionActivity::class.java)
+        actionSelectionActivityLauncher.launch(intent)
         }
     private fun configSelectionActivityResult(result: ActivityResult) {
         if (result.resultCode==RESULT_OK) {
@@ -159,6 +197,27 @@ class SettingsActivity : AppCompatActivity() {
 
                 refreshSelectors()
                 }
+            }
+        }
+    private fun actionSelectionActivityResult(result: ActivityResult) {
+        if (result.resultCode==RESULT_OK) {
+            val output=ActionSelectionActivityOutput.fromIntent(result.data, "SettingsActivity")
+
+            val action=output.action
+
+            when (lastActivatedActionSelector) {
+                shakeActionSelector -> {
+                    settings.shakeAction=action
+                    }
+                volumeUpPressActionSelector -> {
+                    settings.volumeUpPressAction=action
+                    }
+                volumeDownPressActionSelector -> {
+                    settings.volumeDownPressAction=action
+                    }
+                }
+
+            refreshSelectors()
             }
         }
     }
