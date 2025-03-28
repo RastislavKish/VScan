@@ -127,11 +127,11 @@ class SettingsActivity : AppCompatActivity() {
         lastActivatedActionSelector=shakeActionSelector
         startActionSelectionActivity()
         }
-    fun onvolumeUpPressActionSelectorClick(v: View) {
+    fun onVolumeUpPressActionSelectorClick(v: View) {
         lastActivatedActionSelector=volumeUpPressActionSelector
         startActionSelectionActivity()
         }
-    fun onvolumeDownPressActionSelectorClick(v: View) {
+    fun onVolumeDownPressActionSelectorClick(v: View) {
         lastActivatedActionSelector=volumeDownPressActionSelector
         startActionSelectionActivity()
         }
