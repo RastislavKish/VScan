@@ -41,6 +41,8 @@ import java.io.InputStream
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import org.greenrobot.eventbus.EventBus
+
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.PermissionRequester
@@ -78,6 +80,19 @@ class MainActivity : AppCompatActivity() {
         val bottomNavigationView: BottomNavigationView=findViewById(R.id.bottomNavigationView)
 
         NavigationUI.setupWithNavController(bottomNavigationView, navController)
+        }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode==KeyEvent.KEYCODE_VOLUME_UP) {
+            EventBus.getDefault().post(DeviceInputEvent(DeviceInputEventKind.VOLUME_UP_PRESS))
+            return true
+            }
+        if (keyCode==KeyEvent.KEYCODE_VOLUME_DOWN) {
+            EventBus.getDefault().post(DeviceInputEvent(DeviceInputEventKind.VOLUME_DOWN_PRESS))
+            return true
+            }
+
+        return super.onKeyDown(keyCode, event)
         }
 
     fun handleSendImage(intent: Intent) {

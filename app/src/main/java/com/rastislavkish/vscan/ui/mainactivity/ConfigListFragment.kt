@@ -94,17 +94,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         }
     fun configLongClick(config: Config) {
         launch { tabAdapter.mutex.withLock {
-            val image=tabAdapter.lastTakenImage ?: return@launch
-
-            tabAdapter.conversation=Conversation(settings.apiKey, config.model.identifier, config.systemPromptOrNull)
-
-            val encodedImage=Base64.getEncoder().encodeToString(image)
-            tabAdapter.conversation.addMessage(ImageMessage(
-                config.userPrompt,
-                LocalImage(encodedImage),
-                ))
-            val response=tabAdapter.conversation.generateResponse()
-            toast(response)
+            toast(tabAdapter.consultConfig(config) ?: return@launch)
             }}
         }
     fun searchInputTextChange(text: String) {

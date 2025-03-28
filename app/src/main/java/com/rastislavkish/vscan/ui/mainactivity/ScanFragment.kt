@@ -71,6 +71,9 @@ import kotlin.coroutines.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+
 import com.rastislavkish.rtk.TouchWrapper
 import com.rastislavkish.rtk.GestureEventArgs
 
@@ -85,6 +88,14 @@ import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.openai.*
+
+import com.rastislavkish.vscan.core.Action
+import com.rastislavkish.vscan.core.ScanWithActiveConfigAction
+import com.rastislavkish.vscan.core.ScanWithConfigAction
+import com.rastislavkish.vscan.core.ConsultConfigAction
+import com.rastislavkish.vscan.core.AskAction
+import com.rastislavkish.vscan.core.SetSystemPromptAction
+import com.rastislavkish.vscan.core.SetUserPromptAction
 
 class ScanFragment: Fragment(), CoroutineScope {
 
@@ -112,6 +123,9 @@ class ScanFragment: Fragment(), CoroutineScope {
     private var configUsedByCamera: Config?=null
 
     private lateinit var scanButton: Button
+    private lateinit var askButton: Button
+    private lateinit var systemPromptButton: Button
+    private lateinit var userPromptButton: Button
 
     init {
         val resolutionSelector=ResolutionSelector.Builder()
@@ -138,6 +152,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         container: ViewGroup?,
         savedInstanceState: Bundle?
         ): View? {
+        EventBus.getDefault().register(this)
         return inflater.inflate(R.layout.fragment_scan, container, false)
         }
 
@@ -162,6 +177,10 @@ class ScanFragment: Fragment(), CoroutineScope {
         scanButton=view.findViewById(R.id.scanButton)
         scanButton.setOnClickListener(this::scanButtonClick)
         scanButton.setOnTouchListener(this::onTouch)
+
+        askButton=view.findViewById(R.id.askButton)
+        systemPromptButton=view.findViewById(R.id.systemPromptButton)
+        userPromptButton=view.findViewById(R.id.userPromptButton)
 
         askSTT=STT(context!!)
         systemPromptSTT=STT(context!!)
@@ -203,42 +222,24 @@ class ScanFragment: Fragment(), CoroutineScope {
         super.onDestroy()
         }
 
+    @Subscribe
+    fun onDeviceInputEvent(event: DeviceInputEvent) {
+        when (event.kind) {
+            DeviceInputEventKind.VOLUME_UP_PRESS -> {
+                performAction(settings.volumeUpPressAction ?: return)
+                }
+            DeviceInputEventKind.VOLUME_DOWN_PRESS -> {
+                performAction(settings.volumeDownPressAction ?: return)
+                }
+            DeviceInputEventKind.SHAKE -> {
+                performAction(settings.shakeAction ?: return)
+                }
+            }
+        }
+
     fun scanButtonClick(v: View) {
         launch { adapter.mutex.withLock {
-            val flashMode=when (shouldUseFlashlight(adapter)) {
-                true -> ImageCapture.FLASH_MODE_ON
-                false -> ImageCapture.FLASH_MODE_OFF
-                }
-
-            imageCapture.setFlashMode(flashMode)
-            highResImageCapture.setFlashMode(flashMode)
-
-            if (!adapter.activeConfig.highRes)
-            imageCapture.takePicture(
-                ContextCompat.getMainExecutor(context!!),
-                object : ImageCapture.OnImageCapturedCallback() {
-                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                        onPicture(imageProxy)
-                        }
-
-                    override fun onError(error: ImageCaptureException) {
-                        toast("Error capturing the image")
-                        }
-                    },
-                )
-            else
-            highResImageCapture.takePicture(
-                ContextCompat.getMainExecutor(context!!),
-                object : ImageCapture.OnImageCapturedCallback() {
-                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                        onPicture(imageProxy)
-                        }
-
-                    override fun onError(error: ImageCaptureException) {
-                        toast("Error capturing the image")
-                        }
-                    },
-                )
+            scanWithConfig(adapter, adapter.activeConfig)
             }}
         }
 
@@ -347,7 +348,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             lastRotationValue=rotation
             }
         }
-    fun onPicture(imageProxy: ImageProxy) {
+    fun extractImageFromProxy(imageProxy: ImageProxy): ByteArray? {
         val mediaImage=imageProxy.image
         if (mediaImage!=null) {
             if (mediaImage.format==ImageFormat.JPEG) {
@@ -355,34 +356,54 @@ class ScanFragment: Fragment(), CoroutineScope {
                 val bytes=ByteArray(buffer.remaining())
                 buffer.get(bytes)
 
-                if (settings.useSounds)
-                resources.shutterSound.play()
-
-                launch {
-                    adapter.mutex.withLock {
-                        adapter.lastTakenImage=bytes
-                        adapter.lastTakenImageTimestamp=LocalDateTime.now()
-                        val encodedImage=Base64.getEncoder().encodeToString(bytes)
-
-                        adapter.resetConversation()
-                        val image=LocalImage(encodedImage)
-                        adapter.conversation.addMessage(ImageMessage(adapter.activeConfig.userPrompt, image))
-                        val response=adapter.conversation.generateResponse()
-                        toast(response)
-                        }
-                    }
+                imageProxy.close()
+                return bytes
                 }
             else {
                 toast("Error: The camera returned an unsupported image type")
                 }
             }
         imageProxy.close()
+        return null
         }
 
     fun onTouch(v: View, event: MotionEvent): Boolean {
         touchWrapper.update(event)
 
         return true
+        }
+
+    fun performAction(action: Action) {
+        when (action) {
+            is ScanWithActiveConfigAction -> {
+                scanButtonClick(scanButton)
+                }
+            is ScanWithConfigAction -> {
+                val config=configManager.getConfig(action.config)
+                ?: configManager.getBaseConfig()
+
+                launch { adapter.mutex.withLock {
+                    scanWithConfig(adapter, config)
+                    }}
+                }
+            is ConsultConfigAction -> {
+                val config=configManager.getConfig(action.config)
+                ?: configManager.getBaseConfig()
+
+                launch { adapter.mutex.withLock {
+                    consultConfig(adapter, config)
+                    }}
+                }
+            is AskAction -> {
+                askButtonClick(askButton)
+                }
+            is SetSystemPromptAction -> {
+                systemPromptButtonClick(systemPromptButton)
+                }
+            is SetUserPromptAction -> {
+                userPromptButtonClick(userPromptButton)
+                }
+            }
         }
 
     suspend fun bindCamera(adapter: TabAdapter) {
@@ -399,6 +420,107 @@ class ScanFragment: Fragment(), CoroutineScope {
         camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, highResImageCapture)
 
         configUsedByCamera=adapter.activeConfig
+        }
+    fun takePicture(adapter: TabAdapter, callback: (ByteArray) -> Unit) {
+        val flashMode=when (shouldUseFlashlight(adapter)) {
+            true -> ImageCapture.FLASH_MODE_ON
+            false -> ImageCapture.FLASH_MODE_OFF
+            }
+
+        imageCapture.setFlashMode(flashMode)
+        highResImageCapture.setFlashMode(flashMode)
+
+        if (!adapter.activeConfig.highRes)
+        imageCapture.takePicture(
+            ContextCompat.getMainExecutor(context!!),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val image=extractImageFromProxy(imageProxy)
+                    callback(image ?: return)
+                    }
+
+                override fun onError(error: ImageCaptureException) {
+                    toast("Error capturing the image")
+                    }
+                },
+            )
+        else
+        highResImageCapture.takePicture(
+            ContextCompat.getMainExecutor(context!!),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val image=extractImageFromProxy(imageProxy)
+                    callback(image ?: return)
+                    }
+
+                override fun onError(error: ImageCaptureException) {
+                    toast("Error capturing the image")
+                    }
+                },
+            )
+        }
+    fun takePictureToAdapter(adapter: TabAdapter, callback: suspend (TabAdapter) -> Unit) {
+        val flashMode=when (shouldUseFlashlight(adapter)) {
+            true -> ImageCapture.FLASH_MODE_ON
+            false -> ImageCapture.FLASH_MODE_OFF
+            }
+
+        imageCapture.setFlashMode(flashMode)
+        highResImageCapture.setFlashMode(flashMode)
+
+        if (!adapter.activeConfig.highRes)
+        imageCapture.takePicture(
+            ContextCompat.getMainExecutor(context!!),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val image=extractImageFromProxy(imageProxy)
+                    val timestamp=LocalDateTime.now()
+
+                    launch { adapter.mutex.withLock {
+                        adapter.lastTakenImage=image
+                        adapter.lastTakenImageTimestamp=timestamp
+
+                        callback(adapter)
+                        }}
+                    }
+
+                override fun onError(error: ImageCaptureException) {
+                    toast("Error capturing the image")
+                    }
+                },
+            )
+        else
+        highResImageCapture.takePicture(
+            ContextCompat.getMainExecutor(context!!),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val image=extractImageFromProxy(imageProxy)
+                    val timestamp=LocalDateTime.now()
+
+                    launch { adapter.mutex.withLock {
+                        adapter.lastTakenImage=image
+                        adapter.lastTakenImageTimestamp=timestamp
+
+                        callback(adapter)
+                        }}
+                    }
+
+                override fun onError(error: ImageCaptureException) {
+                    toast("Error capturing the image")
+                    }
+                },
+            )
+        }
+    fun scanWithConfig(adapter: TabAdapter, config: Config) {
+        takePictureToAdapter(adapter, callback@{adapter ->
+            if (settings.useSounds)
+            resources.shutterSound.play()
+
+            toast(adapter.consultConfig(config) ?: return@callback)
+            })
+        }
+    suspend fun consultConfig(adapter: TabAdapter, config: Config) {
+        toast(adapter.consultConfig(config) ?: return)
         }
     fun checkShareBox() {
         val shareBox=ShareBox.getInstance(context!!)
