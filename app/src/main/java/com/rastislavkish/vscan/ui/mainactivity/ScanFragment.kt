@@ -126,6 +126,8 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var askButton: Button
     private lateinit var systemPromptButton: Button
     private lateinit var userPromptButton: Button
+    private lateinit var multipurposeInput: EditText
+    private var multipurposeInputPurpose=MultipurposeInputPurpose.MESSAGE
 
     init {
         val resolutionSelector=ResolutionSelector.Builder()
@@ -181,6 +183,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         askButton=view.findViewById(R.id.askButton)
         systemPromptButton=view.findViewById(R.id.systemPromptButton)
         userPromptButton=view.findViewById(R.id.userPromptButton)
+        multipurposeInput=view.findViewById(R.id.multipurposeInput)
+        multipurposeInput.setOnEditorActionListener(this::onMultipurposeInputEditorAction)
 
         askSTT=STT(context!!)
         systemPromptSTT=STT(context!!)
@@ -215,6 +219,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     override fun onPause() {
         orientationEventListener.disable()
+        resetMultipurposeInput()
         super.onPause()
         }
     override fun onDestroy() {
@@ -317,6 +322,16 @@ class ScanFragment: Fragment(), CoroutineScope {
             }}
         }
 
+    fun onMultipurposeInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
+        if (actionId==EditorInfo.IME_ACTION_DONE) {
+            confirmMultipurposeInput()
+
+            return true
+            }
+
+        return false
+        }
+
     fun onSwipeLeft(args: GestureEventArgs) {
         val navBar: BottomNavigationView=activity!!.findViewById(R.id.bottomNavigationView)
         navBar.setSelectedItemId(R.id.optionsFragment)
@@ -371,6 +386,47 @@ class ScanFragment: Fragment(), CoroutineScope {
         touchWrapper.update(event)
 
         return true
+        }
+
+    fun setMultipurposeInputPurpose(purpose: MultipurposeInputPurpose, focus: Boolean=false) {
+        if (!multipurposeInput.text.isBlank())
+        multipurposeInput.text.clear()
+        multipurposeInputPurpose=purpose
+
+        multipurposeInput.hint=when (purpose) {
+            MultipurposeInputPurpose.MESSAGE -> "Message"
+            MultipurposeInputPurpose.SYSTEM_PROMPT -> "System prompt"
+            MultipurposeInputPurpose.USER_PROMPT -> "User prompt"
+            }
+
+        if (focus)
+        multipurposeInput.requestFocus()
+        }
+    fun resetMultipurposeInput() {
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.MESSAGE)
+        }
+    fun confirmMultipurposeInput() {
+        val text=multipurposeInput.text.toString()
+
+        resetMultipurposeInput()
+
+        if (text.isBlank()) {
+            return
+            }
+
+        launch { adapter.mutex.withLock() {
+            when (multipurposeInputPurpose) {
+                MultipurposeInputPurpose.MESSAGE -> {
+                    sendMessage(adapter, text)
+                    }
+                MultipurposeInputPurpose.SYSTEM_PROMPT -> {
+                    setSystemPrompt(adapter, text)
+                    }
+                MultipurposeInputPurpose.USER_PROMPT -> {
+                    setUserPrompt(adapter, text)
+                    }
+                }
+            }}
         }
 
     fun performAction(action: Action) {
@@ -521,6 +577,19 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     suspend fun consultConfig(adapter: TabAdapter, config: Config) {
         toast(adapter.consultConfig(config) ?: return)
+        }
+    suspend fun sendMessage(adapter: TabAdapter, message: String) {
+        adapter.conversation.addMessage(TextMessage(message))
+        val response=adapter.conversation.generateResponse()
+        toast(response)
+        }
+    fun setSystemPrompt(adapter: TabAdapter, message: String) {
+        adapter.activeConfig=adapter.activeConfig.withSystemPrompt(message)
+        toast("${message} set as system prompt")
+        }
+    fun setUserPrompt(adapter: TabAdapter, message: String) {
+        adapter.activeConfig=adapter.activeConfig.withUserPrompt(message)
+        toast("${message} set as user prompt")
         }
     fun checkShareBox() {
         val shareBox=ShareBox.getInstance(context!!)
