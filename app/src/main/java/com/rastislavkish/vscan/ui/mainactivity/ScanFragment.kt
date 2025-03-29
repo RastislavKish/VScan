@@ -181,25 +181,26 @@ class ScanFragment: Fragment(), CoroutineScope {
         scanButton.setOnTouchListener(this::onTouch)
 
         askButton=view.findViewById(R.id.askButton)
+        askButton.setOnClickListener(this::askButtonClick)
+        askButton.setOnLongClickListener(this::askButtonLongClick)
         systemPromptButton=view.findViewById(R.id.systemPromptButton)
+        systemPromptButton.setOnClickListener(this::systemPromptButtonClick)
+        systemPromptButton.setOnLongClickListener(this::systemPromptButtonLongClick)
         userPromptButton=view.findViewById(R.id.userPromptButton)
-        multipurposeInput=view.findViewById(R.id.multipurposeInput)
-        multipurposeInput.setOnEditorActionListener(this::onMultipurposeInputEditorAction)
+        userPromptButton.setOnClickListener(this::userPromptButtonClick)
+        userPromptButton.setOnLongClickListener(this::userPromptButtonLongClick)
 
         askSTT=STT(context!!)
         systemPromptSTT=STT(context!!)
         userPromptSTT=STT(context!!)
 
-        val askButton: Button=view.findViewById(R.id.askButton)
-        askButton.setOnClickListener(this::askButtonClick)
-        val systemPromptButton: Button=view.findViewById(R.id.systemPromptButton)
-        systemPromptButton.setOnClickListener(this::systemPromptButtonClick)
-        val userPromptButton: Button=view.findViewById(R.id.userPromptButton)
-        userPromptButton.setOnClickListener(this::userPromptButtonClick)
         val saveButton: Button=view.findViewById(R.id.saveButton)
         saveButton.setOnClickListener(this::saveButtonClick)
         val resetConfigButton: Button=view.findViewById(R.id.resetConfigButton)
         resetConfigButton.setOnClickListener(this::resetConfigButtonClick)
+
+        multipurposeInput=view.findViewById(R.id.multipurposeInput)
+        multipurposeInput.setOnEditorActionListener(this::onMultipurposeInputEditorAction)
 
         val cameraProviderFuture=ProcessCameraProvider.getInstance(context!!)
         cameraProviderFuture.addListener(Runnable {
@@ -249,41 +250,48 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
 
     fun askButtonClick(v: View) {
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.MESSAGE, true)
+        }
+    fun askButtonLongClick(v: View): Boolean {
         launch {
-            val enquiry=askSTT.recognize()
+            val enquiry=askSTT.recognize() ?: return@launch
 
-            if (enquiry!=null) {
-                adapter.mutex.withLock {
-                    adapter.conversation.addMessage(TextMessage(enquiry))
-                    val response=adapter.conversation.generateResponse()
-                    toast(response)
-                    }
+            adapter.mutex.withLock {
+                sendMessage(adapter, enquiry)
                 }
             }
+
+        return true
         }
     fun systemPromptButtonClick(v: View) {
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.SYSTEM_PROMPT, true)
+        }
+    fun systemPromptButtonLongClick(v: View): Boolean {
         launch {
-            val enquiry=systemPromptSTT.recognize()
+            val enquiry=systemPromptSTT.recognize() ?: return@launch
 
-            if (enquiry!=null && !enquiry.isEmpty()) {
-                adapter.mutex.withLock {
-                    adapter.activeConfig=adapter.activeConfig.withSystemPrompt(enquiry)
-                    toast("${enquiry} set as system prompt")
-                    }
+            if (!enquiry.isEmpty())
+            adapter.mutex.withLock {
+                setSystemPrompt(adapter, enquiry, true)
                 }
             }
+
+        return true
         }
     fun userPromptButtonClick(v: View) {
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.USER_PROMPT, true)
+        }
+    fun userPromptButtonLongClick(v: View): Boolean {
         launch {
-            val enquiry=userPromptSTT.recognize()
+            val enquiry=userPromptSTT.recognize() ?: return@launch
 
-            if (enquiry!=null && !enquiry.isEmpty()) {
-                adapter.mutex.withLock {
-                    adapter.activeConfig=adapter.activeConfig.withUserPrompt(enquiry)
-                    toast("${enquiry} set as user prompt")
-                    }
+            if (!enquiry.isEmpty())
+            adapter.mutex.withLock {
+                setUserPrompt(adapter, enquiry, true)
                 }
             }
+
+        return true
         }
     fun saveButtonClick(v: View) {
         launch { adapter.mutex.withLock {
@@ -583,12 +591,20 @@ class ScanFragment: Fragment(), CoroutineScope {
         val response=adapter.conversation.generateResponse()
         toast(response)
         }
-    fun setSystemPrompt(adapter: TabAdapter, message: String) {
+    fun setSystemPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
         adapter.activeConfig=adapter.activeConfig.withSystemPrompt(message)
+
+        if (!includePromptInConfirmation)
+        toast("System prompt set")
+        else
         toast("${message} set as system prompt")
         }
-    fun setUserPrompt(adapter: TabAdapter, message: String) {
+    fun setUserPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
         adapter.activeConfig=adapter.activeConfig.withUserPrompt(message)
+
+        if (!includePromptInConfirmation)
+        toast("User prompt set")
+        else
         toast("${message} set as user prompt")
         }
     fun checkShareBox() {
