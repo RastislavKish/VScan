@@ -37,6 +37,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ContentValues
 import android.content.Intent
+import android.content.Context
 
 import android.net.Uri
 
@@ -48,6 +49,7 @@ import android.widget.EditText
 import android.widget.Toast
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.view.OrientationEventListener
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -407,8 +409,12 @@ class ScanFragment: Fragment(), CoroutineScope {
             MultipurposeInputPurpose.USER_PROMPT -> "User prompt"
             }
 
-        if (focus)
-        multipurposeInput.requestFocus()
+        if (focus) {
+            multipurposeInput.requestFocus()
+
+            val imm=context!!.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(multipurposeInput, InputMethodManager.SHOW_IMPLICIT)
+            }
         }
     fun resetMultipurposeInput() {
         setMultipurposeInputPurpose(MultipurposeInputPurpose.MESSAGE)
