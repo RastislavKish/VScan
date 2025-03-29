@@ -415,6 +415,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     fun confirmMultipurposeInput() {
         val text=multipurposeInput.text.toString()
+        val purpose=multipurposeInputPurpose
 
         resetMultipurposeInput()
 
@@ -423,7 +424,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
 
         launch { adapter.mutex.withLock() {
-            when (multipurposeInputPurpose) {
+            when (purpose) {
                 MultipurposeInputPurpose.MESSAGE -> {
                     sendMessage(adapter, text)
                     }
