@@ -48,6 +48,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var configManager: ConfigManager
     private lateinit var settings: Settings
 
+    private val apiBaseUrlRegex=Regex("^https://.+[^/]\$")
+
     private lateinit var flashlightSwitch: Switch
     private lateinit var soundsSwitch: Switch
 
@@ -58,6 +60,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var shakeActionSelector: TextView
     private lateinit var volumeUpPressActionSelector: TextView
     private lateinit var volumeDownPressActionSelector: TextView
+
+    private lateinit var apiBaseUrlInput: EditText
+    private lateinit var applyBaseUrlButton: Button
 
     private lateinit var apiKeyInput: EditText
     private lateinit var applyKeyButton: Button
@@ -85,6 +90,10 @@ class SettingsActivity : AppCompatActivity() {
         volumeUpPressActionSelector=findViewById(R.id.volumeUpPressActionSelector)
         volumeDownPressActionSelector=findViewById(R.id.volumeDownPressActionSelector)
 
+        apiBaseUrlInput=findViewById(R.id.apiBaseUrlInput)
+        apiBaseUrlInput.setOnEditorActionListener(this::onApiBaseUrlInputEditorAction)
+        applyBaseUrlButton=findViewById(R.id.applyBaseUrlButton)
+
         apiKeyInput=findViewById(R.id.apiKeyInput)
         apiKeyInput.setOnEditorActionListener(this::onApiKeyInputEditorAction)
         applyKeyButton=findViewById(R.id.applyKeyButton)
@@ -96,6 +105,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         flashlightSwitch.setChecked(settings.useFlashlight)
         soundsSwitch.setChecked(settings.useSounds)
+
+        apiBaseUrlInput.setText(settings.apiBaseUrl)
 
         refreshSelectors()
 
@@ -136,6 +147,34 @@ class SettingsActivity : AppCompatActivity() {
         startActionSelectionActivity()
         }
 
+    fun onApiBaseUrlInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
+        if (actionId==EditorInfo.IME_ACTION_DONE) {
+            applyBaseUrlButton.performClick()
+            return true
+            }
+
+        return false
+        }
+    fun onApplyBaseUrlButtonClick(v: View) {
+        var baseUrl=apiBaseUrlInput.text.toString().trim()
+        if (baseUrl.endsWith("/")) {
+            baseUrl=baseUrl.substring(0, baseUrl.length-1)
+            }
+
+        if (apiBaseUrlRegex.matches(baseUrl)) {
+            settings.apiBaseUrl=baseUrl
+            toast("API base URL set")
+            }
+        else {
+            toast("Invalid URL")
+            }
+        }
+    fun onResetBaseUrlButtonClick(v: View) {
+        settings.apiBaseUrl="https://api.openai.com/v1"
+        apiBaseUrlInput.setText(settings.apiBaseUrl)
+        toast("API base URL reset")
+        }
+
     fun onApiKeyInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
         if (actionId==EditorInfo.IME_ACTION_DONE) {
             applyKeyButton.performClick()
@@ -144,7 +183,6 @@ class SettingsActivity : AppCompatActivity() {
 
         return false
         }
-
     fun onApplyKeyButtonClick(v: View) {
         settings.apiKey=apiKeyInput.text.toString()
         settings.save()

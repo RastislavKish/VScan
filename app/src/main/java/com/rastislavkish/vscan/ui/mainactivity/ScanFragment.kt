@@ -301,7 +301,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
 
             val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-            val connection=Conversation(settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
+            val connection=Conversation(settings.apiBaseUrl, settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             connection.addMessage(ImageMessage(
@@ -625,7 +625,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             val config=settings.getShareConfig(configManager)
 
-            adapter.conversation=Conversation(settings.apiKey, config.model.identifier, config.systemPromptOrNull)
+            adapter.conversation=Conversation(settings.apiBaseUrl, settings.apiKey, config.model.identifier, config.systemPromptOrNull)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             adapter.conversation.addMessage(ImageMessage(

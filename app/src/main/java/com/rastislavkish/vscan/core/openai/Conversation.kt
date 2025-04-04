@@ -32,6 +32,7 @@ import com.rastislavkish.vscan.core.openai.requests.Message as Msg
 import com.rastislavkish.vscan.core.openai.requests.Request as OpenaiRequest
 
 class Conversation(
+    val apiBaseUrl: String,
     val apiKey: String,
     val model: String,
     val systemMessage: SystemMessage?,
@@ -84,7 +85,7 @@ class Conversation(
                 requestTimeout=300000
                 }
             }
-        val response: HttpResponse=client.post("https://api.openai.com/v1/chat/completions") {
+        val response: HttpResponse=client.post("$apiBaseUrl/chat/completions") {
             header("Content-Type", "application/json")
             bearerAuth(apiKey)
             setBody(format.encodeToString(bodyObject))
