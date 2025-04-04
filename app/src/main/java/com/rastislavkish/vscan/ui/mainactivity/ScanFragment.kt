@@ -156,7 +156,6 @@ class ScanFragment: Fragment(), CoroutineScope {
         container: ViewGroup?,
         savedInstanceState: Bundle?
         ): View? {
-        EventBus.getDefault().register(this)
         return inflater.inflate(R.layout.fragment_scan, container, false)
         }
 
@@ -212,6 +211,13 @@ class ScanFragment: Fragment(), CoroutineScope {
                 bindCamera(adapter)
                 }}
             }, ContextCompat.getMainExecutor(context!!))
+
+        try {
+            EventBus.getDefault().register(this)
+            }
+        catch (e: Exception) {
+
+            }
         }
 
     override fun onResume() {
