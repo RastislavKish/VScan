@@ -630,16 +630,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             adapter.lastTakenImageTimestamp=timestamp
 
             val config=settings.getShareConfig(configManager)
-
-            adapter.conversation=Conversation(settings.apiBaseUrl, settings.apiKey, config.model.identifier, config.systemPromptOrNull)
-
-            val encodedImage=Base64.getEncoder().encodeToString(image)
-            adapter.conversation.addMessage(ImageMessage(
-                config.userPrompt,
-                LocalImage(encodedImage),
-                ))
-            val response=adapter.conversation.generateResponse()
-            toast(response)
+            consultConfig(adapter, config)
             }}
         }
     fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
