@@ -42,7 +42,6 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
-import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.UsedCamera
 
 import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
@@ -63,7 +62,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var flashlightModeSpinner: Spinner
 
     private lateinit var cameraSpinner: Spinner
-    private lateinit var modelSpinner: Spinner
+    private lateinit var modelInput: EditText
 
     private lateinit var nameInput: EditText
 
@@ -114,16 +113,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
 
-        modelSpinner=view.findViewById(R.id.modelSpinner)
-        val modelSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, modelSpinnerOptions)
-        modelSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        modelSpinner.setAdapter(modelSpinnerAdapter)
-        modelSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
-                onModelSpinnerItemSelected(v ?: return, position)
-                }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-            })
+        modelInput=view.findViewById(R.id.modelInput)
+        TextController(modelInput).setTextChangeListener(this::onModelInputTextChange)
 
         nameInput=view.findViewById(R.id.nameInput)
         TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
@@ -161,7 +152,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             setSelectedCamera(activeConfig.camera)
 
             if (uiConfig.model!=activeConfig.model)
-            setSelectedModel(activeConfig.model)
+            modelInput.setText(activeConfig.model)
 
             if (uiConfig.name!=activeConfig.name)
             nameInput.setText(activeConfig.name)
@@ -214,10 +205,11 @@ class OptionsFragment: Fragment(), CoroutineScope {
             adapter.activeConfig=activeConfig.withCamera(camera)
             }}
         }
-    fun onModelSpinnerItemSelected(v: View, position: Int) {
+    fun onModelInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
             val activeConfig=adapter.activeConfig
-            val model=getSelectedModel()
+            val model=modelInput.text.toString()
+
             if (model!=activeConfig.model)
             adapter.activeConfig=activeConfig.withModel(model)
             }}
@@ -272,8 +264,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             highResSwitch.isChecked(),
             getSelectedFlashlightMode(),
             getSelectedCamera(),
-            getSelectedModel(),
-
+            modelInput.text.toString(),
             )
         }
 
@@ -309,18 +300,4 @@ class OptionsFragment: Fragment(), CoroutineScope {
             })
         }
 
-    val modelSpinnerOptions=arrayOf("GPT 4O", "GPT 4O Mini")
-    fun getSelectedModel(): LLM {
-        return when (modelSpinner.selectedItemPosition) {
-            0 -> LLM.GPT_4O
-            1 -> LLM.GPT_4O_MINI
-            else -> throw Exception("Unknown model ${modelSpinner.selectedItem}")
-            }
-        }
-    fun setSelectedModel(model: LLM) {
-        modelSpinner.setSelection(when (model) {
-            LLM.GPT_4O -> 0
-            LLM.GPT_4O_MINI -> 1
-            })
-        }
     }

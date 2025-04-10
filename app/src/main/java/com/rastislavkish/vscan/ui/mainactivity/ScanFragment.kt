@@ -85,7 +85,6 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
-import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
@@ -307,7 +306,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
 
             val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-            val connection=Conversation(settings.apiBaseUrl, settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
+            val connection=Conversation(settings.apiBaseUrl, settings.apiKey, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             connection.addMessage(ImageMessage(
