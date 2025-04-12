@@ -23,6 +23,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 
 import android.content.Intent
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -44,6 +47,8 @@ import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
 
+import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
+import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
 
 class OptionsFragment: Fragment(), CoroutineScope {
@@ -63,12 +68,15 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     private lateinit var cameraSpinner: Spinner
     private lateinit var modelInput: EditText
+    private lateinit var selectModelButton: Button
 
     private lateinit var nameInput: EditText
 
     private lateinit var updateButton: Button
     private lateinit var createButton: Button
     private lateinit var deleteButton: Button
+
+    private lateinit var modelSelectionActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -115,6 +123,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         modelInput=view.findViewById(R.id.modelInput)
         TextController(modelInput).setTextChangeListener(this::onModelInputTextChange)
+        selectModelButton=view.findViewById(R.id.selectModelButton)
+        selectModelButton.setOnClickListener(this::onSelectModelButtonClick)
 
         nameInput=view.findViewById(R.id.nameInput)
         TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
@@ -128,6 +138,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         val settingsButton: Button=view.findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener(this::onSettingsButtonClick)
+
+        modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
         }
 
     override fun onResume() {
@@ -213,6 +225,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
             if (model!=activeConfig.model)
             adapter.activeConfig=activeConfig.withModel(model)
             }}
+        }
+    fun onSelectModelButtonClick(v: View) {
+        startModelSelectionActivity()
         }
 
     fun onNameInputTextChange(text: String) {
@@ -300,4 +315,19 @@ class OptionsFragment: Fragment(), CoroutineScope {
             })
         }
 
+    private fun startModelSelectionActivity() {
+        val intent=Intent(activity!!, ModelSelectionActivity::class.java)
+        modelSelectionActivityLauncher.launch(intent)
+        }
+    private fun onModelSelectionActivityResult(result: ActivityResult) {
+        if (result.resultCode==androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
+            val output=ModelSelectionActivityOutput.fromIntent(result.data, "SettingsActivity")
+
+            if (!output.model.isEmpty()) {
+                val model=output.model
+
+                modelInput.setText(model)
+                }
+            }
+        }
     }
