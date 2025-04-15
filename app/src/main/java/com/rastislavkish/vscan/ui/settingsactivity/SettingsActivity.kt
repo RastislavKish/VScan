@@ -42,6 +42,7 @@ import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivit
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivityOutput
 import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivity
 import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivityOutput
+import com.rastislavkish.vscan.ui.providersactivity.ProvidersActivity
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -147,6 +148,10 @@ class SettingsActivity : AppCompatActivity() {
         startActionSelectionActivity()
         }
 
+    fun onApiProvidersLabelClick(v: View) {
+        startProvidersActivity()
+        }
+
     fun onApiBaseUrlInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
         if (actionId==EditorInfo.IME_ACTION_DONE) {
             applyBaseUrlButton.performClick()
@@ -213,6 +218,10 @@ class SettingsActivity : AppCompatActivity() {
     private fun startActionSelectionActivity() {
         val intent=Intent(this, ActionSelectionActivity::class.java)
         actionSelectionActivityLauncher.launch(intent)
+        }
+    private fun startProvidersActivity() {
+        val intent=Intent(this, ProvidersActivity::class.java)
+        startActivity(intent)
         }
     private fun configSelectionActivityResult(result: ActivityResult) {
         if (result.resultCode==RESULT_OK) {
