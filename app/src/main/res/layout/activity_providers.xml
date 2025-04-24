@@ -32,6 +32,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Default provider: None"
+            android:onClick="onDefaultProviderSelectorClick"
+            />
+        <Button
+            android:id="@+id/resetDefaultProviderButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:onClick="onResetDefaultProviderButtonClick"
             />
         </LinearLayout>
 

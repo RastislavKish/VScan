@@ -26,6 +26,7 @@ class ProvidersManager(
     val preferences: SharedPreferences
     ) {
 
+    private var defaultProvider: Int?=null
     private var providers=mutableMapOf<Int, Provider>()
 
     fun addProvider(provider: Provider): Provider {
@@ -43,8 +44,17 @@ class ProvidersManager(
     fun getAllProviders(): List<Provider> {
         return providers.values.toList()
         }
+    fun getDefaultProvider(): Provider? {
+        val defaultProviderId=defaultProvider ?: return null
+
+        return getProvider(defaultProviderId)
+        }
     fun updateProvider(provider: Provider) {
         providers[provider.id]=provider
+        save()
+        }
+    fun setDefaultProvider(provider: Int?) {
+        defaultProvider=provider
         save()
         }
     fun deleteProvider(provider: Int) {
@@ -59,10 +69,18 @@ class ProvidersManager(
         return
 
         providers=Json.decodeFromString(serializedProviders)
+
+        val serializedDefaultProvider=preferences.getInt("defaultProvider", -1)
+        defaultProvider=if (serializedDefaultProvider!=-1)
+        serializedDefaultProvider
+        else
+        null
+
         }
     fun save() {
         preferences.edit()
         .putString("providers", Json.encodeToString(providers))
+        .putInt("defaultProvider", defaultProvider ?: -1)
         .commit()
         }
 
