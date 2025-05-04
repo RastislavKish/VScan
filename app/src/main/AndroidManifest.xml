@@ -38,6 +38,8 @@
         <activity android:name=".ui.settingsactivity.SettingsActivity" />
         <activity android:name=".ui.providersactivity.ProvidersActivity" />
         <activity android:name=".ui.provideractivity.ProviderActivity" />
+        <activity android:name=".ui.modelprovidermappingactivity.ModelProviderMappingActivity" />
+        <activity android:name=".ui.modelprovidermappingsactivity.ModelProviderMappingsActivity" />
         <activity android:name=".ui.confirmationactivity.ConfirmationActivity" />
 
         <provider

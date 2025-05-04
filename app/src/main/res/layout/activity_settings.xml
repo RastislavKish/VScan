@@ -142,6 +142,13 @@
         android:text="API providers"
         android:onClick="onApiProvidersLabelClick"
         />
+    <TextView
+        android:id="@+id/modelProviderMappingsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Providers for models"
+        android:onClick="onModelProviderMappingsLabelClick"
+        />
 
     <LinearLayout
         android:orientation="horizontal"

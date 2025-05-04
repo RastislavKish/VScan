@@ -28,6 +28,7 @@ class ProvidersManager(
 
     private var defaultProvider: Int?=null
     private var providers=mutableMapOf<Int, Provider>()
+    private var modelProviderMappings=mutableMapOf<String, Int?>()
 
     fun addProvider(provider: Provider): Provider {
         val id=getFreeId()
@@ -59,15 +60,55 @@ class ProvidersManager(
         }
     fun deleteProvider(provider: Int) {
         providers.remove(provider)
+
+        for (model in modelProviderMappings.keys) {
+            if (modelProviderMappings[model]==provider)
+            modelProviderMappings[model]=null
+            }
+
+        save()
+        }
+
+    fun getProviderForModel(model: String): Provider? {
+        val provider=modelProviderMappings.get(model)
+
+        if (provider==null) {
+            if (modelProviderMappings.containsKey(model))
+            return null
+            else
+            return getDefaultProvider()
+            }
+
+        return getProvider(provider)
+        }
+    fun getAllModelProviderMappings(): List<Pair<String, Provider?>> {
+        val result=mutableListOf<Pair<String, Provider?>>()
+
+        for (key in modelProviderMappings.keys) {
+            val providerId=modelProviderMappings[key]
+            val provider=if (providerId!=null)
+            getProvider(providerId)
+            else
+            null
+
+            result.add(Pair(key, provider))
+            }
+
+        return result
+        }
+    fun mapModelToProvider(model: String, provider: Int?) {
+        modelProviderMappings[model]=provider
+        save()
+        }
+    fun deleteModelProviderMapping(model: String) {
+        modelProviderMappings.remove(model)
         save()
         }
 
     fun load() {
-        val serializedProviders=preferences.getString("providers", "") ?: return
+        val serializedProviders=preferences.getString("providers", "") ?: ""
 
-        if (serializedProviders.isEmpty())
-        return
-
+        if (!serializedProviders.isEmpty())
         providers=Json.decodeFromString(serializedProviders)
 
         val serializedDefaultProvider=preferences.getInt("defaultProvider", -1)
@@ -76,11 +117,16 @@ class ProvidersManager(
         else
         null
 
+        val serializedModelProviderMappings=preferences.getString("modelProviderMappings", "") ?: ""
+
+        if (!serializedModelProviderMappings.isEmpty())
+        modelProviderMappings=Json.decodeFromString(serializedModelProviderMappings)
         }
     fun save() {
         preferences.edit()
         .putString("providers", Json.encodeToString(providers))
         .putInt("defaultProvider", defaultProvider ?: -1)
+        .putString("modelProviderMappings", Json.encodeToString(modelProviderMappings))
         .commit()
         }
 
