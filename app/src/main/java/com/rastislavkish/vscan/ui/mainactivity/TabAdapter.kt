@@ -23,6 +23,7 @@ import android.content.Context
 
 import kotlinx.coroutines.sync.Mutex
 
+import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.openai.Conversation
@@ -35,14 +36,14 @@ import com.rastislavkish.vscan.core.Settings
 class TabAdapter(context: Context) {
 
     private val settings=Settings.getInstance(context)
+    private val providersManager=ProvidersManager.getInstance(context)
     private val configManager=ConfigManager.getInstance(context)
 
     var activeConfig: Config=settings.getDefaultConfig(configManager)
     get set
 
     var conversation: Conversation=Conversation(
-        settings.apiBaseUrl,
-        settings.apiKey,
+        providersManager,
         activeConfig.model,
         if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
         )
@@ -62,8 +63,7 @@ class TabAdapter(context: Context) {
         }
     fun resetConversation() {
         conversation=Conversation(
-            settings.apiBaseUrl,
-            settings.apiKey,
+            providersManager,
             activeConfig.model,
             if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
             )
@@ -72,7 +72,7 @@ class TabAdapter(context: Context) {
     suspend fun consultConfig(config: Config): String? {
         val image=lastTakenImage ?: return null
 
-        conversation=Conversation(settings.apiBaseUrl, settings.apiKey, config.model, config.systemPromptOrNull)
+        conversation=Conversation(providersManager, config.model, config.systemPromptOrNull)
 
         val encodedImage=Base64.getEncoder().encodeToString(image)
         conversation.addMessage(ImageMessage(
