@@ -27,8 +27,6 @@ class Settings(
     val preferences: SharedPreferences
     ) {
 
-    var apiBaseUrl="https://api.openai.com/v1"
-    var apiKey=""
     var useFlashlight=true
     var useSounds=true
 
@@ -41,9 +39,6 @@ class Settings(
     var volumeDownPressAction: Action? = null
 
     fun load() {
-        apiBaseUrl=preferences.getString("apiBaseUrl", "https://api.openai.com/v1")
-        ?: "https://api.openai.com/v1"
-        apiKey=preferences.getString("apiKey", "") ?: ""
         useFlashlight=preferences.getBoolean("useFlashlight", true)
         useSounds=preferences.getBoolean("useSounds", true)
 
@@ -57,8 +52,6 @@ class Settings(
         }
     fun save() {
         preferences.edit()
-        .putString("apiBaseUrl", apiBaseUrl)
-        .putString("apiKey", apiKey)
         .putBoolean("useFlashlight", useFlashlight)
         .putBoolean("useSounds", useSounds)
         .putInt("defaultConfigId", defaultConfigId)
