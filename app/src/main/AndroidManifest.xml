@@ -31,9 +31,16 @@
                 <data android:mimeType="image/*" />
                 </intent-filter>
             </activity>
-        <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
         <activity android:name=".ui.actionselectionactivity.ActionSelectionActivity" />
+        <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
+        <activity android:name=".ui.modelselectionactivity.ModelSelectionActivity" />
+        <activity android:name=".ui.providerselectionactivity.ProviderSelectionActivity" />
         <activity android:name=".ui.settingsactivity.SettingsActivity" />
+        <activity android:name=".ui.providersactivity.ProvidersActivity" />
+        <activity android:name=".ui.provideractivity.ProviderActivity" />
+        <activity android:name=".ui.modelprovidermappingactivity.ModelProviderMappingActivity" />
+        <activity android:name=".ui.modelprovidermappingsactivity.ModelProviderMappingsActivity" />
+        <activity android:name=".ui.confirmationactivity.ConfirmationActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

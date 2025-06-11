@@ -135,49 +135,19 @@
             />
         </LinearLayout>
 
-    <LinearLayout
-        android:orientation="horizontal"
+    <TextView
+        android:id="@+id/apiProvidersLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        >
-        <EditText
-            android:id="@+id/apiBaseUrlInput"
-            android:hint="API base URL"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <Button
-            android:id="@+id/applyBaseUrlButton"
-            android:text="Apply base URL"
-            android:onClick="onApplyBaseUrlButtonClick"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <Button
-            android:id="@+id/resetBaseUrlButton"
-            android:text="Reset to OpenAI"
-            android:onClick="onResetBaseUrlButtonClick"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
+        android:text="API providers"
+        android:onClick="onApiProvidersLabelClick"
+        />
+    <TextView
+        android:id="@+id/modelProviderMappingsLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        >
-        <EditText
-            android:id="@+id/apiKeyInput"
-            android:hint="API key"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <Button
-            android:id="@+id/applyKeyButton"
-            android:text="Apply key"
-            android:onClick="onApplyKeyButtonClick"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        </LinearLayout>
+        android:text="Providers for models"
+        android:onClick="onModelProviderMappingsLabelClick"
+        />
+
     </LinearLayout>

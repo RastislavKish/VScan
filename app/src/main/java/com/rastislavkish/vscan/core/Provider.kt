@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2024 Rastislav Kish
+* Copyright (C) 2025 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,18 @@ package com.rastislavkish.vscan.core
 import kotlinx.serialization.*
 
 @Serializable
-enum class LLM {
-    GPT_4O,
-    GPT_4O_MINI;
+data class Provider(
+    val id: Int=-1,
+    val name: String,
+    val baseUrl: String,
+    val apiKey: String,
+    ) {
 
-    val identifier: String
-    get() = when (this) {
-        LLM.GPT_4O -> "gpt-4o"
-        LLM.GPT_4O_MINI -> "gpt-4o-mini"
-        }
+    fun withId(id: Int) = Provider(
+        id,
+        name,
+        baseUrl,
+        apiKey,
+        )
 
     }

@@ -28,12 +28,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 
+import com.rastislavkish.vscan.core.ProvidersManager
+
 import com.rastislavkish.vscan.core.openai.requests.Message as Msg
 import com.rastislavkish.vscan.core.openai.requests.Request as OpenaiRequest
 
 class Conversation(
-    val apiBaseUrl: String,
-    val apiKey: String,
+    val providersManager: ProvidersManager,
     val model: String,
     val systemMessage: SystemMessage?,
     ) {
@@ -72,6 +73,12 @@ class Conversation(
         }
 
     suspend fun generateResponse(): String {
+        val provider=providersManager.getProviderForModel(model)
+        ?: return "Error: Model $model does not have an assigned provider"
+
+        val baseUrl=provider.baseUrl
+        val apiKey=provider.apiKey
+
         val messages=mutableListOf<Msg>()
         for (message in this.messages) {
             messages.add(message.render())
@@ -85,7 +92,7 @@ class Conversation(
                 requestTimeout=300000
                 }
             }
-        val response: HttpResponse=client.post("$apiBaseUrl/chat/completions") {
+        val response: HttpResponse=client.post("$baseUrl/chat/completions") {
             header("Content-Type", "application/json")
             bearerAuth(apiKey)
             setBody(format.encodeToString(bodyObject))

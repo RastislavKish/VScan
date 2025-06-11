@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.modelprovidermappingactivity.ModelProviderMappingActivity">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <EditText
+            android:id="@+id/modelInput"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="Model:"
+            />
+        <Button
+            android:id="@+id/selectModelButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select model"
+            android:onClick="onSelectModelButtonClick"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <TextView
+            android:id="@+id/providerSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Provider: None"
+            />
+        <Button
+            android:id="@+id/resetProviderButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset provider"
+            android:onClick="onResetProviderButtonClick"
+            />
+        </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:onClick="onSaveButtonClick"
+            />
+        <Button
+            android:id="@+id/deleteButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete"
+            android:onClick="onDeleteButtonClick"
+            />
+        </LinearLayout>
+    </LinearLayout>

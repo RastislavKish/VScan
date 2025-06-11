@@ -81,11 +81,11 @@ import com.rastislavkish.rtk.GestureEventArgs
 
 import com.rastislavkish.vscan.R
 
+import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
-import com.rastislavkish.vscan.core.LLM
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
@@ -113,6 +113,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var adapter: TabAdapter
     private lateinit var resources: Resources
     private lateinit var settings: Settings
+    private lateinit var providersManager: ProvidersManager
     private lateinit var configManager: ConfigManager
     private lateinit var orientationEventListener: OrientationEventListener
     private lateinit var touchWrapper: TouchWrapper
@@ -164,6 +165,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         adapter=TabAdapter.getInstance(context!!)
         resources=Resources.getInstance(context!!)
         settings=Settings.getInstance(context!!)
+        providersManager=ProvidersManager.getInstance(context!!)
         configManager=ConfigManager.getInstance(context!!)
         orientationEventListener=object : OrientationEventListener(context!!) {
 
@@ -307,7 +309,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
 
             val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-            val connection=Conversation(settings.apiBaseUrl, settings.apiKey, fileDescriptionConfig.model.identifier, fileDescriptionConfig.systemPromptOrNull)
+            val connection=Conversation(providersManager, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
 
             val encodedImage=Base64.getEncoder().encodeToString(image)
             connection.addMessage(ImageMessage(

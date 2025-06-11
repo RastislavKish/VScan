@@ -122,10 +122,12 @@ class ConfigManager(
         }
 
     private fun loadImplementation() {
-        val serializedList=preferences.getString("configurations", "") ?: ""
+        var serializedList=preferences.getString("configurations", "") ?: ""
 
         if (serializedList.isEmpty())
         return
+
+        serializedList=fixBackwardCompatibility(serializedList)
 
         configurations=Json.decodeFromString(serializedList)
 
@@ -153,8 +155,20 @@ class ConfigManager(
         return Config()
         .withId(-3)
         .withUserPrompt("Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.")
-        .withModel(LLM.GPT_4O_MINI)
+        .withModel("gpt-4o-mini")
         .withName("File description")
+        }
+
+    private fun fixBackwardCompatibility(serializedList: String): String {
+        var input=serializedList
+
+        if (input.contains("\"model\":\"GPT_4O\""))
+        input=input.replace("\"model\":\"GPT_4O\"", "\"model\":\"gpt-4o\"")
+
+        if (input.contains("\"model\":\"GPT_4O_MINI\""))
+        input=input.replace("\"model\":\"GPT_4O_MINI\"", "\"model\":\"gpt-4o-mini\"")
+
+        return input
         }
 
     companion object {

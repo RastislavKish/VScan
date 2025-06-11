@@ -29,7 +29,7 @@ data class Config(
     val highRes: Boolean=false,
     val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
-    val model: LLM=LLM.GPT_4O,
+    val model: String="gpt-4o",
     ) {
 
     val systemPromptOrNull: SystemMessage?
@@ -107,7 +107,7 @@ data class Config(
         camera,
         model,
         )
-    fun withModel(model: LLM): Config = Config(
+    fun withModel(model: String): Config = Config(
         id,
         name,
         systemPrompt,
