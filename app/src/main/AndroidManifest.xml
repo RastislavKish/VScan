@@ -17,7 +17,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.VScan"
-        tools:targetApi="31">
+        tools:targetApi="36">
 
         <activity android:name=".ui.mainactivity.MainActivity"
             android:exported="true">

@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.rastislavkish.vscan"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.rastislavkish.vscan"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 20
         versionName = "0.2"
 
