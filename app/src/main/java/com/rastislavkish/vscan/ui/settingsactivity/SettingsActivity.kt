@@ -49,6 +49,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var flashlightSwitch: Switch
     private lateinit var soundsSwitch: Switch
+    private lateinit var describeSavedImagesSwitch: Switch
 
     private lateinit var defaultConfigSelector: TextView
     private lateinit var shareConfigSelector: TextView
@@ -72,6 +73,7 @@ class SettingsActivity : AppCompatActivity() {
 
         flashlightSwitch=findViewById(R.id.flashlightSwitch)
         soundsSwitch=findViewById(R.id.soundsSwitch)
+        describeSavedImagesSwitch=findViewById(R.id.describeSavedImagesSwitch)
 
         defaultConfigSelector=findViewById(R.id.defaultConfigSelector)
         shareConfigSelector=findViewById(R.id.shareConfigSelector)
@@ -88,6 +90,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         flashlightSwitch.setChecked(settings.useFlashlight)
         soundsSwitch.setChecked(settings.useSounds)
+        describeSavedImagesSwitch.setChecked(settings.describeSavedImages)
 
         refreshSelectors()
 
@@ -96,6 +99,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onPause() {
         settings.useFlashlight=flashlightSwitch.isChecked()
         settings.useSounds=soundsSwitch.isChecked()
+        settings.describeSavedImages=describeSavedImagesSwitch.isChecked()
 
         settings.save()
 

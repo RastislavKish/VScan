@@ -29,6 +29,7 @@ class Settings(
 
     var useFlashlight=true
     var useSounds=true
+    var describeSavedImages=false
 
     var defaultConfigId: Int=-1
     var shareConfigId: Int=-1
@@ -41,6 +42,7 @@ class Settings(
     fun load() {
         useFlashlight=preferences.getBoolean("useFlashlight", true)
         useSounds=preferences.getBoolean("useSounds", true)
+        describeSavedImages=preferences.getBoolean("describeSavedImages", false)
 
         defaultConfigId=preferences.getInt("defaultConfigId", -1)
         shareConfigId=preferences.getInt("shareConfigId", -1)
@@ -54,6 +56,7 @@ class Settings(
         preferences.edit()
         .putBoolean("useFlashlight", useFlashlight)
         .putBoolean("useSounds", useSounds)
+        .putBoolean("describeSavedImages", describeSavedImages)
         .putInt("defaultConfigId", defaultConfigId)
         .putInt("shareConfigId", shareConfigId)
         .putInt("fileDescriptionConfigId", fileDescriptionConfigId)

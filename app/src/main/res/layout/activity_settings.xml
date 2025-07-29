@@ -18,6 +18,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         />
+    <Switch
+        android:id="@+id/describeSavedImagesSwitch"
+        android:text="Automatically describe saved images using the file description config"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
 
     <LinearLayout
         android:orientation="horizontal"

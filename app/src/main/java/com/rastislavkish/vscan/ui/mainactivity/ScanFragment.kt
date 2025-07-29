@@ -308,24 +308,49 @@ class ScanFragment: Fragment(), CoroutineScope {
             val image=adapter.lastTakenImage ?: return@launch
             val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
 
-            val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-            val connection=Conversation(providersManager, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
 
-            val encodedImage=Base64.getEncoder().encodeToString(image)
-            connection.addMessage(ImageMessage(
-                fileDescriptionConfig.userPrompt,
-                LocalImage(encodedImage),
-                ))
-            val response=connection.generateResponse()
 
-            val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+            if (settings.describeSavedImages) {
+                val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
+                val connection=Conversation(providersManager, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
 
-            try {
-                saveToGallery(fileName, image)
-                toast("Saved as $fileName")
+                val encodedImage=Base64.getEncoder().encodeToString(image)
+                connection.addMessage(ImageMessage(
+                    fileDescriptionConfig.userPrompt,
+                    LocalImage(encodedImage),
+                    ))
+                val response=connection.generateResponse()
+
+                if (!response.lowercase().contains("error")) {
+                    val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    try {
+                        saveToGallery(fileName, image)
+                        toast("Saved as $fileName")
+                        }
+                    catch (e: Exception) {
+                        toast("Saving failed: ${e.message}")
+                        }
+                    }
+                else {
+                    val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    try {
+                        saveToGallery(fileName, image)
+                        toast("Error while describing the image: \"$response\" Saved as $fileName")
+                        }
+                    catch (e: Exception) {
+                        toast("Saving failed: ${e.message}")
+                        }
+                    }
                 }
-            catch (e: Exception) {
-                toast("Saving failed: ${e.message}")
+            else {
+                val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                try {
+                    saveToGallery(fileName, image)
+                    toast("Saved as $fileName")
+                    }
+                catch (e: Exception) {
+                    toast("Saving failed: ${e.message}")
+                    }
                 }
             }}
         }
