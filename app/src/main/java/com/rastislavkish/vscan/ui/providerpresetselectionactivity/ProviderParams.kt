@@ -30,6 +30,18 @@ data class ProviderParams(
             ProviderParams("OpenAI",
                 "https://api.openai.com/v1",
                 ),
+            ProviderParams("Anthropic",
+                "https://api.anthropic.com/v1",
+                ),
+            ProviderParams("TogetherAI",
+                "https://api.together.xyz/v1",
+                ),
+            ProviderParams("OpenRouter",
+                "https://openrouter.ai/api/v1",
+                ),
+            ProviderParams("NanoGPT",
+                "https://nano-gpt.com/api/v1",
+                ),
             )
 
         }
