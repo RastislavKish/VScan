@@ -26,6 +26,14 @@
         android:hint="API key:"
         />
 
+    <Button
+        android:id="@+id/selectPresetButton"
+        android:text="Select a preset"
+        android:onClick="onSelectPresetButtonClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"

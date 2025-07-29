@@ -34,6 +34,7 @@
         <activity android:name=".ui.actionselectionactivity.ActionSelectionActivity" />
         <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
         <activity android:name=".ui.modelselectionactivity.ModelSelectionActivity" />
+        <activity android:name=".ui.providerpresetselectionactivity.ProviderPresetSelectionActivity" />
         <activity android:name=".ui.providerselectionactivity.ProviderSelectionActivity" />
         <activity android:name=".ui.settingsactivity.SettingsActivity" />
         <activity android:name=".ui.providersactivity.ProvidersActivity" />

@@ -34,6 +34,9 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.Provider
 import com.rastislavkish.vscan.core.ProvidersManager
 
+import com.rastislavkish.vscan.ui.providerpresetselectionactivity.ProviderPresetSelectionActivity
+import com.rastislavkish.vscan.ui.providerpresetselectionactivity.ProviderPresetSelectionActivityOutput
+
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivity
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityInput
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityOutput
@@ -50,6 +53,7 @@ class ProviderActivity : AppCompatActivity() {
     private lateinit var baseUrlInput: EditText
     private lateinit var apiKeyInput: EditText
 
+    private lateinit var providerPresetSelectionActivityLauncher: ActivityResultLauncher<Intent>
     private lateinit var confirmationActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +87,12 @@ class ProviderActivity : AppCompatActivity() {
             deleteButton.setEnabled(false)
             }
 
+        providerPresetSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::providerPresetSelectionActivityResult)
         confirmationActivityLauncher=registerForActivityResult(StartActivityForResult(), this::confirmationActivityResult)
+        }
+
+    fun onSelectPresetButtonClick(v: View) {
+        startProviderPresetSelectionActivity()
         }
 
     fun onSaveButtonClick(v: View) {
@@ -132,6 +141,19 @@ class ProviderActivity : AppCompatActivity() {
         startConfirmationActivity("Are you sure you want to delete the $inputProviderName provider?")
         }
 
+    fun startProviderPresetSelectionActivity() {
+        val intent=Intent(this, ProviderPresetSelectionActivity::class.java)
+        providerPresetSelectionActivityLauncher.launch(intent)
+        }
+    fun providerPresetSelectionActivityResult(result: ActivityResult) {
+        if (result.resultCode==RESULT_OK) {
+            val output=ProviderPresetSelectionActivityOutput.fromIntent(result.data, "ProviderActivity")
+
+            nameInput.setText(output.providerParams.name)
+            baseUrlInput.setText(output.providerParams.baseUrl)
+
+            }
+        }
     fun startConfirmationActivity(text: String, additionalData: String="") {
         val intent=ConfirmationActivityInput(text, additionalData)
         .toIntent(this)
