@@ -14,38 +14,14 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.core
+package com.rastislavkish.vscan.ui.modelidactivity
 
 import kotlinx.serialization.*
 
 @Serializable
-data class Provider(
-    val id: Int=-1,
-    val name: String,
-    val baseUrl: String,
-    val apiKey: String,
-    // A map of VScan models supported by the provider, maps VScan model ID to its respective provider model ID
-    val models: Map<String, String>,
+data class ModelToIdMapping(
+    val model: String,
+    val id: String,
     ) {
-
-    fun getModelId(vscanId: String): String {
-        if (!vscanId.startsWith("vscan-"))
-        return vscanId
-
-        val modelId=models.get(vscanId)
-
-        return if (modelId!=null)
-        modelId
-        else
-        vscanId
-        }
-
-    fun withId(id: Int) = Provider(
-        id,
-        name,
-        baseUrl,
-        apiKey,
-        models,
-        )
 
     }

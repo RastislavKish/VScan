@@ -27,15 +27,21 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.recyclerview.widget.RecyclerView
 import android.view.View
 
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Provider
 import com.rastislavkish.vscan.core.ProvidersManager
+import com.rastislavkish.vscan.core.TextController
 
 import com.rastislavkish.vscan.ui.providerpresetselectionactivity.ProviderPresetSelectionActivity
 import com.rastislavkish.vscan.ui.providerpresetselectionactivity.ProviderPresetSelectionActivityOutput
+
+import com.rastislavkish.vscan.ui.modelidactivity.ModelIdActivity
+import com.rastislavkish.vscan.ui.modelidactivity.ModelIdActivityInput
+import com.rastislavkish.vscan.ui.modelidactivity.ModelIdActivityOutput
 
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivity
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityInput
@@ -52,8 +58,14 @@ class ProviderActivity : AppCompatActivity() {
     private lateinit var nameInput: EditText
     private lateinit var baseUrlInput: EditText
     private lateinit var apiKeyInput: EditText
+    private val models: MutableList<ModelToIdMapping> = mutableListOf()
+
+    private lateinit var modelsListAdapter: ModelsListAdapter
+
+    private lateinit var searchInput: EditText
 
     private lateinit var providerPresetSelectionActivityLauncher: ActivityResultLauncher<Intent>
+    private lateinit var modelIdActivityLauncher: ActivityResultLauncher<Intent>
     private lateinit var confirmationActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,13 +93,25 @@ class ProviderActivity : AppCompatActivity() {
             nameInput.setText(inputProvider.name)
             baseUrlInput.setText(inputProvider.baseUrl)
             apiKeyInput.setText(inputProvider.apiKey)
+
+            for (entry in inputProvider.models.entries)
+            models.add(ModelToIdMapping(entry.key, entry.value))
             }
         else {
             val deleteButton: Button=findViewById(R.id.deleteButton)
             deleteButton.setEnabled(false)
             }
 
+        searchInput=findViewById(R.id.searchInput)
+        TextController(searchInput).setTextChangeListener(this::onSearchInputTextChange)
+
+        modelsListAdapter=ModelsListAdapter(models)
+        modelsListAdapter.setItemClickListener(this::onModelClick)
+        val modelsList: RecyclerView=findViewById(R.id.modelsList)
+        modelsList.adapter=modelsListAdapter
+
         providerPresetSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::providerPresetSelectionActivityResult)
+        modelIdActivityLauncher=registerForActivityResult(StartActivityForResult(), this::modelIdActivityResult)
         confirmationActivityLauncher=registerForActivityResult(StartActivityForResult(), this::confirmationActivityResult)
         }
 
@@ -95,10 +119,25 @@ class ProviderActivity : AppCompatActivity() {
         startProviderPresetSelectionActivity()
         }
 
+    fun onSearchInputTextChange(text: String) {
+        modelsListAdapter.setFilter(text)
+        }
+    fun onModelClick(mapping: ModelToIdMapping) {
+        startModelIdActivity(mapping)
+        }
+
+    fun onAddModelButtonClick(v: View) {
+        startModelIdActivity()
+        }
+
     fun onSaveButtonClick(v: View) {
         val name=nameInput.text.toString()
         var baseUrl=baseUrlInput.text.toString()
         val apiKey=apiKeyInput.text.toString()
+        val models: MutableMap<String, String> = mutableMapOf()
+
+        for (mapping in this.models)
+        models.put(mapping.model, mapping.id)
 
         if (name.isEmpty()) {
             toast("Error: Name must not be empty.")
@@ -122,7 +161,7 @@ class ProviderActivity : AppCompatActivity() {
             return
             }
 
-        val provider=Provider(-1, name, baseUrl, apiKey)
+        val provider=Provider(-1, name, baseUrl, apiKey, models)
 
         val inputProvider=this.inputProvider
 
@@ -152,6 +191,45 @@ class ProviderActivity : AppCompatActivity() {
             nameInput.setText(output.providerParams.name)
             baseUrlInput.setText(output.providerParams.baseUrl)
 
+            models.clear()
+            for (entry in output.providerParams.models.entries)
+            models.add(ModelToIdMapping(entry.key, entry.value))
+
+            modelsListAdapter.refresh(models)
+            }
+        }
+    fun startModelIdActivity(mapping: ModelToIdMapping?=null) {
+        val mapping=if (mapping!=null)
+        com.rastislavkish.vscan.ui.modelidactivity.ModelToIdMapping(mapping.model, mapping.id)
+        else
+        null
+
+        val intent=ModelIdActivityInput(mapping)
+        .toIntent(this)
+
+        modelIdActivityLauncher.launch(intent)
+        }
+    fun modelIdActivityResult(result: ActivityResult) {
+        if (result.resultCode==RESULT_OK) {
+            val output=ModelIdActivityOutput.fromIntent(result.data, "ProviderActivity")
+            val mapping=ModelToIdMapping(output.mapping.model, output.mapping.id)
+
+            for (i in 0 until models.size) {
+                if (models[i].model==mapping.model) {
+                    if (!mapping.id.isEmpty())
+                    models[i]=mapping
+                    else
+                    models.removeAt(i)
+
+                    modelsListAdapter.refresh(models)
+
+                    return
+                    }
+                }
+
+            models.add(mapping)
+
+            modelsListAdapter.refresh(models)
             }
         }
     fun startConfirmationActivity(text: String, additionalData: String="") {

@@ -155,7 +155,7 @@ class ConfigManager(
         return Config()
         .withId(-3)
         .withUserPrompt("Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.")
-        .withModel("gpt-4o-mini")
+        .withModel("vscan-gpt-4o-mini")
         .withName("File description")
         }
 
@@ -163,10 +163,10 @@ class ConfigManager(
         var input=serializedList
 
         if (input.contains("\"model\":\"GPT_4O\""))
-        input=input.replace("\"model\":\"GPT_4O\"", "\"model\":\"gpt-4o\"")
+        input=input.replace("\"model\":\"GPT_4O\"", "\"model\":\"vscan-gpt-4o\"")
 
         if (input.contains("\"model\":\"GPT_4O_MINI\""))
-        input=input.replace("\"model\":\"GPT_4O_MINI\"", "\"model\":\"gpt-4o-mini\"")
+        input=input.replace("\"model\":\"GPT_4O_MINI\"", "\"model\":\"vscan-gpt-4o-mini\"")
 
         return input
         }

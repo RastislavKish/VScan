@@ -29,7 +29,7 @@ data class Config(
     val highRes: Boolean=false,
     val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
-    val model: String="gpt-4o",
+    val model: String="vscan-gpt-4o",
     ) {
 
     val systemPromptOrNull: SystemMessage?

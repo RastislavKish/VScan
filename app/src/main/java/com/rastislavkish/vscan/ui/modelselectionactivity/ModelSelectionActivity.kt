@@ -32,6 +32,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.TextController
+import com.rastislavkish.vscan.core.Model
 
 class ModelSelectionActivity : AppCompatActivity() {
 

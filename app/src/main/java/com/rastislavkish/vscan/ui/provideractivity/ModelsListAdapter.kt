@@ -14,7 +14,7 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.ui.modelselectionactivity
+package com.rastislavkish.vscan.ui.provideractivity
 
 import android.content.Context
 
@@ -28,13 +28,14 @@ import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Model
 
-class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.ModelViewHolder>() {
+class ModelsListAdapter(modelList: List<ModelToIdMapping>): RecyclerView.Adapter<ModelsListAdapter.ModelToIdMappingViewHolder>() {
 
-    private var modelList=Model.presets
+    private var originalModelList=modelList
+    private var modelList=modelList
     private var filter=""
-    private var itemClickListener: ((Model) -> Unit)?=null
+    private var itemClickListener: ((ModelToIdMapping) -> Unit)?=null
 
-    class ModelViewHolder(view: View): RecyclerView.ViewHolder(view) {
+    class ModelToIdMappingViewHolder(view: View): RecyclerView.ViewHolder(view) {
 
         private val itemTextView: TextView=view.findViewById(R.id.itemTextView)
 
@@ -42,50 +43,51 @@ class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.
             itemTextView.setOnClickListener(this::itemTextView_click)
             }
 
-        private var model: Model?=null
+        private var mapping: ModelToIdMapping?=null
 
-        fun bind(model: Model) {
-            this.model=model
+        fun bind(mapping: ModelToIdMapping) {
+            this.mapping=mapping
 
-            itemTextView.text=model.name
+            itemTextView.text=mapping.toPrettyString()
             }
 
         fun itemTextView_click(view: View) {
-            (bindingAdapter as ModelListAdapter?)?.onItemClick(model!!)
+            (bindingAdapter as ModelsListAdapter?)?.onItemClick(mapping!!)
             }
         }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ModelViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ModelToIdMappingViewHolder {
         val view=LayoutInflater.from(parent.context)
-        .inflate(R.layout.model_list_item, parent, false)
+        .inflate(R.layout.provider_activity_models_list_item, parent, false)
 
-        return ModelViewHolder(view)
+        return ModelToIdMappingViewHolder(view)
         }
-    override fun onBindViewHolder(viewHolder: ModelViewHolder, position: Int) {
+    override fun onBindViewHolder(viewHolder: ModelToIdMappingViewHolder, position: Int) {
         viewHolder.bind(modelList[position])
         }
     override fun getItemCount() = modelList.size
 
-    fun refresh() {
-        modelList=Model.presets
+    fun refresh(modelList: List<ModelToIdMapping>) {
+        originalModelList=modelList
+        this.modelList=modelList
 
         if (!filter.isEmpty()) {
             val filterProcessed=filter.lowercase()
 
-            modelList=modelList
-            .filter({ item -> item.name.lowercase().contains(filterProcessed) })
+            this.modelList=modelList
+            .filter({ item -> item.toPrettyString().lowercase().contains(filterProcessed) })
             }
 
         notifyDataSetChanged()
         }
     fun setFilter(filter: String) {
         this.filter=filter
-        refresh()
+        refresh(originalModelList)
         }
-    fun setItemClickListener(listener: ((Model) -> Unit)?) {
+    fun setItemClickListener(listener: ((ModelToIdMapping) -> Unit)?) {
         itemClickListener=listener
         }
-    fun onItemClick(item: Model) {
+    fun onItemClick(item: ModelToIdMapping) {
         itemClickListener?.invoke(item)
         }
 

@@ -14,7 +14,7 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.ui.modelselectionactivity
+package com.rastislavkish.vscan.core
 
 data class Model(
     val name: String,
@@ -31,51 +31,73 @@ data class Model(
                 "OpenAI",
                 "GPT",
                 "Unknown",
-                "gpt-4o",
+                "vscan-gpt-4o",
                 ),
             Model("GPT 4.1",
                 "OpenAI",
                 "GPT",
                 "Unknown",
-                "gpt-4.1",
+                "vscan-gpt-4.1",
                 ),
             Model("GPT 4O mini",
                 "OpenAI",
                 "GPT",
                 "Unknown",
-                "gpt-4o-mini",
+                "vscan-gpt-4o-mini",
                 ),
             Model("Claude 4 Opus",
                 "Anthropic",
                 "Claude",
                 "Unknown",
-                "claude-opus-4-0",
+                "vscan-claude-4-opus",
                 ),
             Model("Claude 4 Sonnet",
                 "Anthropic",
                 "Claude",
                 "Unknown",
-                "claude-sonnet-4-0",
+                "vscan-claude-4-sonnet",
                 ),
             Model("Claude 3.7 Sonnet",
                 "Anthropic",
                 "Claude",
                 "Unknown",
-                "claude-3-7-sonnet-latest",
+                "vscan-claude-3.7-sonnet",
                 ),
             Model("Claude 3.5 Sonnet",
                 "Anthropic",
                 "Claude",
                 "Unknown",
-                "claude-3-5-sonnet-latest",
+                "vscan-claude-3.5-sonnet",
                 ),
             Model("Claude 3.5 Haiku",
                 "Anthropic",
                 "Claude",
                 "Unknown",
-                "claude-3-5-haiku-latest",
+                "vscan-claude-3.5-haiku",
                 ),
             )
+
+        private val idToNameMap: Map<String, String>
+        init {
+            val map=mutableMapOf<String, String>()
+
+            for (model in presets)
+            map.put(model.identifier, model.name)
+
+            idToNameMap=map
+            }
+
+        fun idToName(id: String): String {
+            if (!id.startsWith("vscan-"))
+            return id
+
+            val name=idToNameMap.get(id)
+
+            return if (name!=null)
+            name
+            else
+            id
+            }
 
         }
     }

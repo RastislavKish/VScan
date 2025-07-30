@@ -78,12 +78,16 @@ class Conversation(
 
         val baseUrl=provider.baseUrl
         val apiKey=provider.apiKey
+        val modelId=provider.getModelId(model)
+
+        if (modelId.startsWith("vscan-"))
+        return "Error: The chosen provider does not support this model."
 
         val messages=mutableListOf<Msg>()
         for (message in this.messages) {
             messages.add(message.render())
             }
-        val bodyObject=OpenaiRequest(model, messages, 300)
+        val bodyObject=OpenaiRequest(modelId, messages, 300)
 
         val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
 
