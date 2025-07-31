@@ -179,27 +179,42 @@ data class Model(
                 ),
             )
 
-        private val idToNameMap: Map<String, String>
+        private val idToModelMap: Map<String, Model>
         init {
-            val map=mutableMapOf<String, String>()
+            val map=mutableMapOf<String, Model>()
 
             for (model in presets)
-            map.put(model.identifier, model.name)
+            map.put(model.identifier, model)
 
-            idToNameMap=map
+            idToModelMap=map
             }
 
         fun idToName(id: String): String {
             if (!id.startsWith("vscan-"))
             return id
 
-            val name=idToNameMap.get(id)
+            val model=idToModelMap.get(id)
 
-            return if (name!=null)
-            name
+            return if (model!=null)
+            model.name
             else
             id
             }
+
+        fun idToKnownModel(id: String): Model? {
+            if (!id.startsWith("vscan-"))
+            return null
+
+            return idToModelMap.get(id)
+            }
+
+        fun idToModel(id: String): Model
+        = idToKnownModel(id) ?: Model(id,
+            "unknown",
+            "Unknown",
+            "Unknown",
+            id,
+            )
 
         }
     }

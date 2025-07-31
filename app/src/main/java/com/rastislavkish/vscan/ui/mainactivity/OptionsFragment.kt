@@ -48,6 +48,8 @@ import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
 
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
+import com.rastislavkish.vscan.ui.modelselectionactivity.DisplayedModels
+import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityInput
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
 
@@ -316,7 +318,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
 
     private fun startModelSelectionActivity() {
-        val intent=Intent(activity!!, ModelSelectionActivity::class.java)
+        val intent=ModelSelectionActivityInput(DisplayedModels.READY_TO_USE)
+        .toIntent(activity!!)
         modelSelectionActivityLauncher.launch(intent)
         }
     private fun onModelSelectionActivityResult(result: ActivityResult) {

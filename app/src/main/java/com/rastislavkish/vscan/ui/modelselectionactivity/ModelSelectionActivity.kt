@@ -36,13 +36,25 @@ import com.rastislavkish.vscan.core.Model
 
 class ModelSelectionActivity : AppCompatActivity() {
 
+    private var displayedModels: DisplayedModels=DisplayedModels.ALL
+
     private lateinit var modelListAdapter: ModelListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_model_selection)
 
+        val input=try {
+            ModelSelectionActivityInput.fromIntent(intent, "ModelSelectionActivity")
+            }
+        catch (e: Exception) {
+            ModelSelectionActivityInput()
+            }
+
+        displayedModels=input.displayedModels
+
         modelListAdapter=ModelListAdapter(this)
+        modelListAdapter.setDisplayedModels(displayedModels)
         modelListAdapter.setItemClickListener(this::modelClick)
         val modelList: RecyclerView=findViewById(R.id.modelList)
         modelList.adapter=modelListAdapter

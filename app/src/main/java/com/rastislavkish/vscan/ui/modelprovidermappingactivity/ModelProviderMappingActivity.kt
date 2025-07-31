@@ -40,6 +40,8 @@ import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityInput
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityOutput
 
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
+import com.rastislavkish.vscan.ui.modelselectionactivity.DisplayedModels
+import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityInput
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 
 import com.rastislavkish.vscan.ui.providerselectionactivity.ProviderSelectionActivity
@@ -138,7 +140,8 @@ class ModelProviderMappingActivity : AppCompatActivity() {
         }
 
     fun startModelSelectionActivity() {
-        val intent=Intent(this, ModelSelectionActivity::class.java)
+        val intent=ModelSelectionActivityInput(DisplayedModels.SUPPORTED_BY_PROVIDERS)
+        .toIntent(this)
         modelSelectionActivityLauncher.launch(intent)
         }
     fun modelSelectionActivityResult(result: ActivityResult) {

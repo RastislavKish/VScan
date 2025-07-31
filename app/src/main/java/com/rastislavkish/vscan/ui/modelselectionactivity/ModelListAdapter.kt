@@ -27,10 +27,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Model
+import com.rastislavkish.vscan.core.ProvidersManager
 
 class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.ModelViewHolder>() {
 
+    private val context=context
+
     private var modelList=Model.presets
+    private var displayedModels=DisplayedModels.ALL
     private var filter=""
     private var itemClickListener: ((Model) -> Unit)?=null
 
@@ -67,7 +71,11 @@ class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.
     override fun getItemCount() = modelList.size
 
     fun refresh() {
-        modelList=Model.presets
+        modelList=when (displayedModels) {
+            DisplayedModels.ALL -> Model.presets
+            DisplayedModels.READY_TO_USE -> readyToUseModels()
+            DisplayedModels.SUPPORTED_BY_PROVIDERS -> supportedByProvidersModels()
+            }
 
         if (!filter.isEmpty()) {
             val filterProcessed=filter.lowercase()
@@ -82,11 +90,53 @@ class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.
         this.filter=filter
         refresh()
         }
+    fun setDisplayedModels(displayedModels: DisplayedModels) {
+        this.displayedModels=displayedModels
+        }
     fun setItemClickListener(listener: ((Model) -> Unit)?) {
         itemClickListener=listener
         }
     fun onItemClick(item: Model) {
         itemClickListener?.invoke(item)
+        }
+
+    private fun readyToUseModels(): List<Model> {
+        val supportedModels=hashSetOf<String>()
+        for (model in supportedByProvidersModels())
+        supportedModels.add(model.identifier)
+
+        val providersManager=ProvidersManager.getInstance(context)
+        val mappings=providersManager.getAllModelProviderMappings()
+
+        val models=mutableListOf<Model>()
+
+        for (mapping in mappings) {
+            val (model, provider)=mapping
+
+            if (provider==null)
+            continue
+
+            if (model.startsWith("vscan-")) {
+                if (supportedModels.contains(model))
+                models.add(Model.idToModel(model))
+                }
+            else {
+                models.add(Model.idToModel(model))
+                }
+            }
+
+        return models
+        }
+    private fun supportedByProvidersModels(): List<Model> {
+        val providersManager=ProvidersManager.getInstance(context)
+        val providers=providersManager.getAllProviders()
+
+        val models=mutableListOf<Model>()
+        for (provider in providers)
+        for (model in provider.models.keys)
+        models.add(Model.idToModel(model))
+
+        return models
         }
 
     }

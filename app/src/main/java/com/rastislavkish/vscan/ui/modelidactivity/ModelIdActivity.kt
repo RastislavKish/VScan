@@ -32,6 +32,8 @@ import android.view.View
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
+import com.rastislavkish.vscan.ui.modelselectionactivity.DisplayedModels
+import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityInput
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 
 import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivity
@@ -107,7 +109,8 @@ class ModelIdActivity : AppCompatActivity() {
         }
 
     fun startModelSelectionActivity() {
-        val intent=Intent(this, ModelSelectionActivity::class.java)
+        val intent=ModelSelectionActivityInput(DisplayedModels.ALL)
+        .toIntent(this)
         modelSelectionActivityLauncher.launch(intent)
         }
     fun modelSelectionActivityResult(result: ActivityResult) {
