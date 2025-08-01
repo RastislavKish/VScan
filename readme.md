@@ -37,17 +37,59 @@ You're located on a historical square of a well-known city. You move around usin
 
 VScan is NOT supposed to be used for navigation purposes, or at least not for those where safety matters. Remember, the primary, geometric discovery of the space is the task of your physiological cognitive skills, like echolocation, haptic exploration, perceiving the space through sound etc. VScan is just a tool to provide another layer, another dimension to this perception, which should make it richer, more colorful and which could guide you to new, interesting places. However, actual moving around is still a geometric matter. LLMs are neither accurate nor reliable enough to help in this regard. Make sure to always use your senses first, and VScan to enrich them.
 
-## Installation and setup
+## Installation
 
 I recommend installing the app through [Obtainium](https://github.com/ImranR98/Obtainium), installable through [F-Droid](https://f-droid.org/). With Obtainium, you can simply enter the GitHub URL of VScan as the source of the app, and have it installed directly from the GitHub releases of the project. You will receive notifications about any updates and have the option to conveniently install them immediately after they're made available.
 
 Alternatively, you can manually download and install the apk file from the [Releases page](https://github.com/RastislavKish/VScan).
 
-VScan is currently not present in any store due to not working app icon.
+## Initial setup
 
-In order to use the app, you will need to create an OpenAI API key, see the relevant instructions of my [Vision script](https://github.com/RastislavKish/vision) for specific steps, or just Google them in case they become obsolete.
+VScan is a universal tool not bound to any specific LLM model or provider. The user can configure an arbitrary number of LLM servers, which can include closed proprietary services like OpenAI or Anthropic, routers such as OpenRouter or nano-gpt, and the user can even self-host their own server, the only requirement is OpenAI protocol compatibility. Subsequently, any model supported by the configured backends can be used in the app.
 
-You need to enter the key in the app Settings, which you can access on the Options tab. When you're there, I also recommend turning off the flashlight and sounds by default, it will make your usage of the camera more discrete in the public.
+For non-technical users, it's recommended to simply use the well-known services like OpenAI or Anthropic with their flagship models, as they provide a reasonable balance between simplicity, quality and privacy.
+
+There are 3 configuration steps needed to get things going.
+
+### 1. Configure an APi provider
+
+In the app, switch to the Options tab, click on Settings and navigate into API providers. Here you can define servers which will provide you the models you want to use in the app.
+
+Tap on Add provider button and configure the details. If you just want to use one of the common providers such as OpenAI, Anthropic or OpenRouter, tap on Select a preset button and choose from the list of pre-configured choices. All you need to do with this approach is enter your API key, which you can obtain from the website of your chosen provider.
+
+#### For advanced users
+
+The purpose of Name, Base URL and API key fields may be obvious, the models section less so. VScan has an internal catalogue of common vision LLM models. It includes various SOTA model families such as GPT, Claude, Gemini, Gemma or Qwen. VScan uses its own internal textual identifiers for these models, starting with "vscan-" e.g. vscan-gpt-4o, vscan-claude-4-sonnet etc. The purpose of these identifiers is to allow VScan to easily request a particular model from any known or unknown LLM provider, as far as mapping between the VScan identifiers and the provider's model identifiers exists.
+
+The models section in the provider configuration serves exactly this purpose. Here, the user can configure what models known by VScan does the provider offer, and how does it identify them. Provider presets include these mappings, so if the user goes with one of the supported choices, there should be no need to configure anything. But even if the provider is unknown to VScan, it can still be setup manually.
+
+Note, while it's recommended to use the VScan identifiers for building cognitive tools, the app can still use arbitrary textual identifiers, so if you self-host a server with your own finetuned models or want to use models other than those known by VScan, you should be able to do so without any complications.
+
+### 2. Configure the models you want to use
+
+Before you can use an LLM model with VScan, you need to assign it a provider. In the app settings, Navigate to the Providers for models section. Think about the models you want to use with your cognitive tools, set them up here and assign them a provider or providers you have configured in the previous step. E.G. if you have chosen OpenAI as your provider and want to use GPT 4O (which is default for the base cognitive tool), click on Add, tap on Select model button and choose GPT 4O from the list, then tap on the Provider field and choose your configured OpenAI backend. If you want to use auto-describing of saved images, you may want to configure GPT 4O mini in the same way, as it is used by default by the description model.
+
+### 3. Finetune your cognitive tools
+
+If you've chosen OpenAI as your provider and configured GPT 4O and GPT 4O mini in the previous step, you can skip this part and enjoy taking photos. If you've chosen a different configuration, there is one more thing to do.
+
+The default Base cognitive tool and File description cognitive tool are pre-configured to use GPT 4O and GPT 4O mini respectively, because they're the most popular option. These configs can't be directly edited, since they serve as a basis for deriving new configurations. You need to create your own derivations of these models, for instance, MyBase and MyFileDescription, with the same parameters but a model of your choice. You can do this easily on the Options tab by editing the respective config's Name, choosing the model and hitting Create. Next, you need to setup MyBase and MyFileDescription in the Settings to be used as the default models for the respective actions.
+
+## Usage
+
+VScan is a versatile app, which however is equipped with a highly-streamlined interface which should be easy, convenient and straight-forward to use in any situation.
+
+After opening, you land directly on the scanning screen, where you can press the Scan button to take an image and apply the currently active cognitive tool (config in Vscan terminology). On the upper bar, you have a several quick action buttons, which let you ask a question, set up the system prompt, user prompt or save the last taken image to your gallery.
+
+Setting the system or user prompt is a temporary action, these changes won't be saved to the currently active config and will be reset either upon changing configs, or upon hitting the Reset button on the upper bar, unless you explicitly decide to save them. This is useful either to throw in a random user prompt you may suddenly need to use without spending time on creating a new config, or simply for testing out new prompts.
+
+Under the Scan button, there is a multipurpose edit field, which is used for various text input operations, like entering the system / user prompt, or sending a message to the conversation, this is the default action.
+
+If you switch to the Options tab, you can see the entire configuration of the currently active cognitive tool, including its name, prompts, used camera, image resolution etc. Any changes made to these parameters are temporary, until you either hit the Update button, which saves these changes, or the create button, which saves a new cognitive tool with the configured parameters. Note. It is not possible to update the Base config and File description config, these are intended to be used for deriving custom configurations, and thus are immutable, you can either use them as they are, or derive your own variants and configure them to be used by default in the app settings.
+
+The Config list tab includes a list of your cognitive tools, here you can either click on one to use it on the Scan tab, or long press one to apply it on the currently captured image (this is called consulting the config).
+
+Eventually, the Conversation tab displays the currently active conversation, where you can access the past messages.
 
 ## Attributions
 
@@ -58,7 +100,7 @@ Shutter sound | [InspectorJ](https://freesound.org/people/InspectorJ/) | [FreeSo
 
 ## Privacy policy
 
-VScan does not collect any personal information. Photos and chats the users create and share with the app are processed by OpenAI through the OpenAI APi under the terms of the [API privacy policy](https://openai.com/enterprise-privacy/).
+VScan on its own does not collect any personal information. If the user deliberately chooses to interact through the app with a third-party LLM provider, the user's photos, chats and other data shared for purposes of LLM processing are subject to the privacy policy of the respective external provider. VScan is not affiliated with any external services and it's solely the user's responsibility to review and agree with the conditions of any third-party LLM providers they choose to use.
 
 ## License
 
