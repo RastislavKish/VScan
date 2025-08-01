@@ -35,7 +35,7 @@ class ConfigManager(
 
     private var job=Job()
 
-    private var configurations=mutableListOf(Config())
+    private var configurations=mutableListOf(baseConfig(), fileDescriptionConfig())
     private val configurationsMutex=Mutex()
 
     fun addConfig(config: Config): Config {
