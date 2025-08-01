@@ -27,7 +27,7 @@ class Settings(
     val preferences: SharedPreferences
     ) {
 
-    var useFlashlight=true
+    var useFlashlight=false
     var useSounds=true
     var describeSavedImages=false
 
@@ -40,7 +40,7 @@ class Settings(
     var volumeDownPressAction: Action? = null
 
     fun load() {
-        useFlashlight=preferences.getBoolean("useFlashlight", true)
+        useFlashlight=preferences.getBoolean("useFlashlight", false)
         useSounds=preferences.getBoolean("useSounds", true)
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
 
