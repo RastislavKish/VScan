@@ -1,9 +1,0 @@
-- Prekopané používateľské rozhranie
-- Pridané ukladanie konfigurácií na rôzne účely
-- Pridaná podpora pre zdieľanie obrázkou s aplikáciou
-- Pridaná podpora pre prednú kameru
-- Pridaná možnosť zvoliť si GPT model pre konfiguráciu
-- Pridaná možnosť ukladať obrázky s podporou pre autopopisovanie
-- Pridaný konverzačný zoznam s možnosťou kopírovať správy
-- Pridaná možnosť konzultovať zachytený obrázok s rôznymi konfiguráciami
-- Pridaná možnosť položiť otázku, nastaviť system prompt alebo user prompt hlasom priamo z hlavnej obrazovky

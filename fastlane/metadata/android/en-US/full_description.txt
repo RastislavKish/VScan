@@ -1,27 +1,14 @@
 <p>
-OpenAI's GPT is notoriously known for its good role-playing skills. You can tell it it's a teapot and it will act like a teapot, you can specify exact behavior, output etc. GPT 4 vision is no different in this regard.
-</p>
-
-<p>
-VScan allows you to tell GPT 4V it's an accessibility aid, or to simply just give it instructions on how to behave. Then you can just take pictures, GPT will always act in the way you configured it on the primary screen. If you tell it it's a color detector that should respond by writing down the color your index finger is pointing to, you can afterwards just repeatedly press the Take a picture button and pointing your finger to various items, GPT will respond in style "brown... white... green..." etc.
-</p>
-
-<p>
-This way, VScan essentially becomes a tool of your liking. The app is also cost-effective, each scan starts a new conversation, limiting used tokens and therefore, the price. Having full control over the system and user prompts also gives you full power to apply the good practices of prompt engineering, so you can experiment and find prompts that produce the most efficient and reliable outputs.
-</p>
-
-<p>
-If no input configuration is entered, the app uses "What's in the image?" prompt and can be used for general purpose scene recognition. Asking follow up questions functionality is also present regardless of the used configuration.
-</p>
-
-<p>
-Note: VScan uses the OpenAI API, a third-party service. In order to make it work, you need to obtain an API key from <a href="https://platform.openai.com">platform.openai.com</a>. See VScan's readme for more information on instructions and approximate pricing.
-</p>
-
-<p>
-Icon <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a>
+This is a little project of mine aiming to research how vision LLMs could help out blind people on travel and in their every-day life by substituting eyesight for various visual tasks. VScan turns your smartphone's camera into a device for visual perception. You can define various optical cognitive functions, like looking for objects, signs, evaluating a scene or simply mediating visual impressions. You can afterwards use these functions on the camera view, just like a sighted person would use their eyes to achieve a specific goal in the physical world.
 </p>
 <p>
-Shutter sound by <a href="https://freesound.org/people/InspectorJ/">InspectorJ</a> of <a href="https://freesound.org/people/InspectorJ/sounds/360329/">FreeSound</a>
+Each cognitive tool consists of two major parts:
+<ul>
+<li>The camera to be used - front / back, as well as camera parameters - resolution, flashlight etc.</li>
+<li>The prompts used for LLM processing. LLM is the bridge between raw pixel data and your interpretation of it, and in the user/system prompt, you can specify what exactly are you interested in for the particular function and how should it be communicated, as well as the LLM model that should be used.</li>
+</ul>
+Camera input in combination with an LLM processing prompt forms a  cognitive function, which can be used to serve various visual tasks.
 </p>
-
+<p>
+VScan is open-source software. Visit the project's <a href="https://github.com/RastislavKish/VScan">official repository</a> to learn more about its background, motivation, specific usage examples and setup instructions.
+</p>
