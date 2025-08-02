@@ -17,25 +17,45 @@ The camera of your smartphone is your visual perception device. The core of VSca
 * The camera used - front / back, as well as camera parameters - resolution, flashlight etc.
 * The prompts used for LLM processing. LLM is the bridge between pixel data and your interpretation of it, and in the user/system prompt, you can specify what are you interested in for the particular purpose, as well as the LLM model that should be used.
 
-For the general purpose scene description, you may want to use the base config, with "What's in the image?" prompt using the back camera, which will give you a feeling of whatever area are you pointing to. For creating good looking selfies, you may want to use a specialized purpose, where you ask how good self-image have you captured, and can even ask for details such as the camera orientation, visibility of the capturing person, focus on the background, and the overall impression of the photography.
+For the general purpose scene description, you may want to use the base config, with "What's in the image?" prompt using the back camera, which will give you a feeling of whatever area are you pointing to. For creating good looking selfies, you may want to use a specialized purpose, where you ask how good self-image have you captured, and can even ask for details such as the camera orientation, visibility of the capturing person, focus on the background, and the overall impression of the photography. Using the configs, you can describe various visual cognitive functions, for instance, looking for an object such as an electric outlet, a specific building or state of an object.
 
-The interface of the app is designed for maximum efficiency. Right after the start, you're presented with the scanning tab, embracing a large easily-focusable Scan button, which will capture an image, process it using the active config, and read out the result. You can swipe right to display the list of your saved configurations and select the one you want to use, swipe left to see the parameters in detail or swipe up to display the conversation, were you can read/copy individual messages.
+### Example usage scenarios
 
-The scan tab also contains buttons for easy adjustment of the LLM prompts or asking questions. All of these are done by voice, since they're supposed to be used on the fly. You may, for example, want to focus scene descriptions on a particular building, so you dictate a new, more specific user prompt for the model and then take pictures of the building from various angles / places. When you're done, you can use the Reset button to return to the original config, all changes you make by these adjustments are temporary.
+I love examples, they can often explain things much clearer than thousand definitions. These are some of the ways you can use VScan.
 
-There is also a Save button, which will automatically generate a few word description of the last captured image and save it to your gallery together with its timestamp. Very useful for photo-documenting your travel, no more piles of photos with long, arbitrary numbers in their names and unknown content.
+#### Travel and feeling the surrounding
 
-Sometimes, you may actively use one config, but want to hear the opinion of another without taking a new photo or changing your parameters. You can do this by opening the config list and long-pressing any configuration.
+You're located on a historical square of a well-known city. You move around using echolocation, first near its edges, 5 - 10 meters from the walls. In your left hand, you're holding your smartphone with opened VScan, active Base config and the Scan button focused.
 
-### An example usage routine
+As you're passing individual buildings, you take an image of every-one with your left thumb and can embrace all its visual details. You may even ask about specific things if you find something of interest, for instance the text of a plaque on a house, its architecture, state etc.
 
-I love examples, they can often explain things much clearer than thousand definitions. This is one of the ways you can use VScan.
+When you are done with the edges, you move across the open space and discover a sculpture in the middle of the square. First you ask details about it and explore it. Then you decide it's a good place to take selfie. First you circle around and discover what's visible from various sides, and you choose what buildings would you like to have in the background.
 
-You're located on a historical square of a well-known city. You move around using echolocation, first near its edges, 5 - 10 meters from the walls. In your left hand, you're holding your smartphone with opened VScan, active Base config and the Scan button focused. As you're passing individual buildings, you take an image of every-one with your left thumb and can embrace all its visual details. You may even ask about the content of plaques. When you are done with the edges, you move across the open space and discover a sculpture in the middle of the square. First you ask details about it and explore it. Then you decide it's a good place to take selfie. First you circle around and discover what's visible from various sides, and select what buildings would you like to have in the background. When you find the ideal view, you walk to the opposite side of the sculpture, so it will be located behind your back together with your selected vieww. You switch the active config to Selfie, and try to capture the ideal travel photography, receiving feedback of your job. When you're satisfied, you can do one last check and consult the image with the Base model, to decide if there are no general error. If everything goes as you imagined, you press the Save button and store the trophy in your gallery.
+When you find the ideal view, you walk to the opposite side of the sculpture, so it will be located behind your back together with your selected vieww. You switch the active config to Selfie, and try to capture the ideal travel photography, receiving feedback of your job. When you're satisfied, you can do one last check and consult the image with the Base model, to decide if there are no general errors. If everything goes as you imagined, you press the Save button and store the trophy in your gallery.
+
+#### Looking for electric outlets
+
+Whenever you visit a hotel, searching for an outlet to charge your equipment can get... Time consuming. Walls are large, outlets are tiny, and they can be located almost anywhere. Without sight, there is often no other way to find them than manually search every squared centimeter of your room.
+
+With VScan, you can create a config that specifically looks for electric outlets. Then you simply point at large wall segments and press the Scan button to see if they contain what you're looking for, instead of manually gliding them with your hands from top to bottom.
+
+Note: Sometimes the outlets are deliberately located on covered locations, such as behind nightstands, between the bed and the wall, etc. In this case, they're often visible just partially, or can only be spotted from a specific angle. Nevertheless, even in such situation, VScan can help you elliminate large surfaces you'd otherwise need to check manually, just like a sighted person can right away tell the outlets are not present on the open areas and can immediately focus on the covered-ones.
+
+#### Verifying state of objects
+
+Have you ever needed to live-capture your ID for an online identity verification? Yes, I'm looking at you, Ryanair. Then you may know it requires some conditions to be met in order to capture a usable photo. You need good lighting in the room, no shadows, the ID must be in correct orientation, correct distance, facing you with the correct side and the image you capture must be readable.
+
+A sighted person can evaluate all of these things at a single glance. And you may be able to as well. In VScan, you can define a config checking specifically for the conditions you're interested in. For instance: "Is the text on the card fully visible, upright and clearly readable?"
+
+And you can afterwards just keep pressing the Scan button, as you try various positions for capturing the image of your ID and get immediate feedback whether it's usable or not.
+
+Note: For capturing sensitive documents like the ID cards, passports or health insurance cards, make sure to verify the privacy policy of your chosen provider and the conditions under which your data are manipulated. You most likely DO NOT want an image of your ID card ending up in the training data of a public large language model.
 
 ## Warning
 
 VScan is NOT supposed to be used for navigation purposes, or at least not for those where safety matters. Remember, the primary, geometric discovery of the space is the task of your physiological cognitive skills, like echolocation, haptic exploration, perceiving the space through sound etc. VScan is just a tool to provide another layer, another dimension to this perception, which should make it richer, more colorful and which could guide you to new, interesting places. However, actual moving around is still a geometric matter. LLMs are neither accurate nor reliable enough to help in this regard. Make sure to always use your senses first, and VScan to enrich them.
+
+Also note the LLMs may be prone to general hallucinations and inaccuracy. This is something VScan fully counts with. If we can get a cognitive function to work in 7 out of 10 times, that's a considerable improvement over 0 out of 10 times. However, there are important situations, when you may need 10 out of 10 accuracy. In such scenarios, VScan is NOT the tool to use.
 
 ## Installation
 
@@ -79,23 +99,22 @@ The default Base cognitive tool and File description cognitive tool are pre-conf
 
 VScan is a versatile app, which however is equipped with a highly-streamlined interface which should be easy, convenient and straight-forward to use in any situation.
 
-After opening, you land directly on the scanning screen, where you can press the Scan button to take an image and apply the currently active cognitive tool (config in Vscan terminology). On the upper bar, you have a several quick action buttons, which let you ask a question, set up the system prompt, user prompt or save the last taken image to your gallery.
+After opening, you land directly on the scanning screen, where you can press the Scan button to take an image and apply the currently active cognitive tool (config in Vscan terminology). On the upper bar, you have a several quick action buttons, which let you ask a question, set up the system prompt, user prompt or save the last taken image to your gallery. The buttons triggering user input work on a textual basis, long pressing will use voice input (although this is not fully tuned to my liking yet).
 
 Setting the system or user prompt is a temporary action, these changes won't be saved to the currently active config and will be reset either upon changing configs, or upon hitting the Reset button on the upper bar, unless you explicitly decide to save them. This is useful either to throw in a random user prompt you may suddenly need to use without spending time on creating a new config, or simply for testing out new prompts.
 
 Under the Scan button, there is a multipurpose edit field, which is used for various text input operations, like entering the system / user prompt, or sending a message to the conversation, this is the default action.
 
-If you switch to the Options tab, you can see the entire configuration of the currently active cognitive tool, including its name, prompts, used camera, image resolution etc. Any changes made to these parameters are temporary, until you either hit the Update button, which saves these changes, or the create button, which saves a new cognitive tool with the configured parameters. Note. It is not possible to update the Base config and File description config, these are intended to be used for deriving custom configurations, and thus are immutable, you can either use them as they are, or derive your own variants and configure them to be used by default in the app settings.
+If you switch to the Options tab or swipe left, you can see the entire configuration of the currently active cognitive tool, including its name, prompts, used camera, image resolution etc. Any changes made to these parameters are temporary, until you either hit the Update button, which saves these changes, or the create button, which saves a new cognitive tool with the configured parameters. Note. It is not possible to update the Base config and File description config, these are intended to be used for deriving custom configurations, and thus are immutable, you can either use them as they are, or derive your own variants and configure them to be used by default in the app settings.
 
-The Config list tab includes a list of your cognitive tools, here you can either click on one to use it on the Scan tab, or long press one to apply it on the currently captured image (this is called consulting the config).
+The Config list tab, accessible by a swipe to the right, includes a list of your cognitive tools, here you can either click on one to use it on the Scan tab, or long press one to apply it on the currently captured image (this is called consulting the config).
 
-Eventually, the Conversation tab displays the currently active conversation, where you can access the past messages.
+Eventually, the Conversation tab, which you can access by swiping up, displays the currently active conversation, where you can access the past messages.
 
 ## Attributions
 
 Asset | Author | Source
 --- | --- | ---
-Icon | <a href="https://www.flaticon.com/free-icons/qr-scan" title="qr scan icons">Qr scan icons created by Bharat Icons - Flaticon</a> | [Flaticon](https://www.flaticon.com/free-icon/scanning_7698853?term=scanner&page=1&position=3&origin=search&related_id=7698853)
 Shutter sound | [InspectorJ](https://freesound.org/people/InspectorJ/) | [FreeSound](https://freesound.org/people/InspectorJ/sounds/360329/)
 
 ## Privacy policy
@@ -117,4 +136,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
-
