@@ -45,6 +45,7 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
+import com.rastislavkish.vscan.core.CaptureMode
 import com.rastislavkish.vscan.core.UsedCamera
 
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
@@ -67,6 +68,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     private lateinit var highResSwitch: Switch
     private lateinit var flashlightModeSpinner: Spinner
+    private lateinit var captureModeSpinner: Spinner
 
     private lateinit var cameraSpinner: Spinner
     private lateinit var modelInput: EditText
@@ -108,6 +110,17 @@ class OptionsFragment: Fragment(), CoroutineScope {
         flashlightModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
                 onFlashlightModeSpinnerItemSelected(v ?: return, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+            })
+
+        captureModeSpinner=view.findViewById(R.id.captureModeSpinner)
+        val captureModeSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, captureModeSpinnerOptions)
+        captureModeSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        captureModeSpinner.setAdapter(captureModeSpinnerAdapter)
+        captureModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onCaptureModeSpinnerItemSelected(v ?: return, position)
                 }
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
@@ -162,6 +175,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
             if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
             setSelectedFlashlightMode(activeConfig.flashlightMode)
 
+            if (uiConfig.captureMode!=activeConfig.captureMode)
+            setSelectedCaptureMode(activeConfig.captureMode)
+
             if (uiConfig.camera!=activeConfig.camera)
             setSelectedCamera(activeConfig.camera)
 
@@ -208,6 +224,14 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val flashlightMode=getSelectedFlashlightMode()
             if (flashlightMode!=activeConfig.flashlightMode)
             adapter.activeConfig=activeConfig.withFlashlightMode(flashlightMode)
+            }}
+        }
+    fun onCaptureModeSpinnerItemSelected(v: View, position: Int) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val captureMode=getSelectedCaptureMode()
+            if (captureMode!=activeConfig.captureMode)
+            adapter.activeConfig=activeConfig.withCaptureMode(captureMode)
             }}
         }
 
@@ -280,6 +304,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             userPromptInput.toString(),
             highResSwitch.isChecked(),
             getSelectedFlashlightMode(),
+            getSelectedCaptureMode(),
             getSelectedCamera(),
             modelInput.text.toString(),
             )
@@ -299,6 +324,23 @@ class OptionsFragment: Fragment(), CoroutineScope {
             FlashlightMode.DEFAULT -> 0
             FlashlightMode.ON -> 1
             FlashlightMode.OFF -> 2
+            })
+        }
+
+    val captureModeSpinnerOptions=arrayOf("Maximize quality", "Minimize latency", "Video")
+    fun getSelectedCaptureMode(): CaptureMode {
+        return when (captureModeSpinner.selectedItemPosition) {
+            0 -> CaptureMode.MAXIMIZE_QUALITY
+            1 -> CaptureMode.MINIMIZE_LATENCY
+            2 -> CaptureMode.VIDEO
+            else -> throw Exception("Unknown capture mode ${captureModeSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedCaptureMode(captureMode: CaptureMode) {
+        captureModeSpinner.setSelection(when (captureMode) {
+            CaptureMode.MAXIMIZE_QUALITY -> 0
+            CaptureMode.MINIMIZE_LATENCY -> 1
+            CaptureMode.VIDEO -> 2
             })
         }
 

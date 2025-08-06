@@ -52,6 +52,24 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="Capture mode"
+            />
+        <Spinner
+            android:id="@+id/captureModeSpinner"
+            android:hint="Capture mode"
+            android:spinnerMode="dropdown"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            />
+        </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Camera"
             />
         <Spinner

@@ -28,6 +28,7 @@ data class Config(
     val userPrompt: String="What's in the image?",
     val highRes: Boolean=false,
     val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
+    val captureMode: CaptureMode=CaptureMode.MAXIMIZE_QUALITY,
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: String="vscan-gpt-4o",
     ) {
@@ -42,6 +43,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -52,6 +54,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -62,6 +65,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -72,6 +76,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -83,6 +88,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -93,6 +99,18 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
+        camera,
+        model,
+        )
+    fun withCaptureMode(captureMode: CaptureMode): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -104,6 +122,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )
@@ -114,6 +133,7 @@ data class Config(
         userPrompt,
         highRes,
         flashlightMode,
+        captureMode,
         camera,
         model,
         )

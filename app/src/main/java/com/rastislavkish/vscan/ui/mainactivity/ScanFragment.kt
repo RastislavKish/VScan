@@ -63,6 +63,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.core.ImageProxy
@@ -71,6 +72,7 @@ import java.util.concurrent.Executors
 
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.sync.*
 
 import org.greenrobot.eventbus.EventBus
@@ -85,11 +87,13 @@ import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
+import com.rastislavkish.vscan.core.CaptureMode
 import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.openai.*
+import com.rastislavkish.vscan.core.ImageConverter
 
 import com.rastislavkish.vscan.core.Action
 import com.rastislavkish.vscan.core.ScanWithActiveConfigAction
@@ -120,8 +124,14 @@ class ScanFragment: Fragment(), CoroutineScope {
 
     private var camera: Camera?=null
     private var cameraProvider: ProcessCameraProvider?=null
-    private val imageCapture: ImageCapture
-    private val highResImageCapture: ImageCapture
+    private val maximizeQualityImageCapture: ImageCapture
+    private val minimizeLatencyImageCapture: ImageCapture
+    private val highResMaximizeQualityImageCapture: ImageCapture
+    private val highResMinimizeLatencyImageCapture: ImageCapture
+    private val imageAnalysis: ImageAnalysis
+    private val highResImageAnalysis: ImageAnalysis
+
+    private val videoRequestsChannel: Channel<(ByteArray) -> Unit> = Channel(Channel.BUFFERED)
 
     private var configUsedByCamera: Config?=null
 
@@ -141,15 +151,41 @@ class ScanFragment: Fragment(), CoroutineScope {
         .setResolutionStrategy(ResolutionStrategy(Size(1024, 1024), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
         .build()
 
-        imageCapture=ImageCapture.Builder()
+        maximizeQualityImageCapture=ImageCapture.Builder()
         .setResolutionSelector(resolutionSelector)
-        .setFlashMode(ImageCapture.FLASH_MODE_ON)
+        .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
         .build()
 
-        highResImageCapture=ImageCapture.Builder()
-        .setResolutionSelector(highResResolutionSelector)
-        .setFlashMode(ImageCapture.FLASH_MODE_ON)
+        minimizeLatencyImageCapture=ImageCapture.Builder()
+        .setResolutionSelector(resolutionSelector)
+        .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
         .build()
+
+        highResMaximizeQualityImageCapture=ImageCapture.Builder()
+        .setResolutionSelector(highResResolutionSelector)
+        .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+        .build()
+
+        highResMinimizeLatencyImageCapture=ImageCapture.Builder()
+        .setResolutionSelector(highResResolutionSelector)
+        .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        .build()
+
+        imageAnalysis=ImageAnalysis.Builder()
+        .setResolutionSelector(resolutionSelector)
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .build()
+        imageAnalysis.setAnalyzer(Dispatchers.IO.asExecutor(), ImageAnalysis.Analyzer(this::onVideoImageReceived))
+
+        highResImageAnalysis=ImageAnalysis.Builder()
+        .setResolutionSelector(highResResolutionSelector)
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .build()
+        highResImageAnalysis.setAnalyzer(Dispatchers.IO.asExecutor(), ImageAnalysis.Analyzer(this::onVideoImageReceived))
         }
 
     override fun onCreateView(
@@ -400,8 +436,12 @@ class ScanFragment: Fragment(), CoroutineScope {
         val rotation=UseCase.snapToSurfaceRotation(orientation)
 
         if (rotation!=lastRotationValue) {
-            imageCapture.setTargetRotation(rotation)
-            highResImageCapture.setTargetRotation(rotation)
+            maximizeQualityImageCapture.setTargetRotation(rotation)
+            minimizeLatencyImageCapture.setTargetRotation(rotation)
+            highResMaximizeQualityImageCapture.setTargetRotation(rotation)
+            highResMinimizeLatencyImageCapture.setTargetRotation(rotation)
+            imageAnalysis.setTargetRotation(rotation)
+            highResImageAnalysis.setTargetRotation(rotation)
 
             lastRotationValue=rotation
             }
@@ -414,14 +454,16 @@ class ScanFragment: Fragment(), CoroutineScope {
                 val bytes=ByteArray(buffer.remaining())
                 buffer.get(bytes)
 
-                imageProxy.close()
+                return bytes
+                }
+            else if (mediaImage.format==ImageFormat.YUV_420_888) {
+                val bytes=ImageConverter.yuv420ToJpeg(mediaImage)
                 return bytes
                 }
             else {
-                toast("Error: The camera returned an unsupported image type")
+                return null
                 }
             }
-        imageProxy.close()
         return null
         }
 
@@ -518,12 +560,44 @@ class ScanFragment: Fragment(), CoroutineScope {
             UsedCamera.FRONT_CAMERA -> CameraSelector.DEFAULT_FRONT_CAMERA
             }
 
-        if (!adapter.activeConfig.highRes)
-        camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, imageCapture)
-        else
-        camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, highResImageCapture)
+        if (isVideoUsed(adapter)) {
+            val imageAnalysis=getActiveImageAnalysis(adapter)
+            camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, imageAnalysis)
+            }
+        else {
+            val imageCapture=getActiveImageCapture(adapter)
+            camera=cameraProvider?.bindToLifecycle(activity!!, cameraSelector, imageCapture)
+            }
 
         configUsedByCamera=adapter.activeConfig
+        }
+    fun getActiveImageCapture(adapter: TabAdapter): ImageCapture {
+        return if (!adapter.activeConfig.highRes) {
+            when (adapter.activeConfig.captureMode) {
+                CaptureMode.MAXIMIZE_QUALITY -> maximizeQualityImageCapture
+                CaptureMode.MINIMIZE_LATENCY -> minimizeLatencyImageCapture
+                CaptureMode.VIDEO -> throw Exception("Error: requested ImageAnalysis from getActiveImageCapture method")
+                }
+            }
+        else {
+            when (adapter.activeConfig.captureMode) {
+                CaptureMode.MAXIMIZE_QUALITY -> highResMaximizeQualityImageCapture
+                CaptureMode.MINIMIZE_LATENCY -> highResMinimizeLatencyImageCapture
+                CaptureMode.VIDEO -> throw Exception("Error: requested ImageAnalysis from getActiveImageCapture method")
+                }
+            }
+        }
+    fun getActiveImageAnalysis(adapter: TabAdapter): ImageAnalysis {
+        if (adapter.activeConfig.captureMode!=CaptureMode.VIDEO)
+        throw Exception("Error: Requested ImageCapture from getActiveImageAnalysis method")
+
+        return if (!adapter.activeConfig.highRes)
+        imageAnalysis
+        else
+        highResImageAnalysis
+        }
+    fun isVideoUsed(adapter: TabAdapter): Boolean {
+        return adapter.activeConfig.captureMode==CaptureMode.VIDEO
         }
     fun takePicture(adapter: TabAdapter, callback: (ByteArray) -> Unit) {
         val flashMode=when (shouldUseFlashlight(adapter)) {
@@ -531,37 +605,33 @@ class ScanFragment: Fragment(), CoroutineScope {
             false -> ImageCapture.FLASH_MODE_OFF
             }
 
-        imageCapture.setFlashMode(flashMode)
-        highResImageCapture.setFlashMode(flashMode)
+        if (isVideoUsed(adapter)) {
+            val imageAnalysis=getActiveImageAnalysis(adapter)
+            videoRequestsChannel.trySend(callback)
+            }
+        else {
+            val imageCapture=getActiveImageCapture(adapter)
+            imageCapture.setFlashMode(flashMode)
+            imageCapture.takePicture(
+                ContextCompat.getMainExecutor(context!!),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                        val image=extractImageFromProxy(imageProxy)
+                        imageProxy.close()
 
-        if (!adapter.activeConfig.highRes)
-        imageCapture.takePicture(
-            ContextCompat.getMainExecutor(context!!),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val image=extractImageFromProxy(imageProxy)
-                    callback(image ?: return)
-                    }
+                        if (image!=null)
+                        callback(image)
+                        else {
+                            toast("Error: The camera returned an unsupported image type")
+                            }
+                        }
 
-                override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing the image")
-                    }
-                },
-            )
-        else
-        highResImageCapture.takePicture(
-            ContextCompat.getMainExecutor(context!!),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val image=extractImageFromProxy(imageProxy)
-                    callback(image ?: return)
-                    }
-
-                override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing the image")
-                    }
-                },
-            )
+                    override fun onError(error: ImageCaptureException) {
+                        toast("Error capturing the image")
+                        }
+                    },
+                )
+            }
         }
     fun takePictureToAdapter(adapter: TabAdapter, callback: suspend (TabAdapter) -> Unit) {
         val flashMode=when (shouldUseFlashlight(adapter)) {
@@ -569,51 +639,74 @@ class ScanFragment: Fragment(), CoroutineScope {
             false -> ImageCapture.FLASH_MODE_OFF
             }
 
-        imageCapture.setFlashMode(flashMode)
-        highResImageCapture.setFlashMode(flashMode)
+        if (isVideoUsed(adapter)) {
+            val imageAnalysis=getActiveImageAnalysis(adapter)
+            videoRequestsChannel.trySend({ image ->
+                val t2=System.currentTimeMillis()
+                val timestamp=LocalDateTime.now()
 
-        if (!adapter.activeConfig.highRes)
-        imageCapture.takePicture(
-            ContextCompat.getMainExecutor(context!!),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val image=extractImageFromProxy(imageProxy)
-                    val timestamp=LocalDateTime.now()
+                launch { adapter.mutex.withLock {
+                    adapter.lastTakenImage=image
+                    adapter.lastTakenImageTimestamp=timestamp
 
-                    launch { adapter.mutex.withLock {
-                        adapter.lastTakenImage=image
-                        adapter.lastTakenImageTimestamp=timestamp
+                    callback(adapter)
+                    }}
+                })
+            }
+        else {
+            val imageCapture=getActiveImageCapture(adapter)
+            imageCapture.setFlashMode(flashMode)
 
-                        callback(adapter)
-                        }}
+            imageCapture.takePicture(
+                ContextCompat.getMainExecutor(context!!),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                        val image=extractImageFromProxy(imageProxy)
+
+                        val timestamp=LocalDateTime.now()
+
+                        if (image==null) {
+                            toast("Error: The camera returned an unsupported image type")
+                            }
+
+                        launch { adapter.mutex.withLock {
+                            adapter.lastTakenImage=image
+                            adapter.lastTakenImageTimestamp=timestamp
+
+                            callback(adapter)
+                            }}
+                        }
+
+                    override fun onError(error: ImageCaptureException) {
+                        toast("Error capturing the image")
+                        }
+                    },
+                )
+            }
+
+        }
+    fun onVideoImageReceived(imageProxy: ImageProxy) {
+        var callback=videoRequestsChannel.tryReceive().getOrNull()
+        if (callback!=null) {
+            val image=extractImageFromProxy(imageProxy)
+
+            if (image!=null) {
+                while (callback!=null) {
+                    val toInvoke=callback
+                    launch(Dispatchers.Main) {
+                        toInvoke.invoke(image)
+                        }
+                    callback=videoRequestsChannel.tryReceive().getOrNull()
                     }
-
-                override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing the image")
+                }
+            else {
+                launch(Dispatchers.Main) {
+                    toast("Error: The camera returned an unsupported image type")
                     }
-                },
-            )
-        else
-        highResImageCapture.takePicture(
-            ContextCompat.getMainExecutor(context!!),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val image=extractImageFromProxy(imageProxy)
-                    val timestamp=LocalDateTime.now()
+                }
+            }
 
-                    launch { adapter.mutex.withLock {
-                        adapter.lastTakenImage=image
-                        adapter.lastTakenImageTimestamp=timestamp
-
-                        callback(adapter)
-                        }}
-                    }
-
-                override fun onError(error: ImageCaptureException) {
-                    toast("Error capturing the image")
-                    }
-                },
-            )
+        imageProxy.close()
         }
     fun scanWithConfig(adapter: TabAdapter, config: Config) {
         takePictureToAdapter(adapter, callback@{adapter ->
