@@ -96,10 +96,16 @@ class Conversation(
                 requestTimeout=300000
                 }
             }
-        val response: HttpResponse=client.post("$baseUrl/chat/completions") {
-            header("Content-Type", "application/json")
-            bearerAuth(apiKey)
-            setBody(format.encodeToString(bodyObject))
+
+        val response: HttpResponse=try {
+            client.post("$baseUrl/chat/completions") {
+                header("Content-Type", "application/json")
+                bearerAuth(apiKey)
+                setBody(format.encodeToString(bodyObject))
+                }
+            }
+        catch (e: Exception) {
+            return "Error: Unable to connect to the model provider"
             }
 
         val responseText: String=response.body()
