@@ -20,6 +20,8 @@
         tools:targetApi="36">
 
         <activity android:name=".ui.mainactivity.MainActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,19 +33,57 @@
                 <data android:mimeType="image/*" />
                 </intent-filter>
             </activity>
-        <activity android:name=".ui.actionselectionactivity.ActionSelectionActivity" />
-        <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity" />
-        <activity android:name=".ui.modelselectionactivity.ModelSelectionActivity" />
-        <activity android:name=".ui.providerpresetselectionactivity.ProviderPresetSelectionActivity" />
-        <activity android:name=".ui.providerselectionactivity.ProviderSelectionActivity" />
-        <activity android:name=".ui.settingsactivity.SettingsActivity" />
-        <activity android:name=".ui.providersactivity.ProvidersActivity" />
-        <activity android:name=".ui.provideractivity.ProviderActivity" />
-        <activity android:name=".ui.modelidactivity.ModelIdActivity" />
-        <activity android:name=".ui.modelprovidermappingactivity.ModelProviderMappingActivity" />
-        <activity android:name=".ui.modelprovidermappingsactivity.ModelProviderMappingsActivity" />
-        <activity android:name=".ui.confirmationactivity.ConfirmationActivity" />
+        <activity android:name=".ui.actionselectionactivity.ActionSelectionActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.configselectionactivity.ConfigSelectionActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.modelselectionactivity.ModelSelectionActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.providerpresetselectionactivity.ProviderPresetSelectionActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.providerselectionactivity.ProviderSelectionActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.settingsactivity.SettingsActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.providersactivity.ProvidersActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.provideractivity.ProviderActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.modelidactivity.ModelIdActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.modelprovidermappingactivity.ModelProviderMappingActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.modelprovidermappingsactivity.ModelProviderMappingsActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
+        <activity android:name=".ui.confirmationactivity.ConfirmationActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            />
         <activity android:name=".ui.textinputactivity.TextInputActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation|screenSize"
             android:windowSoftInputMode="stateVisible"
             />
 
