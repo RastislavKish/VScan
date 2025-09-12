@@ -188,7 +188,13 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
     fun updateSystemPromptLink(adapter: TabAdapter) {
         val systemPrompt=adapter.activeConfig.systemPrompt
-        systemPromptLink.setText("System prompt: ${summarizeText(systemPrompt)}")
+
+        val message=if (!systemPrompt.isEmpty())
+        summarizeText(systemPrompt)
+        else
+        "None"
+
+        systemPromptLink.setText("System prompt: $message")
         }
 
     fun onUserPromptLinkClick(v: View) {
@@ -198,7 +204,13 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
     fun updateUserPromptLink(adapter: TabAdapter) {
         val userPrompt=adapter.activeConfig.userPrompt
-        userPromptLink.setText("User prompt: ${summarizeText(userPrompt)}")
+
+        val message=if (!userPrompt.isEmpty())
+        summarizeText(userPrompt)
+        else
+        "None"
+
+        userPromptLink.setText("User prompt: $message")
         }
 
     fun onHighResSwitchCheckedChange(v: View, checked: Boolean) {
