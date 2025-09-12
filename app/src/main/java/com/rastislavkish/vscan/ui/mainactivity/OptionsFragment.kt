@@ -33,6 +33,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 
 import kotlin.coroutines.*
@@ -47,6 +48,9 @@ import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
 
+import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivity
+import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityInput
+import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityOutput
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivity
 import com.rastislavkish.vscan.ui.modelselectionactivity.DisplayedModels
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityInput
@@ -62,8 +66,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     private lateinit var adapter: TabAdapter
 
-    private lateinit var systemPromptInput: EditText
-    private lateinit var userPromptInput: EditText
+    private lateinit var systemPromptLink: TextView
+    private lateinit var userPromptLink: TextView
 
     private lateinit var highResSwitch: Switch
     private lateinit var flashlightModeSpinner: Spinner
@@ -78,6 +82,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var createButton: Button
     private lateinit var deleteButton: Button
 
+    private lateinit var textInputActivityLauncher: ActivityResultLauncher<Intent>
     private lateinit var modelSelectionActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
@@ -93,10 +98,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         adapter=TabAdapter.getInstance(context!!)
 
-        systemPromptInput=view.findViewById(R.id.systemPromptInput)
-        TextController(systemPromptInput).setTextChangeListener(this::onSystemPromptInputTextChange)
-        userPromptInput=view.findViewById(R.id.userPromptInput)
-        TextController(userPromptInput).setTextChangeListener(this::onUserPromptInputTextChange)
+        systemPromptLink=view.findViewById(R.id.systemPromptLink)
+        systemPromptLink.setOnClickListener(this::onSystemPromptLinkClick)
+        userPromptLink=view.findViewById(R.id.userPromptLink)
+        userPromptLink.setOnClickListener(this::onUserPromptLinkClick)
 
         highResSwitch=view.findViewById(R.id.highResSwitch)
         highResSwitch.setOnCheckedChangeListener(this::onHighResSwitchCheckedChange)
@@ -141,6 +146,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
         val settingsButton: Button=view.findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener(this::onSettingsButtonClick)
 
+        textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onTextInputActivityResult)
         modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
         }
 
@@ -150,11 +156,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
             val activeConfig=adapter.activeConfig
 
-            if (uiConfig.systemPrompt!=activeConfig.systemPrompt)
-            systemPromptInput.setText(activeConfig.systemPrompt)
-
-            if (uiConfig.userPrompt!=activeConfig.userPrompt)
-            userPromptInput.setText(activeConfig.userPrompt)
+            updateSystemPromptLink(adapter)
+            updateUserPromptLink(adapter)
 
             if (uiConfig.highRes!=activeConfig.highRes)
             highResSwitch.setChecked(activeConfig.highRes)
@@ -178,21 +181,24 @@ class OptionsFragment: Fragment(), CoroutineScope {
         super.onResume()
         }
 
-    fun onSystemPromptInputTextChange(text: String) {
+    fun onSystemPromptLinkClick(v: View) {
         launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val systemPrompt=systemPromptInput.text.toString()
-            if (systemPrompt!=activeConfig.systemPrompt)
-            adapter.activeConfig=activeConfig.withSystemPrompt(systemPrompt)
+            startTextInputActivity("System prompt", adapter.activeConfig.systemPrompt, "system-prompt")
             }}
         }
-    fun onUserPromptInputTextChange(text: String) {
+    fun updateSystemPromptLink(adapter: TabAdapter) {
+        val systemPrompt=adapter.activeConfig.systemPrompt
+        systemPromptLink.setText("System prompt: ${summarizeText(systemPrompt)}")
+        }
+
+    fun onUserPromptLinkClick(v: View) {
         launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val userPrompt=userPromptInput.text.toString()
-            if (userPrompt!=activeConfig.userPrompt)
-            adapter.activeConfig=activeConfig.withUserPrompt(userPrompt)
+            startTextInputActivity("User prompt", adapter.activeConfig.userPrompt, "user-prompt")
             }}
+        }
+    fun updateUserPromptLink(adapter: TabAdapter) {
+        val userPrompt=adapter.activeConfig.userPrompt
+        userPromptLink.setText("User prompt: ${summarizeText(userPrompt)}")
         }
 
     fun onHighResSwitchCheckedChange(v: View, checked: Boolean) {
@@ -276,8 +282,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         return Config(
             adapter.activeConfig.id,
             nameInput.toString(),
-            systemPromptInput.toString(),
-            userPromptInput.toString(),
+            adapter.activeConfig.systemPrompt,
+            adapter.activeConfig.userPrompt,
             highResSwitch.isChecked(),
             getSelectedFlashlightMode(),
             getSelectedCamera(),
@@ -317,6 +323,44 @@ class OptionsFragment: Fragment(), CoroutineScope {
             })
         }
 
+    fun summarizeText(text: String): String {
+        val processedText=text.replace("\n", " ")
+
+        return if (processedText.length<=300)
+        processedText
+        else
+        "${processedText.substring(0..300)}..."
+        }
+
+    private fun startTextInputActivity(title: String, text: String, context: String) {
+        val intent=TextInputActivityInput(title, text, context)
+        .toIntent(activity!!)
+        textInputActivityLauncher.launch(intent)
+        }
+    private fun onTextInputActivityResult(result: ActivityResult) {
+        if (result.resultCode==androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
+            val output=TextInputActivityOutput.fromIntent(result.data, "OptionsFragment")
+
+            launch { adapter.mutex.withLock {
+                val activeConfig=adapter.activeConfig
+                when (output.context) {
+                    "system-prompt" -> {
+                        if (activeConfig.systemPrompt!=output.text) {
+                            adapter.activeConfig=activeConfig.withSystemPrompt(output.text)
+                            updateSystemPromptLink(adapter)
+                            }
+                        }
+                    "user-prompt" -> {
+                        if (activeConfig.userPrompt!=output.text) {
+                            adapter.activeConfig=activeConfig.withUserPrompt(output.text)
+                            updateUserPromptLink(adapter)
+                            }
+                        }
+                    else -> toast("Error: Received text input for unknown field ${output.context}")
+                    }
+                }}
+            }
+        }
     private fun startModelSelectionActivity() {
         val intent=ModelSelectionActivityInput(DisplayedModels.READY_TO_USE)
         .toIntent(activity!!)
@@ -324,7 +368,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
     private fun onModelSelectionActivityResult(result: ActivityResult) {
         if (result.resultCode==androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
-            val output=ModelSelectionActivityOutput.fromIntent(result.data, "SettingsActivity")
+            val output=ModelSelectionActivityOutput.fromIntent(result.data, "OptionsFragment")
 
             if (!output.model.isEmpty()) {
                 val model=output.model

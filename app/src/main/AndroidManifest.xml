@@ -43,6 +43,9 @@
         <activity android:name=".ui.modelprovidermappingactivity.ModelProviderMappingActivity" />
         <activity android:name=".ui.modelprovidermappingsactivity.ModelProviderMappingsActivity" />
         <activity android:name=".ui.confirmationactivity.ConfirmationActivity" />
+        <activity android:name=".ui.textinputactivity.TextInputActivity"
+            android:windowSoftInputMode="stateVisible"
+            />
 
         <provider
             android:name="androidx.core.content.FileProvider"

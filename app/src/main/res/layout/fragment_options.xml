@@ -7,15 +7,13 @@
     android:orientation="vertical"
     tools:context=".ui.mainactivity.OptionsFragment">
 
-    <EditText
-        android:id="@+id/systemPromptInput"
-        android:hint="System prompt"
+    <TextView
+        android:id="@+id/systemPromptLink"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         />
-    <EditText
-        android:id="@+id/userPromptInput"
-        android:hint="User prompt"
+    <TextView
+        android:id="@+id/userPromptLink"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         />
