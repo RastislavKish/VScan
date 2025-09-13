@@ -25,7 +25,7 @@ import android.view.inputmethod.EditorInfo
 import androidx.fragment.app.Fragment
 
 import android.widget.Button
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
 import androidx.recyclerview.widget.RecyclerView
 import android.widget.Toast
 
@@ -47,7 +47,7 @@ class ConversationFragment: Fragment(), CoroutineScope {
     private lateinit var adapter: TabAdapter
     private val conversationListAdapter=ConversationListAdapter()
 
-    private lateinit var messageInput: EditText
+    private lateinit var messageInput: TextInputEditText
     private lateinit var sendButton: Button
 
     override fun onCreateView(
@@ -81,8 +81,8 @@ class ConversationFragment: Fragment(), CoroutineScope {
         }
 
     fun sendButtonClick(v: View) {
-        val message=messageInput.text.toString()
-        messageInput.text.clear()
+        val message=messageInput.text?.toString() ?: return
+        messageInput.text?.clear()
         sendButton.setClickable(false)
         launch { adapter.mutex.withLock {
             val userMessage=TextMessage(message)

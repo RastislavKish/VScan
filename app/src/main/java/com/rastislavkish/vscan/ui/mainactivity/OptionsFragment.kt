@@ -30,11 +30,11 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
@@ -73,10 +73,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var flashlightModeSpinner: Spinner
 
     private lateinit var cameraSpinner: Spinner
-    private lateinit var modelInput: EditText
+    private lateinit var modelInput: TextInputEditText
     private lateinit var selectModelButton: Button
 
-    private lateinit var nameInput: EditText
+    private lateinit var nameInput: TextInputEditText
 
     private lateinit var updateButton: Button
     private lateinit var createButton: Button

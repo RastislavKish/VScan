@@ -27,64 +27,80 @@
     <LinearLayout
         android:orientation="horizontal"
         android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         >
         <TextView
+            android:text="Flashlight mode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Flashlight mode"
+            android:layout_weight="0"
             />
         <Spinner
             android:id="@+id/flashlightModeSpinner"
             android:hint="Flashlight mode"
             android:spinnerMode="dropdown"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             />
         </LinearLayout>
     <LinearLayout
         android:orientation="horizontal"
         android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         >
         <TextView
+            android:text="Camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Camera"
+            android_layout_weight="0"
             />
         <Spinner
             android:id="@+id/cameraSpinner"
             android:hint="Camera"
             android:spinnerMode="dropdown"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            />
-        </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        >
-        <EditText
-            android:id="@+id/modelInput"
-            android:hint="Model"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
-        <Button
-            android:id="@+id/selectModelButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Select model"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             />
         </LinearLayout>
 
-    <EditText
-        android:id="@+id/nameInput"
-        android:hint="Config name"
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
-        />
+        >
+        <com.google.android.material.textfield.TextInputLayout
+            android:hint="Model"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            >
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/modelInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                />
+            </com.google.android.material.textfield.TextInputLayout>
+        <Button
+            android:id="@+id/selectModelButton"
+            android:text="Select model"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+            />
+        </LinearLayout>
+    <com.google.android.material.textfield.TextInputLayout
+        android:hint="Config name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/nameInput"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            />
+        </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout
         android:id="@+id/bottomBar"

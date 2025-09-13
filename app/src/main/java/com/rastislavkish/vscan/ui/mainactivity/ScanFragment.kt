@@ -45,8 +45,9 @@ import android.provider.MediaStore
 
 import android.widget.Button
 import android.widget.ToggleButton
-import android.widget.EditText
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.textfield.TextInputEditText
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -129,7 +130,8 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var askButton: Button
     private lateinit var systemPromptButton: Button
     private lateinit var userPromptButton: Button
-    private lateinit var multipurposeInput: EditText
+    private lateinit var multipurposeInputLayout: TextInputLayout
+    private lateinit var multipurposeInput: TextInputEditText
     private var multipurposeInputPurpose=MultipurposeInputPurpose.MESSAGE
 
     init {
@@ -202,6 +204,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         val resetConfigButton: Button=view.findViewById(R.id.resetConfigButton)
         resetConfigButton.setOnClickListener(this::resetConfigButtonClick)
 
+        multipurposeInputLayout=view.findViewById(R.id.multipurposeInputLayout)
         multipurposeInput=view.findViewById(R.id.multipurposeInput)
         multipurposeInput.setOnEditorActionListener(this::onMultipurposeInputEditorAction)
 
@@ -432,11 +435,11 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
 
     fun setMultipurposeInputPurpose(purpose: MultipurposeInputPurpose, focus: Boolean=false) {
-        if (!multipurposeInput.text.isBlank())
-        multipurposeInput.text.clear()
+        if (!(multipurposeInput.text?.isBlank() ?: false))
+        multipurposeInput.text?.clear()
         multipurposeInputPurpose=purpose
 
-        multipurposeInput.hint=when (purpose) {
+        multipurposeInputLayout.hint=when (purpose) {
             MultipurposeInputPurpose.MESSAGE -> "Message"
             MultipurposeInputPurpose.SYSTEM_PROMPT -> "System prompt"
             MultipurposeInputPurpose.USER_PROMPT -> "User prompt"
@@ -453,7 +456,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         setMultipurposeInputPurpose(MultipurposeInputPurpose.MESSAGE)
         }
     fun confirmMultipurposeInput() {
-        val text=multipurposeInput.text.toString()
+        val text=multipurposeInput.text?.toString() ?: return
         val purpose=multipurposeInputPurpose
 
         resetMultipurposeInput()

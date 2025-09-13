@@ -24,8 +24,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 
-import android.widget.EditText
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 import androidx.recyclerview.widget.RecyclerView
 import androidx.navigation.fragment.NavHostFragment
 
@@ -73,7 +73,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         val configList: RecyclerView=view.findViewById(R.id.configList)
         configList.adapter=configListAdapter
 
-        val searchInput: EditText=view.findViewById(R.id.searchInput)
+        val searchInput: TextInputEditText=view.findViewById(R.id.searchInput)
         TextController(searchInput).setTextChangeListener(this::searchInputTextChange)
         }
 
