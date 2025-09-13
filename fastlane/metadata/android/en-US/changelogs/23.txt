@@ -1,0 +1,2 @@
+- There is now a standalone editor for entering the system prompt and user prompt. This editor has a large text field, which should make it easy to work with long and complex prompts.
+- Various UI improvements and bug fixes.
