@@ -1,5 +1,11 @@
 # VScan
 
+<a href="https://f-droid.org/packages/com.rastislavkish.vscan">
+    <img src="https://f-droid.org/badge/get-it-on.png"
+    alt="Get it on F-Droid"
+    height="80">
+</a>
+
 Perceiving space's geometry lets me *find* interesting things. Perceiving space's vibes lets me *discover* them.
 
 Travelling the world as a blind individual, I get to see many interesting and beautiful places. However, while I can navigate around quite well using human echolocation and my long cane, I still felt something was missing compared to my sighted times. I can use echolocation to perceive the geometry of the environment, but not so much its vibes, which often lie in subtle details. A silent, empty square feels completely different to a square full of people, music and life. In a similar fashion, a square in the middle of the day is something else to a night square, lit by colorful neons, full of flowers, statues, ancient or modern buildings.
@@ -59,9 +65,9 @@ Also note the LLMs may be prone to general hallucinations and inaccuracy. This i
 
 ## Installation
 
-I recommend installing the app through [Obtainium](https://github.com/ImranR98/Obtainium), installable through [F-Droid](https://f-droid.org/). With Obtainium, you can simply enter the GitHub URL of VScan as the source of the app, and have it installed directly from the GitHub releases of the project. You will receive notifications about any updates and have the option to conveniently install them immediately after they're made available.
+VScan is available on [F-Droid](https://f-droid.org/packages/com.rastislavkish.vscan), through [Obtainium](https://github.com/ImranR98/Obtainium) and also on [Google Play](https://play.google.com/store/apps/details?id=com.rastislavkish.vscan).
 
-Alternatively, you can manually download and install the apk file from the [Releases page](https://github.com/RastislavKish/VScan).
+I recommend using F-Droid for standard installation and Obtainium for installing directly from the repository. You can use the Google Play version as well, but this version is signed by a Play Store generated key, and as such I can't guarantee the package authenticity. Also note there are several other apps on the Play store with the same or a similar name, make sure to check the source before installing.
 
 ## Initial setup
 
