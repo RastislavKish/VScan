@@ -1,14 +1,9 @@
-<p>
 This is a little project of mine aiming to research how vision LLMs could help out blind people on travel and in their every-day life by substituting eyesight for various visual tasks. VScan turns your smartphone's camera into a device for visual perception. You can define various optical cognitive functions, like looking for objects, signs, evaluating a scene or simply mediating visual impressions. You can afterwards use these functions on the camera view, just like a sighted person would use their eyes to achieve a specific goal in the physical world.
-</p>
-<p>
+
 Each cognitive tool consists of two major parts:
-<ul>
-<li>The camera to be used - front / back, as well as camera parameters - resolution, flashlight etc.</li>
-<li>The prompts used for LLM processing. LLM is the bridge between raw pixel data and your interpretation of it, and in the user/system prompt, you can specify what exactly are you interested in for the particular function and how should it be communicated, as well as the LLM model that should be used.</li>
-</ul>
+• The camera to be used - front / back, as well as camera parameters - resolution, flashlight etc.
+• The prompts used for LLM processing. LLM is the bridge between raw pixel data and your interpretation of it, and in the user/system prompt, you can specify what exactly are you interested in for the particular function and how should it be communicated, as well as the LLM model that should be used.
+
 Camera input in combination with an LLM processing prompt forms a  cognitive function, which can be used to serve various visual tasks.
-</p>
-<p>
+
 VScan is open-source software. Visit the project's <a href="https://github.com/RastislavKish/VScan">official repository</a> to learn more about its background, motivation, specific usage examples and setup instructions.
-</p>
