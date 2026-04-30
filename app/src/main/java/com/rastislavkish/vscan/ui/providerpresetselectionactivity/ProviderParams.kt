@@ -31,6 +31,12 @@ data class ProviderParams(
             ProviderParams("OpenAI",
                 "https://api.openai.com/v1",
                 mapOf(
+                    "vscan-gpt-5.5" to "gpt-5.5",
+                    "vscan-gpt-5.5-pro" to "gpt-5.5-pro",
+                    "vscan-gpt-5.4" to "gpt-5.4",
+                    "vscan-gpt-5.4-mini" to "gpt-5.4-mini",
+                    "vscan-gpt-5.4-nano" to "gpt-5.4-nano",
+                    "vscan-gpt-5.4-pro" to "gpt-5.4-pro",
                     "vscan-gpt-4.1" to "gpt-4.1",
                     "vscan-gpt-4.1-mini" to "gpt-4.1-mini",
                     "vscan-gpt-4.1-nano" to "gpt-4.1-nano",
