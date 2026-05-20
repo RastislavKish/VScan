@@ -35,7 +35,8 @@ import com.rastislavkish.vscan.core.openai.requests.Request as OpenaiRequest
 
 class Conversation(
     val providersManager: ProvidersManager,
-    val model: String,
+    var model: String,
+    var maxCompletionTokens: Int,
     val systemMessage: SystemMessage?,
     ) {
 
@@ -87,7 +88,7 @@ class Conversation(
         for (message in this.messages) {
             messages.add(message.render())
             }
-        val bodyObject=OpenaiRequest(modelId, messages, 300)
+        val bodyObject=OpenaiRequest(modelId, messages, maxCompletionTokens)
 
         val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
 

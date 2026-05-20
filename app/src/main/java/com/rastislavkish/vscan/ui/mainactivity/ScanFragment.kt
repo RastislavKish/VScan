@@ -315,7 +315,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             if (settings.describeSavedImages) {
                 val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-                val connection=Conversation(providersManager, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
+                val connection=Conversation(providersManager, fileDescriptionConfig.model, 300, fileDescriptionConfig.systemPromptOrNull)
 
                 val encodedImage=Base64.getEncoder().encodeToString(image)
                 connection.addMessage(ImageMessage(
