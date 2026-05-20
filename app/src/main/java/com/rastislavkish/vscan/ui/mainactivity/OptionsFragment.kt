@@ -34,6 +34,7 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textfield.TextInputEditText
 
 import kotlin.coroutines.*
@@ -75,6 +76,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var cameraSpinner: Spinner
     private lateinit var modelInput: TextInputEditText
     private lateinit var selectModelButton: Button
+    private lateinit var maxCompletionTokensInput: TextInputEditText
 
     private lateinit var nameInput: TextInputEditText
 
@@ -132,6 +134,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         TextController(modelInput).setTextChangeListener(this::onModelInputTextChange)
         selectModelButton=view.findViewById(R.id.selectModelButton)
         selectModelButton.setOnClickListener(this::onSelectModelButtonClick)
+        maxCompletionTokensInput=view.findViewById(R.id.maxCompletionTokensInput)
+        TextController(maxCompletionTokensInput).setTextChangeListener(this::onMaxCompletionTokensInputTextChange)
 
         nameInput=view.findViewById(R.id.nameInput)
         TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
@@ -145,6 +149,17 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         val settingsButton: Button=view.findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener(this::onSettingsButtonClick)
+
+        val modelInputLayout: TextInputLayout=view.findViewById(R.id.modelInputLayout)
+        val maxCompletionTokensInputLayout: TextInputLayout=view.findViewById(R.id.maxCompletionTokensInputLayout)
+        val nameInputLayout: TextInputLayout=view.findViewById(R.id.nameInputLayout)
+
+        modelInputLayout.setPrefixText("Model")
+        modelInputLayout.setPlaceholderText("Model")
+        maxCompletionTokensInputLayout.setPrefixText("Max completion tokens")
+        maxCompletionTokensInputLayout.setPlaceholderText("Max completion tokens")
+        nameInputLayout.setPrefixText("Config name")
+        nameInputLayout.setPlaceholderText("Config name")
 
         textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onTextInputActivityResult)
         modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
@@ -170,6 +185,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
             if (uiConfig.model!=activeConfig.model)
             modelInput.setText(activeConfig.model)
+
+            if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
+            maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
 
             if (uiConfig.name!=activeConfig.name)
             nameInput.setText(activeConfig.name)
@@ -249,6 +267,19 @@ class OptionsFragment: Fragment(), CoroutineScope {
     fun onSelectModelButtonClick(v: View) {
         startModelSelectionActivity()
         }
+    fun onMaxCompletionTokensInputTextChange(text: String) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val conversation=adapter.conversation
+            val maxCompletionTokens=maxCompletionTokensInput.text.toString().toInt()
+
+            if (maxCompletionTokens!=activeConfig.maxCompletionTokens)
+            adapter.activeConfig=activeConfig.withMaxCompletionTokens(maxCompletionTokens)
+
+            if (maxCompletionTokens!=conversation.maxCompletionTokens)
+            conversation.maxCompletionTokens=maxCompletionTokens
+            }}
+        }
 
     fun onNameInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
@@ -291,6 +322,12 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
 
     fun getUIConfig(adapter: TabAdapter): Config {
+        val maxCompletionTokensInputText=maxCompletionTokensInput.text.toString()
+        val maxCompletionTokens=if (!maxCompletionTokensInputText.isBlank())
+        maxCompletionTokensInputText.toInt()
+        else
+        0
+
         return Config(
             adapter.activeConfig.id,
             nameInput.toString(),
@@ -300,6 +337,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             getSelectedFlashlightMode(),
             getSelectedCamera(),
             modelInput.text.toString(),
+            maxCompletionTokens,
             )
         }
 

@@ -30,6 +30,7 @@ data class Config(
     val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: String="vscan-gpt-4o",
+    val maxCompletionTokens: Int=300,
     ) {
 
     val systemPromptOrNull: SystemMessage?
@@ -44,6 +45,7 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
     fun withName(name: String): Config = Config(
         id,
@@ -54,6 +56,7 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
     fun withSystemPrompt(systemPrompt: String): Config = Config(
         id,
@@ -64,6 +67,7 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
     fun withUserPrompt(userPrompt: String): Config = Config(
         id,
@@ -74,6 +78,7 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
 
     fun withHighRes(highRes: Boolean): Config = Config(
@@ -85,6 +90,7 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
     fun withFlashlightMode(flashlightMode: FlashlightMode): Config = Config(
         id,
@@ -95,8 +101,8 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
-
     fun withCamera(camera: UsedCamera): Config = Config(
         id,
         name,
@@ -106,7 +112,9 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
         )
+
     fun withModel(model: String): Config = Config(
         id,
         name,
@@ -116,6 +124,18 @@ data class Config(
         flashlightMode,
         camera,
         model,
+        maxCompletionTokens,
+        )
+    fun withMaxCompletionTokens(maxCompletionTokens: Int): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        flashlightMode,
+        camera,
+        model,
+        maxCompletionTokens,
         )
 
     }

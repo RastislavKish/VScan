@@ -315,14 +315,19 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             if (settings.describeSavedImages) {
                 val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-                val connection=Conversation(providersManager, fileDescriptionConfig.model, 300, fileDescriptionConfig.systemPromptOrNull)
+                val conversation=Conversation(
+                    providersManager,
+                    fileDescriptionConfig.model,
+                    fileDescriptionConfig.maxCompletionTokens,
+                    fileDescriptionConfig.systemPromptOrNull,
+                    )
 
                 val encodedImage=Base64.getEncoder().encodeToString(image)
-                connection.addMessage(ImageMessage(
+                conversation.addMessage(ImageMessage(
                     fileDescriptionConfig.userPrompt,
                     LocalImage(encodedImage),
                     ))
-                val response=connection.generateResponse()
+                val response=conversation.generateResponse()
 
                 if (!response.lowercase().contains("error")) {
                     val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
