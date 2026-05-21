@@ -42,14 +42,17 @@ class Conversation(
     val systemMessage: SystemMessage?,
     ) {
 
-    var totalUsedInputTokens=0
+    var promptTokens=0
     get private set
 
-    var totalUsedOutputTokens=0
+    var reasoningTokens=0
     get private set
 
-    val totalPrice: Double
-    get() = 0.005*(totalUsedInputTokens/1000)+0.015*(totalUsedOutputTokens/1000)
+    var completionTokens=0
+    get private set
+
+    var totalTokens=0
+    get private set
 
     val messages=mutableListOf<Message>()
 
@@ -127,12 +130,21 @@ class Conversation(
             }
 
         if (json.containsKey("usage")) {
-            val usageNode=(json.get("usage") ?: return "Error: Unable to extract the usage noe") as JsonObject
-            val promptTokens=(usageNode.get("prompt_tokens") ?: return "Error: Unable to extract used prompt tokens") as JsonPrimitive
-            val completionTokens=(usageNode.get("completion_tokens") ?: return "Error: Unable to extract used completion tokens") as JsonPrimitive
+            val usageNode=(json.get("usage") ?: return "Error: Unable to extract the usage node") as JsonObject
 
-            totalUsedInputTokens=promptTokens.content.toInt()
-            totalUsedOutputTokens=completionTokens.content.toInt()
+            promptTokens=((usageNode.get("prompt_tokens") ?: return "Error: Unable to extract used prompt tokens") as JsonPrimitive)
+            .content.toInt()
+
+            reasoningTokens=if (usageNode.containsKey("reasoning_tokens"))
+            (usageNode.get("reasoning_tokens")!! as JsonPrimitive).content.toInt()
+            else
+            0
+
+            completionTokens=((usageNode.get("completion_tokens") ?: return "Error: Unable to extract used completion tokens") as JsonPrimitive)
+            .content.toInt()
+
+            totalTokens=((usageNode.get("total_tokens") ?: return "Error: Unable to extract used total tokens") as JsonPrimitive)
+            .content.toInt()
             }
 
         if (json.containsKey("choices")) {
