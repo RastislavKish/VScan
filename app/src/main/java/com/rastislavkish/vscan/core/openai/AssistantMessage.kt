@@ -16,8 +16,10 @@
 
 package com.rastislavkish.vscan.core.openai
 
-class GptResponse(
-    text: String,
-    ): Message("assistant", text, listOf()) {
+class AssistantMessage(
+    val content: String,
+    val reasoning: String,
+    val finishReason: String,
+    ): Message("assistant", content, listOf()) {
 
     }

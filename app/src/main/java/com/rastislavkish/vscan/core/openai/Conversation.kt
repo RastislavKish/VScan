@@ -78,16 +78,16 @@ class Conversation(
         return messages.last()
         }
 
-    suspend fun generateResponse(): String {
+    suspend fun generateResponse(): AssistantMessage {
         val provider=providersManager.getProviderForModel(model)
-        ?: return "Error: Model $model does not have an assigned provider"
+        ?: throw Exception("Error: Model $model does not have an assigned provider")
 
         val baseUrl=provider.baseUrl
         val apiKey=provider.apiKey
         val modelId=provider.getModelId(model)
 
         if (modelId.startsWith("vscan-"))
-        return "Error: The chosen provider does not support this model."
+        throw Exception("Error: The chosen provider does not support this model.")
 
         val messages=mutableListOf<Msg>()
         for (message in this.messages) {
@@ -116,23 +116,23 @@ class Conversation(
                 }
             }
         catch (e: Exception) {
-            return "Error: Unable to connect to the model provider"
+            throw Exception("Error: Unable to connect to the model provider")
             }
 
         val responseText: String=response.body()
 
         val json: JsonObject=Json.decodeFromString(responseText)
         if (json.containsKey("error")) {
-            val errorNode=(json.get("error") ?: return "Error: Unknown error") as JsonObject
-            val message=(errorNode.get("message") ?: return "Error: Unknown error") as JsonPrimitive
+            val errorNode=json.get("error")!! as JsonObject
+            val message=(errorNode.get("message") ?: throw Exception("Error: Unable to extract error message")) as JsonPrimitive
 
-            return message.content
+            throw Exception(message.content)
             }
 
         if (json.containsKey("usage")) {
-            val usageNode=(json.get("usage") ?: return "Error: Unable to extract the usage node") as JsonObject
+            val usageNode=json.get("usage")!! as JsonObject
 
-            promptTokens=((usageNode.get("prompt_tokens") ?: return "Error: Unable to extract used prompt tokens") as JsonPrimitive)
+            promptTokens=((usageNode.get("prompt_tokens") ?: throw Exception("Error: Unable to extract used prompt tokens")) as JsonPrimitive)
             .content.toInt()
 
             reasoningTokens=if (usageNode.containsKey("reasoning_tokens"))
@@ -140,26 +140,35 @@ class Conversation(
             else
             0
 
-            completionTokens=((usageNode.get("completion_tokens") ?: return "Error: Unable to extract used completion tokens") as JsonPrimitive)
+            completionTokens=((usageNode.get("completion_tokens") ?: throw Exception("Error: Unable to extract used completion tokens")) as JsonPrimitive)
             .content.toInt()
 
-            totalTokens=((usageNode.get("total_tokens") ?: return "Error: Unable to extract used total tokens") as JsonPrimitive)
+            totalTokens=((usageNode.get("total_tokens") ?: throw Exception("Error: Unable to extract used total tokens")) as JsonPrimitive)
             .content.toInt()
             }
 
         if (json.containsKey("choices")) {
             val choicesArray=json.get("choices")!! as JsonArray
-            val choiceNode=(choicesArray.getOrNull(0) ?: return "Error: Model returned no response") as JsonObject
-            val messageNode=(choiceNode.get("message") ?: return "Error: Unable to extract the response message") as JsonObject
-            val content=(messageNode.get("content") ?: return "Error: Unable to extract the response message content") as JsonPrimitive
+            val choiceNode=(choicesArray.getOrNull(0) ?: throw Exception("Error: Model returned no response")) as JsonObject
+            val messageNode=(choiceNode.get("message") ?: throw Exception("Error: Unable to extract the response message")) as JsonObject
+            val content=((messageNode.get("content") ?: throw Exception("Error: Unable to extract the response message content")) as JsonPrimitive)
+            .content
 
-            val responseMessage=GptResponse(content.content)
-            addMessage(responseMessage)
+            val reasoning=if (messageNode.containsKey("reasoning"))
+            (messageNode.get("reasoning")!! as JsonPrimitive).content
+            else
+            ""
 
-            return responseMessage.text
+            val finishReason=((choiceNode.get("finish_reason") ?: throw Exception("Error: Unable to extract the message finish reason")) as JsonPrimitive)
+            .content
+
+            val assistantMessage=AssistantMessage(content, reasoning, finishReason)
+            addMessage(assistantMessage)
+
+            return assistantMessage
             }
 
-        return "Error: Unknown error"
+        throw Exception("Error: Unknown error")
         }
 
     fun toMessageList(): List<Message> {

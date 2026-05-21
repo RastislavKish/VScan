@@ -30,6 +30,7 @@ import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.SystemMessage
 import com.rastislavkish.vscan.core.openai.LocalImage
 import com.rastislavkish.vscan.core.openai.ImageMessage
+import com.rastislavkish.vscan.core.openai.AssistantMessage
 import com.rastislavkish.vscan.core.Settings
 
 // Everything in this class is supposed dto be used only while holding its mutex property
@@ -73,7 +74,7 @@ class TabAdapter(context: Context) {
             )
         }
 
-    suspend fun consultConfig(config: Config): String? {
+    suspend fun consultConfig(config: Config): AssistantMessage? {
         val image=lastTakenImage ?: return null
 
         conversation=Conversation(

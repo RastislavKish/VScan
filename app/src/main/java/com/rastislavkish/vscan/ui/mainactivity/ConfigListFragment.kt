@@ -94,7 +94,12 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         }
     fun configLongClick(config: Config) {
         launch { tabAdapter.mutex.withLock {
-            toast(tabAdapter.consultConfig(config) ?: return@launch)
+            try {
+                toast(tabAdapter.consultConfig(config)?.content ?: return@launch)
+                }
+            catch (e: Exception) {
+                toast(e.message ?: "Error")
+                }
             }}
         }
     fun searchInputTextChange(text: String) {

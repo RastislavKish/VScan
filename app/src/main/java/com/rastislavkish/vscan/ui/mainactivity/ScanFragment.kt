@@ -328,27 +328,28 @@ class ScanFragment: Fragment(), CoroutineScope {
                     fileDescriptionConfig.userPrompt,
                     LocalImage(encodedImage),
                     ))
-                val response=conversation.generateResponse()
 
-                if (!response.lowercase().contains("error")) {
-                    val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
-                    try {
-                        saveToGallery(fileName, image)
-                        toast("Saved as $fileName")
-                        }
-                    catch (e: Exception) {
-                        toast("Saving failed: ${e.message}")
-                        }
+                var errorMessage: String?=null
+
+                val fileName=try {
+                    val response=conversation.generateResponse().content
+                    "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
                     }
-                else {
-                    val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
-                    try {
-                        saveToGallery(fileName, image)
-                        toast("Error while describing the image: \"$response\" Saved as $fileName")
-                        }
-                    catch (e: Exception) {
-                        toast("Saving failed: ${e.message}")
-                        }
+                catch (e: Exception) {
+                    errorMessage=e.message ?: ""
+                    "${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    }
+
+                try {
+                    saveToGallery(fileName, image)
+
+                    if (errorMessage!=null)
+                    toast("Saved as $fileName")
+                    else
+                    toast("Error describing the image: $errorMessage Image saved as $fileName")
+                    }
+                catch (e: Exception) {
+                    toast("Saving failed: ${e.message}")
                     }
                 }
             else {
@@ -629,16 +630,32 @@ class ScanFragment: Fragment(), CoroutineScope {
             if (settings.useSounds)
             resources.shutterSound.play()
 
-            toast(adapter.consultConfig(config) ?: return@callback)
+            try {
+                toast(adapter.consultConfig(config)?.content ?: return@callback)
+                }
+            catch (e: Exception) {
+                toast(e.message ?: "Error")
+                }
             })
         }
     suspend fun consultConfig(adapter: TabAdapter, config: Config) {
-        toast(adapter.consultConfig(config) ?: return)
+        try {
+            toast(adapter.consultConfig(config)?.content ?: return)
+            }
+        catch (e: Exception) {
+            toast(e.message ?: "Error")
+            }
         }
     suspend fun sendMessage(adapter: TabAdapter, message: String) {
         adapter.conversation.addMessage(TextMessage(message))
-        val response=adapter.conversation.generateResponse()
-        toast(response)
+
+        try {
+            val response=adapter.conversation.generateResponse()
+            toast(response.content)
+            }
+        catch (e: Exception) {
+            toast(e.message ?: "Error")
+            }
         }
     fun setSystemPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
         adapter.activeConfig=adapter.activeConfig.withSystemPrompt(message)
