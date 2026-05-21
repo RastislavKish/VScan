@@ -46,6 +46,7 @@ class TabAdapter(context: Context) {
         providersManager,
         activeConfig.model,
         activeConfig.maxCompletionTokens,
+        activeConfig.reasoningEffort,
         if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
         )
     get set
@@ -67,6 +68,7 @@ class TabAdapter(context: Context) {
             providersManager,
             activeConfig.model,
             activeConfig.maxCompletionTokens,
+            activeConfig.reasoningEffort,
             if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
             )
         }
@@ -74,7 +76,13 @@ class TabAdapter(context: Context) {
     suspend fun consultConfig(config: Config): String? {
         val image=lastTakenImage ?: return null
 
-        conversation=Conversation(providersManager, config.model, config.maxCompletionTokens, config.systemPromptOrNull)
+        conversation=Conversation(
+            providersManager,
+            config.model,
+            config.maxCompletionTokens,
+            config.reasoningEffort,
+            config.systemPromptOrNull,
+            )
 
         val encodedImage=Base64.getEncoder().encodeToString(image)
         conversation.addMessage(ImageMessage(

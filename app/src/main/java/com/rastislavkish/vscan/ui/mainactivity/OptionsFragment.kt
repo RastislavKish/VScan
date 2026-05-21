@@ -48,6 +48,7 @@ import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
+import com.rastislavkish.vscan.core.ReasoningEffort
 
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivity
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityInput
@@ -77,6 +78,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var modelInput: TextInputEditText
     private lateinit var selectModelButton: Button
     private lateinit var maxCompletionTokensInput: TextInputEditText
+    private lateinit var reasoningEffortSpinner: Spinner
 
     private lateinit var nameInput: TextInputEditText
 
@@ -137,6 +139,17 @@ class OptionsFragment: Fragment(), CoroutineScope {
         maxCompletionTokensInput=view.findViewById(R.id.maxCompletionTokensInput)
         TextController(maxCompletionTokensInput).setTextChangeListener(this::onMaxCompletionTokensInputTextChange)
 
+        reasoningEffortSpinner=view.findViewById(R.id.reasoningEffortSpinner)
+        val reasoningEffortSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, reasoningEffortSpinnerOptions)
+        reasoningEffortSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        reasoningEffortSpinner.setAdapter(reasoningEffortSpinnerAdapter)
+        reasoningEffortSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onReasoningEffortSpinnerItemSelected(v ?: return, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) { }
+            })
+
         nameInput=view.findViewById(R.id.nameInput)
         TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
 
@@ -188,6 +201,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
             if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
             maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
+
+            if (uiConfig.reasoningEffort!=activeConfig.reasoningEffort)
+            setSelectedReasoningEffort(activeConfig.reasoningEffort)
 
             if (uiConfig.name!=activeConfig.name)
             nameInput.setText(activeConfig.name)
@@ -280,6 +296,19 @@ class OptionsFragment: Fragment(), CoroutineScope {
             conversation.maxCompletionTokens=maxCompletionTokens
             }}
         }
+    fun onReasoningEffortSpinnerItemSelected(v: View?, position: Int?) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val conversation=adapter.conversation
+            val reasoningEffort=getSelectedReasoningEffort()
+
+            if (reasoningEffort!=activeConfig.reasoningEffort)
+            adapter.activeConfig=activeConfig.withReasoningEffort(reasoningEffort)
+
+            if (reasoningEffort!=conversation.reasoningEffort)
+            adapter.conversation.reasoningEffort=reasoningEffort
+            }}
+        }
 
     fun onNameInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
@@ -338,6 +367,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             getSelectedCamera(),
             modelInput.text.toString(),
             maxCompletionTokens,
+            getSelectedReasoningEffort(),
             )
         }
 
@@ -370,6 +400,39 @@ class OptionsFragment: Fragment(), CoroutineScope {
         cameraSpinner.setSelection(when (camera) {
             UsedCamera.BACK_CAMERA -> 0
             UsedCamera.FRONT_CAMERA -> 1
+            })
+        }
+
+    val reasoningEffortSpinnerOptions=arrayOf(
+        "Unspecified",
+        "None",
+        "Minimal",
+        "Low",
+        "Medium",
+        "High",
+        "Xhigh",
+        )
+    fun getSelectedReasoningEffort(): ReasoningEffort? {
+        return when (reasoningEffortSpinner.selectedItemPosition) {
+            0 -> null
+            1 -> ReasoningEffort.NONE
+            2 -> ReasoningEffort.MINIMAL
+            3 -> ReasoningEffort.LOW
+            4 -> ReasoningEffort.MEDIUM
+            5 -> ReasoningEffort.HIGH
+            6 -> ReasoningEffort.XHIGH
+            else -> throw Exception("Unknown reasoning effort ${reasoningEffortSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedReasoningEffort(reasoningEffort: ReasoningEffort?) {
+        reasoningEffortSpinner.setSelection(when (reasoningEffort) {
+            null -> 0
+            ReasoningEffort.NONE -> 1
+            ReasoningEffort.MINIMAL -> 2
+            ReasoningEffort.LOW -> 3
+            ReasoningEffort.MEDIUM -> 4
+            ReasoningEffort.HIGH -> 5
+            ReasoningEffort.XHIGH -> 6
             })
         }
 

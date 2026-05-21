@@ -319,6 +319,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                     providersManager,
                     fileDescriptionConfig.model,
                     fileDescriptionConfig.maxCompletionTokens,
+                    fileDescriptionConfig.reasoningEffort,
                     fileDescriptionConfig.systemPromptOrNull,
                     )
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2023 Rastislav Kish
+* Copyright (C) 2026 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -14,16 +14,16 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.core.openai.requests
+package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 
 @Serializable
-class Request(
-    val model: String,
-    val messages: List<Message>,
-    val max_completion_tokens: Int,
-    val reasoning_effort: String?,
-    ) {
-
+enum class ReasoningEffort {
+    NONE,
+    MINIMAL,
+    LOW,
+    MEDIUM,
+    HIGH,
+    XHIGH,
     }

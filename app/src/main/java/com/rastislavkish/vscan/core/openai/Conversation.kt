@@ -29,6 +29,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 
 import com.rastislavkish.vscan.core.ProvidersManager
+import com.rastislavkish.vscan.core.ReasoningEffort
 
 import com.rastislavkish.vscan.core.openai.requests.Message as Msg
 import com.rastislavkish.vscan.core.openai.requests.Request as OpenaiRequest
@@ -37,6 +38,7 @@ class Conversation(
     val providersManager: ProvidersManager,
     var model: String,
     var maxCompletionTokens: Int,
+    var reasoningEffort: ReasoningEffort?,
     val systemMessage: SystemMessage?,
     ) {
 
@@ -88,7 +90,12 @@ class Conversation(
         for (message in this.messages) {
             messages.add(message.render())
             }
-        val bodyObject=OpenaiRequest(modelId, messages, maxCompletionTokens)
+        val bodyObject=OpenaiRequest(
+            modelId,
+            messages,
+            maxCompletionTokens,
+            reasoningEffortValue(),
+            )
 
         val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
 
@@ -147,4 +154,15 @@ class Conversation(
         return messages.toList()
         }
 
+    private fun reasoningEffortValue(): String? {
+        return when (reasoningEffort) {
+            null -> null
+            ReasoningEffort.NONE -> "none"
+            ReasoningEffort.MINIMAL -> "minimal"
+            ReasoningEffort.LOW -> "low"
+            ReasoningEffort.MEDIUM -> "medium"
+            ReasoningEffort.HIGH -> "high"
+            ReasoningEffort.XHIGH -> "xhigh"
+            }
+        }
     }

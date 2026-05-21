@@ -31,6 +31,7 @@ data class Config(
     val camera: UsedCamera=UsedCamera.BACK_CAMERA,
     val model: String="vscan-gpt-4o",
     val maxCompletionTokens: Int=300,
+    val reasoningEffort: ReasoningEffort?=null,
     ) {
 
     val systemPromptOrNull: SystemMessage?
@@ -46,6 +47,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withName(name: String): Config = Config(
         id,
@@ -57,6 +59,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withSystemPrompt(systemPrompt: String): Config = Config(
         id,
@@ -68,6 +71,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withUserPrompt(userPrompt: String): Config = Config(
         id,
@@ -79,6 +83,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
 
     fun withHighRes(highRes: Boolean): Config = Config(
@@ -91,6 +96,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withFlashlightMode(flashlightMode: FlashlightMode): Config = Config(
         id,
@@ -102,6 +108,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withCamera(camera: UsedCamera): Config = Config(
         id,
@@ -113,6 +120,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
 
     fun withModel(model: String): Config = Config(
@@ -125,6 +133,7 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
         )
     fun withMaxCompletionTokens(maxCompletionTokens: Int): Config = Config(
         id,
@@ -136,6 +145,19 @@ data class Config(
         camera,
         model,
         maxCompletionTokens,
+        reasoningEffort,
+        )
+    fun withReasoningEffort(reasoningEffort: ReasoningEffort?): Config = Config(
+        id,
+        name,
+        systemPrompt,
+        userPrompt,
+        highRes,
+        flashlightMode,
+        camera,
+        model,
+        maxCompletionTokens,
+        reasoningEffort,
         )
 
     }
