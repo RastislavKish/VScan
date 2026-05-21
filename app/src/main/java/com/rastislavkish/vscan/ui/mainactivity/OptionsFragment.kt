@@ -176,40 +176,15 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onTextInputActivityResult)
         modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
+
+        runBlocking { adapter.mutex.withLock {
+            updateUI(adapter)
+            }}
         }
 
     override fun onResume() {
         launch { adapter.mutex.withLock {
-            val uiConfig=getUIConfig(adapter)
-
-            val activeConfig=adapter.activeConfig
-
-            updateSystemPromptLink(adapter)
-            updateUserPromptLink(adapter)
-
-            if (uiConfig.highRes!=activeConfig.highRes)
-            highResSwitch.setChecked(activeConfig.highRes)
-
-            if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
-            setSelectedFlashlightMode(activeConfig.flashlightMode)
-
-            if (uiConfig.camera!=activeConfig.camera)
-            setSelectedCamera(activeConfig.camera)
-
-            if (uiConfig.model!=activeConfig.model)
-            modelInput.setText(activeConfig.model)
-
-            if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
-            maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
-
-            if (uiConfig.reasoningEffort!=activeConfig.reasoningEffort)
-            setSelectedReasoningEffort(activeConfig.reasoningEffort)
-
-            if (uiConfig.name!=activeConfig.name)
-            nameInput.setText(activeConfig.name)
-
-            updateButton.setClickable(activeConfig.id>=0)
-            deleteButton.setClickable(activeConfig.id>=0)
+            updateUI(adapter)
             }}
 
         super.onResume()
@@ -443,6 +418,39 @@ class OptionsFragment: Fragment(), CoroutineScope {
         processedText
         else
         "${processedText.substring(0..300)}..."
+        }
+
+    private fun updateUI(adapter: TabAdapter) {
+        val uiConfig=getUIConfig(adapter)
+
+        val activeConfig=adapter.activeConfig
+
+        updateSystemPromptLink(adapter)
+        updateUserPromptLink(adapter)
+
+        if (uiConfig.highRes!=activeConfig.highRes)
+        highResSwitch.setChecked(activeConfig.highRes)
+
+        if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
+        setSelectedFlashlightMode(activeConfig.flashlightMode)
+
+        if (uiConfig.camera!=activeConfig.camera)
+        setSelectedCamera(activeConfig.camera)
+
+        if (uiConfig.model!=activeConfig.model)
+        modelInput.setText(activeConfig.model)
+
+        if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
+        maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
+
+        if (uiConfig.reasoningEffort!=activeConfig.reasoningEffort)
+        setSelectedReasoningEffort(activeConfig.reasoningEffort)
+
+        if (uiConfig.name!=activeConfig.name)
+        nameInput.setText(activeConfig.name)
+
+        updateButton.setClickable(activeConfig.id>=0)
+        deleteButton.setClickable(activeConfig.id>=0)
         }
 
     private fun startTextInputActivity(title: String, text: String, context: String) {
