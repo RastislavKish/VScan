@@ -331,13 +331,18 @@ class ScanFragment: Fragment(), CoroutineScope {
 
                 var errorMessage: String?=null
 
-                val fileName=try {
+                var fileName=try {
                     val response=conversation.generateResponse().content
                     "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
                     }
                 catch (e: Exception) {
                     errorMessage=e.message ?: ""
                     "${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    }
+
+                if (fileName.isEmpty() && errorMessage==null) {
+                    errorMessage="Reasoning exceeded the token limit"
+                    fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
                     }
 
                 try {
@@ -631,7 +636,8 @@ class ScanFragment: Fragment(), CoroutineScope {
             resources.shutterSound.play()
 
             try {
-                toast(adapter.consultConfig(config)?.content ?: return@callback)
+                val response=adapter.consultConfig(config) ?: return@callback
+                toastResponse(response)
                 }
             catch (e: Exception) {
                 toast(e.message ?: "Error")
@@ -640,7 +646,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     suspend fun consultConfig(adapter: TabAdapter, config: Config) {
         try {
-            toast(adapter.consultConfig(config)?.content ?: return)
+            val response=adapter.consultConfig(config) ?: return
+            toastResponse(response)
             }
         catch (e: Exception) {
             toast(e.message ?: "Error")
@@ -651,7 +658,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
         try {
             val response=adapter.conversation.generateResponse()
-            toast(response.content)
+            toastResponse(response)
             }
         catch (e: Exception) {
             toast(e.message ?: "Error")
@@ -695,6 +702,14 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
+        }
+    fun toastResponse(response: AssistantMessage) {
+        if (!response.content.isEmpty())
+        toast(response.content)
+        else if (response.finishReason=="length")
+        toast("Error: Reasoning exceeded the token limit")
+        else
+        toast("Error: Received empty output")
         }
     fun createImageFile(fileName: String): File {
         val storageDir: File = if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q) Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) else activity!!.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: throw Exception("Failed to optain the Pictures folder path")
