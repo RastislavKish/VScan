@@ -22,7 +22,8 @@ import kotlinx.serialization.*
 class Request(
     val model: String,
     val messages: List<Message>,
-    val max_tokens: Int,
+    val max_completion_tokens: Int,
+    val reasoning_effort: String?,
     ) {
 
     }

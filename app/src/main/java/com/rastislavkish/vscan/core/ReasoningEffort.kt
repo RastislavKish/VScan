@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2023 Rastislav Kish
+* Copyright (C) 2026 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -14,14 +14,16 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.core.openai
+package com.rastislavkish.vscan.core
 
-class SystemMessage(
-    text: String,
-    ): Message("system", text, listOf()) {
+import kotlinx.serialization.*
 
-    override fun withText(text: String): Message = SystemMessage(
-        text,
-        )
-
+@Serializable
+enum class ReasoningEffort {
+    NONE,
+    MINIMAL,
+    LOW,
+    MEDIUM,
+    HIGH,
+    XHIGH,
     }

@@ -41,6 +41,7 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.LocalImage
 import com.rastislavkish.vscan.core.openai.ImageMessage
+import com.rastislavkish.vscan.core.openai.AssistantMessage
 
 class ConfigListFragment: Fragment(), CoroutineScope {
 
@@ -94,7 +95,13 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         }
     fun configLongClick(config: Config) {
         launch { tabAdapter.mutex.withLock {
-            toast(tabAdapter.consultConfig(config) ?: return@launch)
+            try {
+                val response=tabAdapter.consultConfig(config) ?: return@launch
+                toastResponse(response)
+                }
+            catch (e: Exception) {
+                toast(e.message ?: "Error")
+                }
             }}
         }
     fun searchInputTextChange(text: String) {
@@ -103,5 +110,13 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
+        }
+    fun toastResponse(response: AssistantMessage) {
+        if (!response.text.isEmpty())
+        toast(response.text)
+        else if (response.finishReason=="length")
+        toast("Error: Reasoning exceeded the token limit")
+        else
+        toast("Error: Received empty output")
         }
     }

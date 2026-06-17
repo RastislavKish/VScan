@@ -34,6 +34,7 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textfield.TextInputEditText
 
 import kotlin.coroutines.*
@@ -47,6 +48,7 @@ import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.UsedCamera
+import com.rastislavkish.vscan.core.ReasoningEffort
 
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivity
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityInput
@@ -75,6 +77,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var cameraSpinner: Spinner
     private lateinit var modelInput: TextInputEditText
     private lateinit var selectModelButton: Button
+    private lateinit var maxCompletionTokensInput: TextInputEditText
+    private lateinit var reasoningEffortSpinner: Spinner
 
     private lateinit var nameInput: TextInputEditText
 
@@ -132,6 +136,19 @@ class OptionsFragment: Fragment(), CoroutineScope {
         TextController(modelInput).setTextChangeListener(this::onModelInputTextChange)
         selectModelButton=view.findViewById(R.id.selectModelButton)
         selectModelButton.setOnClickListener(this::onSelectModelButtonClick)
+        maxCompletionTokensInput=view.findViewById(R.id.maxCompletionTokensInput)
+        TextController(maxCompletionTokensInput).setTextChangeListener(this::onMaxCompletionTokensInputTextChange)
+
+        reasoningEffortSpinner=view.findViewById(R.id.reasoningEffortSpinner)
+        val reasoningEffortSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, reasoningEffortSpinnerOptions)
+        reasoningEffortSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        reasoningEffortSpinner.setAdapter(reasoningEffortSpinnerAdapter)
+        reasoningEffortSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
+                onReasoningEffortSpinnerItemSelected(v ?: return, position)
+                }
+            override fun onNothingSelected(parent: AdapterView<*>) { }
+            })
 
         nameInput=view.findViewById(R.id.nameInput)
         TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
@@ -146,36 +163,28 @@ class OptionsFragment: Fragment(), CoroutineScope {
         val settingsButton: Button=view.findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener(this::onSettingsButtonClick)
 
+        val modelInputLayout: TextInputLayout=view.findViewById(R.id.modelInputLayout)
+        val maxCompletionTokensInputLayout: TextInputLayout=view.findViewById(R.id.maxCompletionTokensInputLayout)
+        val nameInputLayout: TextInputLayout=view.findViewById(R.id.nameInputLayout)
+
+        modelInputLayout.setPrefixText("Model")
+        modelInputLayout.setPlaceholderText("Model")
+        maxCompletionTokensInputLayout.setPrefixText("Max completion tokens")
+        maxCompletionTokensInputLayout.setPlaceholderText("Max completion tokens")
+        nameInputLayout.setPrefixText("Config name")
+        nameInputLayout.setPlaceholderText("Config name")
+
         textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onTextInputActivityResult)
         modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
+
+        runBlocking { adapter.mutex.withLock {
+            updateUI(adapter)
+            }}
         }
 
     override fun onResume() {
         launch { adapter.mutex.withLock {
-            val uiConfig=getUIConfig(adapter)
-
-            val activeConfig=adapter.activeConfig
-
-            updateSystemPromptLink(adapter)
-            updateUserPromptLink(adapter)
-
-            if (uiConfig.highRes!=activeConfig.highRes)
-            highResSwitch.setChecked(activeConfig.highRes)
-
-            if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
-            setSelectedFlashlightMode(activeConfig.flashlightMode)
-
-            if (uiConfig.camera!=activeConfig.camera)
-            setSelectedCamera(activeConfig.camera)
-
-            if (uiConfig.model!=activeConfig.model)
-            modelInput.setText(activeConfig.model)
-
-            if (uiConfig.name!=activeConfig.name)
-            nameInput.setText(activeConfig.name)
-
-            updateButton.setClickable(activeConfig.id>=0)
-            deleteButton.setClickable(activeConfig.id>=0)
+            updateUI(adapter)
             }}
 
         super.onResume()
@@ -249,6 +258,32 @@ class OptionsFragment: Fragment(), CoroutineScope {
     fun onSelectModelButtonClick(v: View) {
         startModelSelectionActivity()
         }
+    fun onMaxCompletionTokensInputTextChange(text: String) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val conversation=adapter.conversation
+            val maxCompletionTokens=maxCompletionTokensInput.text.toString().toInt()
+
+            if (maxCompletionTokens!=activeConfig.maxCompletionTokens)
+            adapter.activeConfig=activeConfig.withMaxCompletionTokens(maxCompletionTokens)
+
+            if (maxCompletionTokens!=conversation.maxCompletionTokens)
+            conversation.maxCompletionTokens=maxCompletionTokens
+            }}
+        }
+    fun onReasoningEffortSpinnerItemSelected(v: View?, position: Int?) {
+        launch { adapter.mutex.withLock {
+            val activeConfig=adapter.activeConfig
+            val conversation=adapter.conversation
+            val reasoningEffort=getSelectedReasoningEffort()
+
+            if (reasoningEffort!=activeConfig.reasoningEffort)
+            adapter.activeConfig=activeConfig.withReasoningEffort(reasoningEffort)
+
+            if (reasoningEffort!=conversation.reasoningEffort)
+            adapter.conversation.reasoningEffort=reasoningEffort
+            }}
+        }
 
     fun onNameInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
@@ -291,6 +326,12 @@ class OptionsFragment: Fragment(), CoroutineScope {
         }
 
     fun getUIConfig(adapter: TabAdapter): Config {
+        val maxCompletionTokensInputText=maxCompletionTokensInput.text.toString()
+        val maxCompletionTokens=if (!maxCompletionTokensInputText.isBlank())
+        maxCompletionTokensInputText.toInt()
+        else
+        0
+
         return Config(
             adapter.activeConfig.id,
             nameInput.toString(),
@@ -300,6 +341,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             getSelectedFlashlightMode(),
             getSelectedCamera(),
             modelInput.text.toString(),
+            maxCompletionTokens,
+            getSelectedReasoningEffort(),
             )
         }
 
@@ -335,6 +378,39 @@ class OptionsFragment: Fragment(), CoroutineScope {
             })
         }
 
+    val reasoningEffortSpinnerOptions=arrayOf(
+        "Unspecified",
+        "None",
+        "Minimal",
+        "Low",
+        "Medium",
+        "High",
+        "Xhigh",
+        )
+    fun getSelectedReasoningEffort(): ReasoningEffort? {
+        return when (reasoningEffortSpinner.selectedItemPosition) {
+            0 -> null
+            1 -> ReasoningEffort.NONE
+            2 -> ReasoningEffort.MINIMAL
+            3 -> ReasoningEffort.LOW
+            4 -> ReasoningEffort.MEDIUM
+            5 -> ReasoningEffort.HIGH
+            6 -> ReasoningEffort.XHIGH
+            else -> throw Exception("Unknown reasoning effort ${reasoningEffortSpinner.selectedItem}")
+            }
+        }
+    fun setSelectedReasoningEffort(reasoningEffort: ReasoningEffort?) {
+        reasoningEffortSpinner.setSelection(when (reasoningEffort) {
+            null -> 0
+            ReasoningEffort.NONE -> 1
+            ReasoningEffort.MINIMAL -> 2
+            ReasoningEffort.LOW -> 3
+            ReasoningEffort.MEDIUM -> 4
+            ReasoningEffort.HIGH -> 5
+            ReasoningEffort.XHIGH -> 6
+            })
+        }
+
     fun summarizeText(text: String): String {
         val processedText=text.replace("\n", " ")
 
@@ -342,6 +418,39 @@ class OptionsFragment: Fragment(), CoroutineScope {
         processedText
         else
         "${processedText.substring(0..300)}..."
+        }
+
+    private fun updateUI(adapter: TabAdapter) {
+        val uiConfig=getUIConfig(adapter)
+
+        val activeConfig=adapter.activeConfig
+
+        updateSystemPromptLink(adapter)
+        updateUserPromptLink(adapter)
+
+        if (uiConfig.highRes!=activeConfig.highRes)
+        highResSwitch.setChecked(activeConfig.highRes)
+
+        if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
+        setSelectedFlashlightMode(activeConfig.flashlightMode)
+
+        if (uiConfig.camera!=activeConfig.camera)
+        setSelectedCamera(activeConfig.camera)
+
+        if (uiConfig.model!=activeConfig.model)
+        modelInput.setText(activeConfig.model)
+
+        if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
+        maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
+
+        if (uiConfig.reasoningEffort!=activeConfig.reasoningEffort)
+        setSelectedReasoningEffort(activeConfig.reasoningEffort)
+
+        if (uiConfig.name!=activeConfig.name)
+        nameInput.setText(activeConfig.name)
+
+        updateButton.setClickable(activeConfig.id>=0)
+        deleteButton.setClickable(activeConfig.id>=0)
         }
 
     private fun startTextInputActivity(title: String, text: String, context: String) {

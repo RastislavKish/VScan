@@ -8,6 +8,14 @@
     tools:context=".ui.mainactivity.OptionsFragment">
 
     <TextView
+        android:id="@+id/instructionsHeading"
+        android:text="Instructions"
+        android:accessibilityHeading="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        />
+
+    <TextView
         android:id="@+id/systemPromptLink"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
@@ -16,6 +24,14 @@
         android:id="@+id/userPromptLink"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
+        />
+
+    <TextView
+        android:id="@+id/cameraHeading"
+        android:text="Camera"
+        android:accessibilityHeading="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
         />
 
     <Switch
@@ -65,13 +81,21 @@
             />
         </LinearLayout>
 
+    <TextView
+        android:id="@+id/modelHeading"
+        android:text="Model"
+        android:accessibilityHeading="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        />
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         >
         <com.google.android.material.textfield.TextInputLayout
-            android:hint="Model"
+            android:id="@+id/modelInputLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -91,7 +115,49 @@
             />
         </LinearLayout>
     <com.google.android.material.textfield.TextInputLayout
-        android:hint="Config name"
+        android:id="@+id/maxCompletionTokensInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        >
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/maxCompletionTokensInput"
+            android:inputType="number"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            />
+        </com.google.android.material.textfield.TextInputLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        >
+        <TextView
+            android:text="Reasoning effort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+            />
+        <Spinner
+            android:id="@+id/reasoningEffortSpinner"
+            android:hint="Reasoning effort"
+            android:spinnerMode="dropdown"
+            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            />
+        </LinearLayout>
+
+    <TextView
+        android:id="@+id/configHeading"
+        android:text="Config"
+        android:accessibilityHeading="true"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/nameInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         >
@@ -101,7 +167,6 @@
             android:layout_width="match_parent"
             />
         </com.google.android.material.textfield.TextInputLayout>
-
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
@@ -127,6 +192,7 @@
             android:text="Delete"
             />
         </LinearLayout>
+
     <LinearLayout
         android:id="@+id/bottomBar2"
         android:layout_width="match_parent"

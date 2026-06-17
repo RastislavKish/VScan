@@ -30,6 +30,7 @@ class Settings(
     var useFlashlight=false
     var useSounds=true
     var describeSavedImages=false
+    var markdownRendering=false
 
     var defaultConfigId: Int=-1
     var shareConfigId: Int=-1
@@ -43,6 +44,7 @@ class Settings(
         useFlashlight=preferences.getBoolean("useFlashlight", false)
         useSounds=preferences.getBoolean("useSounds", true)
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
+        markdownRendering=preferences.getBoolean("markdownRendering", false)
 
         defaultConfigId=preferences.getInt("defaultConfigId", -1)
         shareConfigId=preferences.getInt("shareConfigId", -1)
@@ -57,6 +59,7 @@ class Settings(
         .putBoolean("useFlashlight", useFlashlight)
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
+        .putBoolean("markdownRendering", markdownRendering)
         .putInt("defaultConfigId", defaultConfigId)
         .putInt("shareConfigId", shareConfigId)
         .putInt("fileDescriptionConfigId", fileDescriptionConfigId)

@@ -16,8 +16,18 @@
 
 package com.rastislavkish.vscan.core.openai
 
-class GptResponse(
+class AssistantMessage(
     text: String,
+    val reasoning: String,
+    val finishReason: String,
+    val usage: Usage=Usage(),
     ): Message("assistant", text, listOf()) {
+
+    override fun withText(text: String): Message = AssistantMessage(
+        text,
+        reasoning,
+        finishReason,
+        usage,
+        )
 
     }

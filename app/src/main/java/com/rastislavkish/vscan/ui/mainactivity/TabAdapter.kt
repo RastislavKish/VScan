@@ -30,6 +30,7 @@ import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.SystemMessage
 import com.rastislavkish.vscan.core.openai.LocalImage
 import com.rastislavkish.vscan.core.openai.ImageMessage
+import com.rastislavkish.vscan.core.openai.AssistantMessage
 import com.rastislavkish.vscan.core.Settings
 
 // Everything in this class is supposed dto be used only while holding its mutex property
@@ -45,6 +46,8 @@ class TabAdapter(context: Context) {
     var conversation: Conversation=Conversation(
         providersManager,
         activeConfig.model,
+        activeConfig.maxCompletionTokens,
+        activeConfig.reasoningEffort,
         if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
         )
     get set
@@ -65,14 +68,22 @@ class TabAdapter(context: Context) {
         conversation=Conversation(
             providersManager,
             activeConfig.model,
+            activeConfig.maxCompletionTokens,
+            activeConfig.reasoningEffort,
             if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
             )
         }
 
-    suspend fun consultConfig(config: Config): String? {
+    suspend fun consultConfig(config: Config): AssistantMessage? {
         val image=lastTakenImage ?: return null
 
-        conversation=Conversation(providersManager, config.model, config.systemPromptOrNull)
+        conversation=Conversation(
+            providersManager,
+            config.model,
+            config.maxCompletionTokens,
+            config.reasoningEffort,
+            config.systemPromptOrNull,
+            )
 
         val encodedImage=Base64.getEncoder().encodeToString(image)
         conversation.addMessage(ImageMessage(

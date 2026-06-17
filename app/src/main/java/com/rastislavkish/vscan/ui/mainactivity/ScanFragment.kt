@@ -315,34 +315,46 @@ class ScanFragment: Fragment(), CoroutineScope {
 
             if (settings.describeSavedImages) {
                 val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
-                val connection=Conversation(providersManager, fileDescriptionConfig.model, fileDescriptionConfig.systemPromptOrNull)
+                val conversation=Conversation(
+                    providersManager,
+                    fileDescriptionConfig.model,
+                    fileDescriptionConfig.maxCompletionTokens,
+                    fileDescriptionConfig.reasoningEffort,
+                    fileDescriptionConfig.systemPromptOrNull,
+                    )
 
                 val encodedImage=Base64.getEncoder().encodeToString(image)
-                connection.addMessage(ImageMessage(
+                conversation.addMessage(ImageMessage(
                     fileDescriptionConfig.userPrompt,
                     LocalImage(encodedImage),
                     ))
-                val response=connection.generateResponse()
 
-                if (!response.lowercase().contains("error")) {
-                    val fileName="$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
-                    try {
-                        saveToGallery(fileName, image)
-                        toast("Saved as $fileName")
-                        }
-                    catch (e: Exception) {
-                        toast("Saving failed: ${e.message}")
-                        }
+                var errorMessage: String?=null
+
+                var fileName=try {
+                    val response=conversation.generateResponse().text
+                    "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
                     }
-                else {
-                    val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
-                    try {
-                        saveToGallery(fileName, image)
-                        toast("Error while describing the image: \"$response\" Saved as $fileName")
-                        }
-                    catch (e: Exception) {
-                        toast("Saving failed: ${e.message}")
-                        }
+                catch (e: Exception) {
+                    errorMessage=e.message ?: ""
+                    "${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    }
+
+                if (fileName.isEmpty() && errorMessage==null) {
+                    errorMessage="Reasoning exceeded the token limit"
+                    fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    }
+
+                try {
+                    saveToGallery(fileName, image)
+
+                    if (errorMessage!=null)
+                    toast("Saved as $fileName")
+                    else
+                    toast("Error describing the image: $errorMessage Image saved as $fileName")
+                    }
+                catch (e: Exception) {
+                    toast("Saving failed: ${e.message}")
                     }
                 }
             else {
@@ -623,16 +635,34 @@ class ScanFragment: Fragment(), CoroutineScope {
             if (settings.useSounds)
             resources.shutterSound.play()
 
-            toast(adapter.consultConfig(config) ?: return@callback)
+            try {
+                val response=adapter.consultConfig(config) ?: return@callback
+                toastResponse(response)
+                }
+            catch (e: Exception) {
+                toast(e.message ?: "Error")
+                }
             })
         }
     suspend fun consultConfig(adapter: TabAdapter, config: Config) {
-        toast(adapter.consultConfig(config) ?: return)
+        try {
+            val response=adapter.consultConfig(config) ?: return
+            toastResponse(response)
+            }
+        catch (e: Exception) {
+            toast(e.message ?: "Error")
+            }
         }
     suspend fun sendMessage(adapter: TabAdapter, message: String) {
         adapter.conversation.addMessage(TextMessage(message))
-        val response=adapter.conversation.generateResponse()
-        toast(response)
+
+        try {
+            val response=adapter.conversation.generateResponse()
+            toastResponse(response)
+            }
+        catch (e: Exception) {
+            toast(e.message ?: "Error")
+            }
         }
     fun setSystemPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
         adapter.activeConfig=adapter.activeConfig.withSystemPrompt(message)
@@ -672,6 +702,14 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
+        }
+    fun toastResponse(response: AssistantMessage) {
+        if (!response.text.isEmpty())
+        toast(response.text)
+        else if (response.finishReason=="length")
+        toast("Error: Reasoning exceeded the token limit")
+        else
+        toast("Error: Received empty output")
         }
     fun createImageFile(fileName: String): File {
         val storageDir: File = if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q) Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) else activity!!.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: throw Exception("Failed to optain the Pictures folder path")
