@@ -6,6 +6,17 @@
     android:layout_height="match_parent"
     tools:context=".ui.mainactivity.ConversationFragment">
 
+    <TextView
+        android:id="@+id/usageHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:accessibilityHeading="true"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/conversationList"
         android:layout_width="0dp"
@@ -13,7 +24,7 @@
         app:layoutManager="LinearLayoutManager"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/usageHeader"
         app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         />
 

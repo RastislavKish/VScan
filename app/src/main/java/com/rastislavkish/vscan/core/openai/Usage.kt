@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2023 Rastislav Kish
+* Copyright (C) 2026 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -16,18 +16,19 @@
 
 package com.rastislavkish.vscan.core.openai
 
-class AssistantMessage(
-    text: String,
-    val reasoning: String,
-    val finishReason: String,
-    val usage: Usage=Usage(),
-    ): Message("assistant", text, listOf()) {
+data class Usage(
+    val promptTokens: Int=0,
+    val reasoningTokens: Int=0,
+    val completionTokens: Int=0,
+    val totalTokens: Int=0,
+    ) {
 
-    override fun withText(text: String): Message = AssistantMessage(
-        text,
-        reasoning,
-        finishReason,
-        usage,
-        )
-
+    operator fun plus(other: Usage): Usage {
+        return Usage(
+            promptTokens+other.promptTokens,
+            reasoningTokens+other.reasoningTokens,
+            completionTokens+other.completionTokens,
+            totalTokens+other.totalTokens,
+            )
+        }
     }

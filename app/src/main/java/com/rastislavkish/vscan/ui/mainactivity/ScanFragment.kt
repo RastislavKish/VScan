@@ -332,7 +332,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                 var errorMessage: String?=null
 
                 var fileName=try {
-                    val response=conversation.generateResponse().content
+                    val response=conversation.generateResponse().text
                     "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
                     }
                 catch (e: Exception) {
@@ -704,8 +704,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
     fun toastResponse(response: AssistantMessage) {
-        if (!response.content.isEmpty())
-        toast(response.content)
+        if (!response.text.isEmpty())
+        toast(response.text)
         else if (response.finishReason=="length")
         toast("Error: Reasoning exceeded the token limit")
         else

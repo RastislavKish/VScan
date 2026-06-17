@@ -117,6 +117,10 @@ The Config list tab, accessible by a swipe to the right, includes a list of your
 
 Eventually, the Conversation tab, which you can access by swiping up, displays the currently active conversation, where you can access the past messages.
 
+## Disclaimer regarding use of development agents
+
+In order to let myself focus on functional aspects of VScan and make the utilization of my free time more efficient, I'm currently experimenting with outsourcing various repetitive programming tasks, such as UI design, to development agents. However, the project is not vibecoded. I've been coding in Kotlin ever since it appeared as a official Java alternative for Android app development, many years before the first mainstream language models appeared. I review all agent written code with the same scrutiny as I would review any pull-request from an external contributor, making sure it's safe to run, reasonably efficient, reliable, and in general meets my personal code quality standards. As the GPL license says, the project comes with no liability. But I can guarantee any bugs in the codebase are a result of human oversight or mistake, not an agent error.
+
 ## Attributions
 
 Asset | Author | Source

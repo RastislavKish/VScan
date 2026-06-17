@@ -42,17 +42,10 @@ class Conversation(
     val systemMessage: SystemMessage?,
     ) {
 
-    var promptTokens=0
-    get private set
-
-    var reasoningTokens=0
-    get private set
-
-    var completionTokens=0
-    get private set
-
-    var totalTokens=0
-    get private set
+    val usage: Usage
+    get() = messages
+    .filterIsInstance<AssistantMessage>()
+    .fold(Usage()) { acc, message -> acc+message.usage }
 
     val messages=mutableListOf<Message>()
 
@@ -64,6 +57,16 @@ class Conversation(
 
     fun addMessage(message: Message) {
         messages.add(message)
+        }
+    fun replaceMessage(index: Int, message: Message) {
+        messages[index]=message
+        }
+    fun removeMessageAt(index: Int) {
+        messages.removeAt(index)
+        }
+    fun removeMessagesFrom(index: Int) {
+        while (messages.size>index)
+        messages.removeAt(messages.size-1)
         }
     fun reset() {
         messages.clear()
@@ -129,22 +132,25 @@ class Conversation(
             throw Exception(message.content)
             }
 
+        var usage=Usage()
         if (json.containsKey("usage")) {
             val usageNode=json.get("usage")!! as JsonObject
 
-            promptTokens=((usageNode.get("prompt_tokens") ?: throw Exception("Error: Unable to extract used prompt tokens")) as JsonPrimitive)
+            val promptTokens=((usageNode.get("prompt_tokens") ?: throw Exception("Error: Unable to extract used prompt tokens")) as JsonPrimitive)
             .content.toInt()
 
-            reasoningTokens=if (usageNode.containsKey("reasoning_tokens"))
+            val reasoningTokens=if (usageNode.containsKey("reasoning_tokens"))
             (usageNode.get("reasoning_tokens")!! as JsonPrimitive).content.toInt()
             else
             0
 
-            completionTokens=((usageNode.get("completion_tokens") ?: throw Exception("Error: Unable to extract used completion tokens")) as JsonPrimitive)
+            val completionTokens=((usageNode.get("completion_tokens") ?: throw Exception("Error: Unable to extract used completion tokens")) as JsonPrimitive)
             .content.toInt()
 
-            totalTokens=((usageNode.get("total_tokens") ?: throw Exception("Error: Unable to extract used total tokens")) as JsonPrimitive)
+            val totalTokens=((usageNode.get("total_tokens") ?: throw Exception("Error: Unable to extract used total tokens")) as JsonPrimitive)
             .content.toInt()
+
+            usage=Usage(promptTokens, reasoningTokens, completionTokens, totalTokens)
             }
 
         if (json.containsKey("choices")) {
@@ -162,7 +168,7 @@ class Conversation(
             val finishReason=((choiceNode.get("finish_reason") ?: throw Exception("Error: Unable to extract the message finish reason")) as JsonPrimitive)
             .content
 
-            val assistantMessage=AssistantMessage(content, reasoning, finishReason)
+            val assistantMessage=AssistantMessage(content, reasoning, finishReason, usage)
             addMessage(assistantMessage)
 
             return assistantMessage
