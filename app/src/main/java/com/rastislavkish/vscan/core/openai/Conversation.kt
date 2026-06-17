@@ -139,13 +139,17 @@ class Conversation(
             val promptTokens=((usageNode.get("prompt_tokens") ?: throw Exception("Error: Unable to extract used prompt tokens")) as JsonPrimitive)
             .content.toInt()
 
-            val reasoningTokens=if (usageNode.containsKey("reasoning_tokens"))
-            (usageNode.get("reasoning_tokens")!! as JsonPrimitive).content.toInt()
-            else
-            0
-
             val completionTokens=((usageNode.get("completion_tokens") ?: throw Exception("Error: Unable to extract used completion tokens")) as JsonPrimitive)
             .content.toInt()
+
+            var reasoningTokens=0
+
+            if (usageNode.containsKey("completion_tokens_details")) {
+                val completionTokensDetailsNode=usageNode.get("completion_tokens_details")!! as JsonObject
+
+                if (completionTokensDetailsNode.containsKey("reasoning_tokens"))
+                reasoningTokens=(completionTokensDetailsNode.get("reasoning_tokens")!! as JsonPrimitive).content.toInt()
+                }
 
             val totalTokens=((usageNode.get("total_tokens") ?: throw Exception("Error: Unable to extract used total tokens")) as JsonPrimitive)
             .content.toInt()
