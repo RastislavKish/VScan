@@ -15,10 +15,15 @@
 */
 
 package com.rastislavkish.vscan.core.openai
+
 class ImageMessage(
     text: String,
     image: Image,
     ): Message("user", text, listOf(image)) {
 
-    }
+    override fun withText(text: String): Message = ImageMessage(
+        text,
+        attachments.first()!! as Image,
+        )
 
+    }

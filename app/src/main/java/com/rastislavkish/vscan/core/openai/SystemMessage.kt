@@ -20,4 +20,8 @@ class SystemMessage(
     text: String,
     ): Message("system", text, listOf()) {
 
+    override fun withText(text: String): Message = SystemMessage(
+        text,
+        )
+
     }

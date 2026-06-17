@@ -112,8 +112,8 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
     fun toastResponse(response: AssistantMessage) {
-        if (!response.content.isEmpty())
-        toast(response.content)
+        if (!response.text.isEmpty())
+        toast(response.text)
         else if (response.finishReason=="length")
         toast("Error: Reasoning exceeded the token limit")
         else

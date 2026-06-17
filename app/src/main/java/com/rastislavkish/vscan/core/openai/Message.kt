@@ -25,6 +25,8 @@ abstract class Message(
     val attachments: List<Attachment>
     ) {
 
+    abstract fun withText(text: String): Message
+
     open fun render(): Msg {
         val content=mutableListOf<Content>(
             Content(

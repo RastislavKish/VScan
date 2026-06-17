@@ -58,6 +58,16 @@ class Conversation(
     fun addMessage(message: Message) {
         messages.add(message)
         }
+    fun replaceMessage(index: Int, message: Message) {
+        messages[index]=message
+        }
+    fun removeMessageAt(index: Int) {
+        messages.removeAt(index)
+        }
+    fun removeMessagesFrom(index: Int) {
+        while (messages.size>index)
+        messages.removeAt(messages.size-1)
+        }
     fun reset() {
         messages.clear()
         if (systemMessage!=null)

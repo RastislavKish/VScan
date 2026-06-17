@@ -20,4 +20,8 @@ class TextMessage(
     text: String,
     ): Message("user", text, listOf()) {
 
+    override fun withText(text: String): Message = TextMessage(
+        text,
+        )
+
     }

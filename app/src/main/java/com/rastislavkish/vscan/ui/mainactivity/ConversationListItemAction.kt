@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2023 Rastislav Kish
+* Copyright (C) 2026 Rastislav Kish
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -14,20 +14,13 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.core.openai
+package com.rastislavkish.vscan.ui.mainactivity
 
-class AssistantMessage(
-    text: String,
-    val reasoning: String,
-    val finishReason: String,
-    val usage: Usage=Usage(),
-    ): Message("assistant", text, listOf()) {
-
-    override fun withText(text: String): Message = AssistantMessage(
-        text,
-        reasoning,
-        finishReason,
-        usage,
-        )
-
+enum class ConversationListItemAction(val label: String) {
+    COPY("Copy"),
+    EDIT("Edit"),
+    EDIT_REGENERATE_FROM("Edit and regenerate from this point"),
+    DELETE("Delete"),
+    REGENERATE_FROM("Regenerate from this point"),
+    STATS("Stats"),
     }
