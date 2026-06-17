@@ -249,10 +249,14 @@ class OptionsFragment: Fragment(), CoroutineScope {
     fun onModelInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
             val activeConfig=adapter.activeConfig
+            val conversation=adapter.conversation
             val model=modelInput.text.toString()
 
             if (model!=activeConfig.model)
             adapter.activeConfig=activeConfig.withModel(model)
+
+            if (model!=conversation.model)
+            conversation.model=model
             }}
         }
     fun onSelectModelButtonClick(v: View) {
