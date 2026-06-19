@@ -101,40 +101,20 @@ class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.
         }
 
     private fun readyToUseModels(): List<Model> {
-        val supportedModels=hashSetOf<String>()
-        for (model in supportedByProvidersModels())
-        supportedModels.add(model.identifier)
-
         val providersManager=ProvidersManager.getInstance(context)
-        val mappings=providersManager.getAllModelProviderMappings()
 
-        val models=mutableListOf<Model>()
-
-        for (mapping in mappings) {
-            val (model, provider)=mapping
-
-            if (provider==null)
-            continue
-
-            if (model.startsWith("vscan-")) {
-                if (supportedModels.contains(model))
-                models.add(Model.idToModel(model))
-                }
-            else {
-                models.add(Model.idToModel(model))
-                }
-            }
+        val models=Model.presets
+        .filter { providersManager.isModelAssigned(it.identifier) }
+        .toList()
 
         return models
         }
     private fun supportedByProvidersModels(): List<Model> {
         val providersManager=ProvidersManager.getInstance(context)
-        val providers=providersManager.getAllProviders()
 
-        val models=mutableListOf<Model>()
-        for (provider in providers)
-        for (model in provider.getExtendedModels().keys)
-        models.add(Model.idToModel(model))
+        val models=Model.presets
+        .filter { providersManager.isModelSupported(it.identifier) }
+        .toList()
 
         return models
         }

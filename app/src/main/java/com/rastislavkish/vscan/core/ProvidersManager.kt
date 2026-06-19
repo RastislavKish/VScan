@@ -105,6 +105,17 @@ class ProvidersManager(
         save()
         }
 
+    fun isModelSupported(model: String): Boolean {
+        for (provider in providers.values)
+        if (provider.supportsModel(model))
+        return true
+
+        return false
+        }
+    fun isModelAssigned(model: String): Boolean {
+        return getProviderForModel(model)!=null
+        }
+
     fun load() {
         val serializedProviders=preferences.getString("providers", "") ?: ""
 

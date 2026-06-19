@@ -68,6 +68,10 @@ data class Provider(
         return base
         }
 
+    fun supportsModel(model: String): Boolean {
+        return models.containsKey(model) || preset?.models?.containsKey(model)==true
+        }
+
     fun withId(id: Int) = Provider(
         id,
         name,
