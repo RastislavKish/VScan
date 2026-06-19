@@ -1,0 +1,5 @@
+- Added support for reasoning models. VScan now allows configuring the amount of tokens a config can spend on a task, and setting the reasoning effort to be used in the process.
+- The conversation screen got a major rewamp. Now it offers detailed information about token usage of the entire conversation, as well as individual generated messages. If the model includes reasoning in its output, it can be displayed separately for each response. The conversation list now also supports accessibility actions, letting the user to edit messages and regenerate responses.
+- Updated the database of models. VScan now recognizes over 80 common large language models with vision support, including the latest releases of GPT, Claude, Gemini, Qwen, Gemma and Mistral.
+- Added presets for Google and Mistral, updated existing presets for OpenAI, OpenRouter and NanoGPt.
+- Fixed various minor bugs and issues. Changing model on the Options tab should now be immediately applied to the conversation, custom model identifiers should now work properly when defined in providers, the Options tab got slightly reorganized and should offer a better experience.
