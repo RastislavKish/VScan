@@ -94,7 +94,7 @@ class ProviderActivity : AppCompatActivity() {
             baseUrlInput.setText(inputProvider.baseUrl)
             apiKeyInput.setText(inputProvider.apiKey)
 
-            for (entry in inputProvider.models.entries)
+            for (entry in inputProvider.getExtendedModels().entries)
             models.add(ModelToIdMapping(entry.key, entry.value))
             }
         else {
@@ -134,10 +134,13 @@ class ProviderActivity : AppCompatActivity() {
         val name=nameInput.text.toString()
         var baseUrl=baseUrlInput.text.toString()
         val apiKey=apiKeyInput.text.toString()
-        val models: MutableMap<String, String> = mutableMapOf()
+        val extendedModels: MutableMap<String, String> = mutableMapOf()
 
         for (mapping in this.models)
-        models.put(mapping.model, mapping.id)
+        extendedModels.put(mapping.model, mapping.id)
+
+        val models=inputProvider?.getBaseModels(extendedModels)
+        ?: extendedModels
 
         if (name.isEmpty()) {
             toast("Error: Name must not be empty.")

@@ -26,6 +26,8 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.rastislavkish.vscan.R
 
+import com.rastislavkish.vscan.core.ProviderParams
+
 class ProviderParamsListAdapter(context: Context): RecyclerView.Adapter<ProviderParamsListAdapter.ProviderParamsViewHolder>() {
 
     private var providerParamsList=ProviderParams.presets

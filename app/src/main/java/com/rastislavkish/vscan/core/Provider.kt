@@ -28,19 +28,54 @@ data class Provider(
     val models: Map<String, String>,
     ) {
 
+    @Transient
+    val preset: ProviderParams?=ProviderParams.presets.find { it.baseUrl==baseUrl }
+
     fun getModelId(vscanId: String): String {
         if (!vscanId.startsWith("vscan-"))
         return vscanId
 
         val modelId=models.get(vscanId)
+        ?: preset?.models?.get(vscanId)
+        ?: vscanId
 
-        return if (modelId!=null)
-        modelId
-        else
-        vscanId
+        return modelId
+        }
+
+    fun getExtendedModels(): Map<String, String> {
+        val extended=preset?.models?.toMutableMap()
+        ?: mutableMapOf<String, String>()
+
+        for ((vscanId, modelId) in models)
+        extended[vscanId]=modelId
+
+        return extended
+        }
+    fun getBaseModels(extendedModels: Map<String, String>): Map<String, String> {
+        // The reverse variant of getExtendedModels
+
+        val preset=preset ?: return extendedModels
+
+        val base=mutableMapOf<String, String>()
+
+        for ((vscanId, modelId) in extendedModels) {
+            if (vscanId.startsWith("vscan-") && preset.models.containsKey(vscanId) && preset.models[vscanId]==modelId)
+            continue
+
+            base[vscanId]=modelId
+            }
+
+        return base
         }
 
     fun withId(id: Int) = Provider(
+        id,
+        name,
+        baseUrl,
+        apiKey,
+        models,
+        )
+    fun withModels(models: Map<String, String>) = Provider(
         id,
         name,
         baseUrl,

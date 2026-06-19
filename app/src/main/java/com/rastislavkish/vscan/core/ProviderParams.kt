@@ -14,7 +14,7 @@
 * along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-package com.rastislavkish.vscan.ui.providerpresetselectionactivity
+package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 

@@ -121,6 +121,8 @@ class ProvidersManager(
 
         if (!serializedModelProviderMappings.isEmpty())
         modelProviderMappings=Json.decodeFromString(serializedModelProviderMappings)
+
+        cleanRedundantProviderModels()
         }
     fun save() {
         preferences.edit()
@@ -128,6 +130,52 @@ class ProvidersManager(
         .putInt("defaultProvider", defaultProvider ?: -1)
         .putString("modelProviderMappings", Json.encodeToString(modelProviderMappings))
         .commit()
+        }
+
+    private fun cleanRedundantProviderModels() {
+        // This is a cleanup for purposes of backward compatibility
+        // Previously, providers would be preload with model definitions if a preset was chosen and these presets get saved as the user configuration
+        // Now the presets are separated from the config, and the preconfigured mappings should be removed
+
+        var fixesDone=false
+
+        for ((id, provider) in providers) {
+            if (provider.preset==null)
+            continue
+
+            val preset=provider.preset!!
+
+            var needsCleaning=false
+
+            for ((vscanId, modelId) in provider.models) {
+                if (vscanId.startsWith("vscan-") && preset.models.containsKey(vscanId) && preset.models[vscanId]==modelId) {
+                    needsCleaning=true
+                    break
+                    }
+
+                }
+
+            if (!needsCleaning)
+            continue
+
+            val models=mutableMapOf<String, String>()
+
+            for ((vscanId, modelId) in provider.models) {
+                if (vscanId.startsWith("vscan-") && preset.models.containsKey(vscanId) && preset.models[vscanId]==modelId)
+                continue
+
+                models[vscanId]=modelId
+                }
+
+            val newProvider=provider.withModels(models)
+
+            providers[id]=newProvider
+
+            fixesDone=true
+            }
+
+        if (fixesDone)
+        save()
         }
 
     private fun getFreeId(): Int {

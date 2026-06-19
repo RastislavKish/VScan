@@ -21,6 +21,8 @@ import android.content.Intent
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.ProviderParams
+
 @Serializable
 data class ProviderPresetSelectionActivityOutput(
     val providerParams: ProviderParams,

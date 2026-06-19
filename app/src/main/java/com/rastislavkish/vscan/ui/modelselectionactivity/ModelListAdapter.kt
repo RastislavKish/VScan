@@ -133,7 +133,7 @@ class ModelListAdapter(context: Context): RecyclerView.Adapter<ModelListAdapter.
 
         val models=mutableListOf<Model>()
         for (provider in providers)
-        for (model in provider.models.keys)
+        for (model in provider.getExtendedModels().keys)
         models.add(Model.idToModel(model))
 
         return models
