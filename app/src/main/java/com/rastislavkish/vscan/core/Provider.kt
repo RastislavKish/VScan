@@ -32,8 +32,6 @@ data class Provider(
     val preset: ProviderParams?=ProviderParams.presets.find { it.baseUrl==baseUrl }
 
     fun getModelId(vscanId: String): String {
-        if (!vscanId.startsWith("vscan-"))
-        return vscanId
 
         val modelId=models.get(vscanId)
         ?: preset?.models?.get(vscanId)
