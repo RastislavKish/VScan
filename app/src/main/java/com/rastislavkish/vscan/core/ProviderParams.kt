@@ -88,6 +88,12 @@ data class ProviderParams(
                     "vscan-magistral-small-1.2" to "magistral-small-2509",
                     ),
                 ),
+            ProviderParams("Cerebras",
+                "https://api.cerebras.ai/v1",
+                mapOf(
+                    "vscan-gemma-4-31b" to "gemma-4-31b",
+                    ),
+                ),
             ProviderParams("TogetherAI",
                 "https://api.together.xyz/v1",
                 mapOf(
