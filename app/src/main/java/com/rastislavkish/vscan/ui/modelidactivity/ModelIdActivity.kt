@@ -54,7 +54,7 @@ class ModelIdActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_model_id)
 
-        val input=try {
+        input=try {
             ModelIdActivityInput.fromIntent(intent, "ModelIdActivity")
             }
         catch (e: Exception) {
