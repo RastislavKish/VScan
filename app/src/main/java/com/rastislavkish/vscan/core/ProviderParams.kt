@@ -206,7 +206,7 @@ data class ProviderParams(
                     "vscan-gemini-2.5-flash" to "gemini-2.5-flash",
                     "vscan-qwen-3.8-27b" to "qwen/qwen3.8-27b",
                     "vscan-qwen-3.6-35b-a3b" to "Qwen/Qwen3.6-35B-A3B",
-                    "vscan-qwen-3.6-27b" to "",
+                    "vscan-qwen-3.6-27b" to "qwen/qwen3.6-27b",
                     "vscan-qwen-3.5-397b-a17b" to "qwen/qwen3.5-397b-a17b",
                     "vscan-qwen-3.5-122b-a10b" to "qwen3.5-122b-a10b",
                     "vscan-qwen-3.5-35b-a3b" to "qwen3.5-35b-a3b",
