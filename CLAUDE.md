@@ -39,7 +39,16 @@ These two cannot be edited; users derive their own configs from them. `ConfigMan
 
 ### The `vscan-` model abstraction
 
-Models are referenced throughout by VScan-internal identifiers like `vscan-gpt-4o`, never by raw provider model IDs. `core/Model.kt` holds the static catalogue of known models (`Model.presets`) mapping these identifiers to display names. A `Provider` (`core/Provider.kt`) holds a `models: Map<vscanId, providerModelId>` translation table; `Provider.getModelId()` resolves a `vscan-` id to the provider's actual id. If a model id does not start with `vscan-` it is passed through verbatim (supports self-hosted / fine-tuned models). At request time, `Conversation.generateResponse()` throws if the resolved id still starts with `vscan-` (meaning the provider has no mapping for it). When adding new models, update both `Model.presets` and the relevant provider presets in `ui/providerpresetselectionactivity/ProviderParams.kt`.
+Models are referenced throughout by VScan-internal identifiers like `vscan-gpt-4o`, never by raw provider model IDs. `core/Model.kt` holds the static catalogue of known models (`Model.presets`) with display metadata (name, author, family, size).
+
+Translation to provider model IDs happens in two layers:
+
+- **Provider presets** (`core/ProviderParams.kt`, `ProviderParams.presets`) — built-in `vscan-id → provider-model-id` maps for known providers (OpenAI, Anthropic, Google, OpenRouter, NanoGPT, Cerebras, …). These live only in code, never in user config.
+- **`Provider.models`** (`core/Provider.kt`) — user-defined overrides/additions only. A `Provider` finds its preset at runtime by matching `baseUrl` (`@Transient val preset`).
+
+`Provider.getModelId()` resolves user mapping → preset mapping → the id verbatim (so non-`vscan-` ids pass through, supporting self-hosted / fine-tuned models). `getExtendedModels()`/`getBaseModels()` merge and split the two layers for the editing UI. `Conversation.generateResponse()` throws if the resolved id still starts with `vscan-` (provider has no mapping for it).
+
+When adding a new model, update both `Model.presets` and the relevant provider entries in `ProviderParams.presets`. Because presets are not persisted, updating a preset reaches existing users automatically.
 
 ### Three independent persistence stores
 
@@ -47,15 +56,15 @@ State lives in three separate `SharedPreferences` files, each owned by a singlet
 
 - **`Settings`** (`VScanSettings`) — global toggles and the default/share/file-description config ids, plus the gesture/volume-key `Action` bindings.
 - **`ConfigManager`** (`VScanConfigurations`) — the list of configs, JSON-serialized.
-- **`ProvidersManager`** (`VScanProviders`) — providers, the default provider, and per-model→provider mappings.
+- **`ProvidersManager`** (`VScanProviders`) — providers, the default provider, and per-model→provider mappings. In `getProviderForModel()`, a model with no mapping falls back to the default provider, while a model explicitly mapped to `null` has no provider.
 
-All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. `ConfigManager.fixBackwardCompatibility()` shows the pattern for migrating old serialized formats (string-replace on the raw JSON before decoding) — follow it when changing serialized shapes.
+All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. Follow these patterns when changing serialized shapes.
 
 ### Request flow
 
 `core/openai/` is a hand-rolled OpenAI chat-completions client built on Ktor CIO. A **`Conversation`** holds the message list and talks to the provider:
 
-1. Resolves provider + model id via `ProvidersManager.getProviderForModel()` (falls back to the default provider when a model has no explicit mapping).
+1. Resolves provider via `ProvidersManager.getProviderForModel()` and the model id via `Provider.getModelId()`.
 2. Builds a `requests/Request` and serializes with `Json { explicitNulls=false }` so null fields are omitted.
 3. POSTs to `$baseUrl/chat/completions` with bearer auth, then manually walks the response `JsonObject` (`error`, `usage`, `choices`) rather than deserializing into a typed model.
 
