@@ -23,6 +23,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Branch-only: lets this branch's debug build install alongside one from main
+            applicationIdSuffix = ".processes2"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
