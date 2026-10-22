@@ -16,11 +16,12 @@
 
 package com.rastislavkish.vscan.core.openai
 
+import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.requests.Content
 import com.rastislavkish.vscan.core.openai.requests.ImageUrl
 
 class LocalImage(
-    val base64Image: String,
+    val image: ImageData,
     ): Image() {
 
     override fun render(): Content {
@@ -28,7 +29,7 @@ class LocalImage(
             "image_url",
             null,
             ImageUrl(
-                "data:image/jpeg;base64,$base64Image"
+                "data:${image.encodedFormat.mimeType};base64,${image.base64}"
                 ),
             )
         }

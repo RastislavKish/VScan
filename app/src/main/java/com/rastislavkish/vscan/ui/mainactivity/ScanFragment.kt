@@ -30,7 +30,6 @@ import java.io.File
 import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Base64
 
 import android.content.ClipboardManager
 import android.content.ClipData
@@ -90,6 +89,7 @@ import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.*
 
 import com.rastislavkish.vscan.core.Action
@@ -323,26 +323,25 @@ class ScanFragment: Fragment(), CoroutineScope {
                     fileDescriptionConfig.systemPromptOrNull,
                     )
 
-                val encodedImage=Base64.getEncoder().encodeToString(image)
                 conversation.addMessage(ImageMessage(
                     fileDescriptionConfig.userPrompt,
-                    LocalImage(encodedImage),
+                    LocalImage(image),
                     ))
 
                 var errorMessage: String?=null
 
                 var fileName=try {
                     val response=conversation.generateResponse().text
-                    "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    "$response-${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.${image.encodedFormat.extension}"
                     }
                 catch (e: Exception) {
                     errorMessage=e.message ?: ""
-                    "${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    "${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.${image.encodedFormat.extension}"
                     }
 
                 if (fileName.isEmpty() && errorMessage==null) {
                     errorMessage="Reasoning exceeded the token limit"
-                    fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                    fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.${image.encodedFormat.extension}"
                     }
 
                 try {
@@ -358,7 +357,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                     }
                 }
             else {
-                val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.jpg"
+                val fileName="${timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))}.${image.encodedFormat.extension}"
                 try {
                     saveToGallery(fileName, image)
                     toast("Saved as $fileName")
@@ -421,7 +420,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             lastRotationValue=rotation
             }
         }
-    fun extractImageFromProxy(imageProxy: ImageProxy): ByteArray? {
+    fun extractImageFromProxy(imageProxy: ImageProxy): ImageData? {
         val mediaImage=imageProxy.image
         if (mediaImage!=null) {
             if (mediaImage.format==ImageFormat.JPEG) {
@@ -430,7 +429,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                 buffer.get(bytes)
 
                 imageProxy.close()
-                return bytes
+                return ImageData.fromEncoded(bytes)
                 }
             else {
                 toast("Error: The camera returned an unsupported image type")
@@ -540,7 +539,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
         configUsedByCamera=adapter.activeConfig
         }
-    fun takePicture(adapter: TabAdapter, callback: (ByteArray) -> Unit) {
+    fun takePicture(adapter: TabAdapter, callback: (ImageData) -> Unit) {
         val flashMode=when (shouldUseFlashlight(adapter)) {
             true -> ImageCapture.FLASH_MODE_ON
             false -> ImageCapture.FLASH_MODE_OFF
@@ -717,7 +716,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         imageFile.createNewFile()
         return imageFile
         }
-    fun saveToGallery(fileName: String, image: ByteArray) {
+    fun saveToGallery(fileName: String, image: ImageData) {
         val imageFile=createImageFile(fileName)
 
         if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q) {
@@ -728,7 +727,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         else {
             val contentValues=ContentValues()
             contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, imageFile.name)
-            contentValues.put(MediaStore.Images.Media.MIME_TYPE, "image/*")
+            contentValues.put(MediaStore.Images.Media.MIME_TYPE, image.encodedFormat.mimeType)
             val contentUri: Uri=if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED))
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             else
@@ -741,7 +740,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             var os: OutputStream?=null
             try {
                 os=activity!!.getContentResolver().openOutputStream(uri)
-                os?.write(image)
+                os?.write(image.encoded)
                 contentValues.clear()
                 contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 activity!!.getContentResolver().update(uri, contentValues, null, null)

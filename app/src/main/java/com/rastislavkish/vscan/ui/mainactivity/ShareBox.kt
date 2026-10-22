@@ -18,14 +18,16 @@ package com.rastislavkish.vscan.ui.mainactivity
 
 import android.content.Context
 
+import com.rastislavkish.vscan.core.image.ImageData
+
 class ShareBox {
 
-    private var image: ByteArray?=null
+    private var image: ImageData?=null
 
-    fun pushImage(image: ByteArray) {
+    fun pushImage(image: ImageData) {
         this.image=image
         }
-    fun popImage(): ByteArray? {
+    fun popImage(): ImageData? {
         val image=this.image
         this.image=null
 

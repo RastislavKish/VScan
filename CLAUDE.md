@@ -70,7 +70,13 @@ All three serialize with `kotlinx.serialization` JSON and call `.commit()` on ev
 2. Builds a `requests/Request` and serializes with `Json { explicitNulls=false }` so null fields are omitted.
 3. POSTs to `$baseUrl/chat/completions` with bearer auth, then manually walks the response `JsonObject` (`error`, `usage`, `choices`) rather than deserializing into a typed model.
 
-The `Message` hierarchy (`Message`, `TextMessage`, `ImageMessage`, `SystemMessage`, `AssistantMessage`) each `render()` into a `requests/Message`. Images are base64-encoded and sent as `LocalImage`. Reasoning effort maps to a string field (`none`/`minimal`/`low`/`medium`/`high`/`xhigh`); a `finish_reason` of `"length"` with empty content is surfaced to the user as "Reasoning exceeded the token limit".
+The `Message` hierarchy (`Message`, `TextMessage`, `ImageMessage`, `SystemMessage`, `AssistantMessage`) each `render()` into a `requests/Message`. Images are sent as `LocalImage`, which wraps an `ImageData`. Reasoning effort maps to a string field (`none`/`minimal`/`low`/`medium`/`high`/`xhigh`); a `finish_reason` of `"length"` with empty content is surfaced to the user as "Reasoning exceeded the token limit".
+
+### Images
+
+`core/image/ImageData` is the app's single internal image type. It holds either the original encoded bytes (camera JPEGs, shared files) or a bitmap produced by a transformation, and derives everything lazily: format (`EncodedFormat.detect()` by magic bytes), EXIF `Orientation`, dimensions (upright, without decoding), and the JPEG / base64 encodings. `encoded`/`encodedFormat` pass the original bytes through when providers accept the format (JPEG, PNG, WebP, GIF) and re-encode to JPEG otherwise. `crop()` (region decoding via `BitmapRegionDecoder`, with a full-decode fallback) and `scaled()`/`decode(maxDimension)` (subsampled decoding) work in upright coordinates and never upscale. Avoid holding full-resolution bitmaps around; a 12 MP one takes ~48 MB.
+
+Under Robolectric, image tests need `@GraphicsMode(GraphicsMode.Mode.NATIVE)`. Robolectric doesn't implement `BitmapRegionDecoder`, so that path is covered by the instrumented `ImageDataInstrumentedTest`.
 
 ### UI structure
 

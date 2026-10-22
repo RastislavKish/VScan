@@ -47,6 +47,7 @@ import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.PermissionRequester
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.image.ImageData
 
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
@@ -100,7 +101,7 @@ class MainActivity : AppCompatActivity() {
             val image=getByteArrayFromUri(this, uri) ?: return
 
             val shareBox=ShareBox.getInstance(this)
-            shareBox.pushImage(image)
+            shareBox.pushImage(ImageData.fromEncoded(image))
             }
         }
 

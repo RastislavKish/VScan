@@ -17,7 +17,6 @@
 package com.rastislavkish.vscan.ui.mainactivity
 
 import java.time.LocalDateTime
-import java.util.Base64
 
 import android.content.Context
 
@@ -26,6 +25,7 @@ import kotlinx.coroutines.sync.Mutex
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
+import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.SystemMessage
 import com.rastislavkish.vscan.core.openai.LocalImage
@@ -52,7 +52,7 @@ class TabAdapter(context: Context) {
         )
     get set
 
-    var lastTakenImage: ByteArray?=null
+    var lastTakenImage: ImageData?=null
     get set
 
     var lastTakenImageTimestamp: LocalDateTime?=null
@@ -85,10 +85,9 @@ class TabAdapter(context: Context) {
             config.systemPromptOrNull,
             )
 
-        val encodedImage=Base64.getEncoder().encodeToString(image)
         conversation.addMessage(ImageMessage(
             config.userPrompt,
-            LocalImage(encodedImage),
+            LocalImage(image),
             ))
         val response=conversation.generateResponse()
 
