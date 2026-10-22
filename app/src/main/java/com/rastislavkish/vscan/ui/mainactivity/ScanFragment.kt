@@ -347,7 +347,7 @@ class ScanFragment: Fragment(), CoroutineScope {
                 try {
                     saveToGallery(fileName, image)
 
-                    if (errorMessage!=null)
+                    if (errorMessage==null)
                     toast("Saved as $fileName")
                     else
                     toast("Error describing the image: $errorMessage Image saved as $fileName")
