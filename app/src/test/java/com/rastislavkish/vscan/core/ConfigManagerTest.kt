@@ -1,0 +1,105 @@
+/*
+* Copyright (C) 2026 Rastislav Kish
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, version 3.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program. If not, see <https://www.gnu.org/licenses/>.
+*/
+package com.rastislavkish.vscan.core
+
+import android.content.Context
+import android.content.SharedPreferences
+
+import androidx.test.core.app.ApplicationProvider
+
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class ConfigManagerTest {
+
+    private lateinit var preferences: SharedPreferences
+
+    @Before
+    fun setUp() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        preferences=context.getSharedPreferences("ConfigManagerTest", Context.MODE_PRIVATE)
+        preferences.edit().clear().commit()
+        }
+
+    private fun freshManager(): ConfigManager {
+        val manager=ConfigManager(preferences)
+        manager.load()
+        return manager
+        }
+
+    @Test
+    fun startsWithBuiltInConfigs() {
+        val ids=freshManager().getList().map { it.id }
+
+        assertEquals(listOf(-1, -3), ids)
+        }
+
+    @Test
+    fun addConfigAssignsFreeIdAndPersists() {
+        val manager=freshManager()
+
+        val first=manager.addConfig(Config().withName("First"))
+        val second=manager.addConfig(Config().withName("Second"))
+
+        assertEquals(0, first.id)
+        assertEquals(1, second.id)
+        assertEquals("Second", freshManager().getConfig(1)?.name)
+        }
+
+    @Test
+    fun updateConfigPersists() {
+        val manager=freshManager()
+        val config=manager.addConfig(Config().withName("Before"))
+
+        manager.updateConfig(config.withName("After"))
+
+        assertEquals("After", freshManager().getConfig(config.id)?.name)
+        }
+
+    @Test
+    fun deleteConfigPersists() {
+        val manager=freshManager()
+        val config=manager.addConfig(Config().withName("Doomed"))
+
+        manager.deleteConfig(config)
+
+        assertNull(manager.getConfig(config.id))
+        assertNull(freshManager().getConfig(config.id))
+        }
+
+    @Test
+    fun loadRestoresEditedBuiltInConfigs() {
+        val manager=freshManager()
+        manager.updateConfig(manager.getBaseConfig().withUserPrompt("Tampered"))
+
+        assertEquals(Config().userPrompt, freshManager().getConfig(-1)?.userPrompt)
+        }
+
+    @Test
+    fun loadMigratesLegacyModelNames() {
+        val legacy="""[{"id":0,"name":"A","model":"GPT_4O"},{"id":1,"name":"B","model":"GPT_4O_MINI"}]"""
+        preferences.edit().putString("configurations", legacy).commit()
+
+        val manager=freshManager()
+        assertEquals("vscan-gpt-4o", manager.getConfig(0)?.model)
+        assertEquals("vscan-gpt-4o-mini", manager.getConfig(1)?.model)
+        }
+
+    }

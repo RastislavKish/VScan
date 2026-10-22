@@ -17,12 +17,12 @@ Standard Gradle Android project. Use the wrapper:
 ./gradlew test                   # run JVM unit tests (app/src/test)
 ./gradlew connectedAndroidTest   # run instrumented tests (needs device/emulator)
 ./gradlew lint                   # Android lint
-./gradlew :app:testDebugUnitTest --tests "com.rastislavkish.vscan.ExampleUnitTest"  # single test class
+./gradlew :app:testDebugUnitTest --tests "com.rastislavkish.vscan.core.ProviderTest"  # single test class
 ```
 
 `local.properties` must point `sdk.dir` at the Android SDK. The only module is `:app`. Dependency versions are centralized in `gradle/libs.versions.toml`. Note the JitPack dependency `RtkKotlinAndroid` (author's own library, provides `Sound`, `TouchWrapper`, gesture helpers).
 
-The current test classes are the default Android template stubs — there is no real test suite yet.
+JVM unit tests live in `app/src/test`, mirroring the main package layout. Pure-Kotlin logic is tested with plain JUnit; classes that need Android (e.g. the SharedPreferences-backed managers, which take a `SharedPreferences` in their constructor) run under Robolectric (`@RunWith(RobolectricTestRunner::class)`, context via `ApplicationProvider`). minSdk is 26.
 
 ## Architecture
 

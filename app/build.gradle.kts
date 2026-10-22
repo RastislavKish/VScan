@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.rastislavkish.vscan"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 24
         versionName = "0.2.4"
@@ -41,6 +41,12 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources and manifest
+            isIncludeAndroidResources = true
+        }
     }
 }
 
@@ -74,6 +80,9 @@ implementation(libs.recyclerview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
