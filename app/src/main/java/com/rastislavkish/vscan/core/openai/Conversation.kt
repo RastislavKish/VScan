@@ -33,6 +33,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.ReasoningEffort
+import com.rastislavkish.vscan.core.Timing
 
 import com.rastislavkish.vscan.core.openai.requests.Message as Msg
 import com.rastislavkish.vscan.core.openai.requests.Request as OpenaiRequest
@@ -96,6 +97,7 @@ class Conversation(
         throw Exception("Error: The chosen provider does not support this model.")
 
         // Rendering may decode and re-encode images, so it's kept off the main thread
+        val preparationStart=Timing.now()
         val body=withContext(Dispatchers.Default) {
             val messages=mutableListOf<Msg>()
             for (message in this@Conversation.messages) {
@@ -112,6 +114,10 @@ class Conversation(
             format.encodeToString(bodyObject)
             }
 
+        Timing.logSince("Request preparation", preparationStart)
+        Timing.log("Request body: ${body.length/1024} kB")
+
+        val requestStart=Timing.now()
         val client=HttpClient(CIO) {
             engine {
                 requestTimeout=300000
@@ -130,6 +136,7 @@ class Conversation(
             }
 
         val responseText: String=response.body()
+        Timing.logSince("Request", requestStart)
 
         val json: JsonObject=Json.decodeFromString(responseText)
         if (json.containsKey("error")) {

@@ -16,6 +16,7 @@
 
 package com.rastislavkish.vscan.core.openai
 
+import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.requests.Content
 import com.rastislavkish.vscan.core.openai.requests.ImageUrl
@@ -27,7 +28,9 @@ class LocalImage(
     // Full-resolution camera images are too large to send, some providers reject images over ~5 MB
     // Until image sources and lenses take over the downscaling, images are capped here
     private val sentImage: ImageData by lazy {
-        image.scaled(MAX_DIMENSION)
+        Timing.measure("Image downscale and encoding") {
+            image.scaled(MAX_DIMENSION).also { it.base64 }
+            }
         }
 
     override fun render(): Content {

@@ -74,6 +74,7 @@ import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.STT
 import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.camera.CaptureException
 import com.rastislavkish.vscan.core.camera.CaptureSettings
 import com.rastislavkish.vscan.core.camera.PhoneCamera
@@ -456,13 +457,16 @@ class ScanFragment: Fragment(), CoroutineScope {
 
         launch {
             val image=try {
-                phoneCamera.capture(captureSettings)
+                Timing.measure("Capture") {
+                    phoneCamera.capture(captureSettings)
+                    }
                 }
             catch (e: CaptureException) {
                 toast(e.message ?: "Error")
                 return@launch
                 }
             val timestamp=LocalDateTime.now()
+            Timing.log("Captured ${image.width}x${image.height}, ${image.encoded.size/1024} kB")
 
             adapter.mutex.withLock {
                 adapter.lastTakenImage=image
@@ -473,6 +477,8 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
     fun scanWithConfig(adapter: TabAdapter, config: Config) {
+        val start=Timing.now()
+
         takePictureToAdapter(adapter, callback@{adapter ->
             if (settings.useSounds)
             resources.shutterSound.play()
@@ -483,6 +489,9 @@ class ScanFragment: Fragment(), CoroutineScope {
                 }
             catch (e: Exception) {
                 toast(e.message ?: "Error")
+                }
+            finally {
+                Timing.logSince("Scan total", start)
                 }
             })
         }
