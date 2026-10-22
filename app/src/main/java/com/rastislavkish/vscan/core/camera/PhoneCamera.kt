@@ -22,6 +22,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import android.graphics.Matrix
+import android.os.SystemClock
 import android.util.Log
 import android.util.Size
 import android.view.OrientationEventListener
@@ -49,6 +50,7 @@ import kotlinx.coroutines.sync.*
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.image.ImageData
+import com.rastislavkish.vscan.core.imagesource.IdleTimeoutLease
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.imagesource.RefCounter
 
@@ -80,6 +82,8 @@ class PhoneCamera private constructor(context: Context): ImageSource {
     private val frameRequests=mutableListOf<CompletableDeferred<ImageData>>()
 
     private val streamUsers=RefCounter { refresh() }
+    // Keeps the stream open between getVideoFrame calls made without an open stream
+    private val implicitStream=IdleTimeoutLease(streamUsers, IDLE_STREAM_TIMEOUT_MILLIS, SystemClock::elapsedRealtime)
     private val torchUsers=RefCounter { refresh() }
 
     private val orientationEventListener: OrientationEventListener
@@ -150,10 +154,8 @@ class PhoneCamera private constructor(context: Context): ImageSource {
         }
 
     override suspend fun getVideoFrame(): ImageData {
-        if (streamUsers.isActive)
+        implicitStream.use()
         return awaitFrame()
-
-        return openStream().use { awaitFrame() }
         }
 
     override fun openStream(): Closeable = streamUsers.acquire()
@@ -298,6 +300,9 @@ class PhoneCamera private constructor(context: Context): ImageSource {
     // Called on the analysis thread for every stream frame, frames are converted only when somebody waits for one
     private fun onFrame(imageProxy: ImageProxy) {
         try {
+            // Checked per frame, as frames keep coming exactly as long as the stream is open
+            implicitStream.releaseIfIdle()
+
             val requests=synchronized(frameRequests) {
                 val requests=frameRequests.toList()
                 frameRequests.clear()
@@ -353,6 +358,7 @@ class PhoneCamera private constructor(context: Context): ImageSource {
         // In the sensor's landscape orientation
         private val STREAM_RESOLUTION=Size(1440, 1080)
         private const val FRAME_TIMEOUT_MILLIS=5000L
+        private const val IDLE_STREAM_TIMEOUT_MILLIS=10000L
 
         private var instance: PhoneCamera?=null
 

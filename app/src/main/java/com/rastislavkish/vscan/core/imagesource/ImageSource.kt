@@ -27,7 +27,7 @@ interface ImageSource {
     suspend fun capture(flashlight: Boolean): ImageData
 
     // Returns the latest frame of the live stream, a low-latency image for repeated analysis
-    // Opens the stream just for this call if it isn't open, which is much slower than holding it open with openStream
+    // If the stream isn't open, the source opens it and keeps it open for a while after the last call
     suspend fun getVideoFrame(): ImageData
 
     // Keeps the live stream running until the returned handle is closed
