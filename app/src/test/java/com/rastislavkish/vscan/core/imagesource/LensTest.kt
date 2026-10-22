@@ -15,6 +15,9 @@
 */
 package com.rastislavkish.vscan.core.imagesource
 
+import kotlinx.serialization.*
+import kotlinx.serialization.json.Json
+
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -48,13 +51,13 @@ class LensTest {
 
     @Test
     fun zoomCutsAroundTheCenter() {
-        assertEquals(RelativeRect(0.25f, 0.25f, 0.75f, 0.75f), Lens.zoom(2f).region)
-        assertEquals(RelativeRect(0.5f, 0f, 1f, 0.5f), Lens.zoom(2f, 0.75f, 0.25f).region)
+        assertEquals(RelativeRect(0.25f, 0.25f, 0.75f, 0.75f), Zoom(2f).region)
+        assertEquals(RelativeRect(0.5f, 0f, 1f, 0.5f), Zoom(2f, 0.75f, 0.25f).region)
         }
 
     @Test
     fun zoomShiftsInsteadOfReachingOverTheEdge() {
-        val region=Lens.zoom(4f, 0.95f, 0.05f).region
+        val region=Zoom(4f, 0.95f, 0.05f).region
 
         assertEquals(0.75f, region.left, 0.0001f)
         assertEquals(1f, region.right, 0.0001f)
@@ -64,12 +67,34 @@ class LensTest {
 
     @Test
     fun zoomOfOneIsTheFullImage() {
-        assertTrue(Lens.zoom(1f).region.isFull)
+        assertTrue(Zoom(1f).region.isFull)
         }
 
     @Test(expected=IllegalArgumentException::class)
     fun zoomCantMagnifyLessThanOnce() {
-        Lens.zoom(0.5f)
+        Zoom(0.5f)
+        }
+
+    @Test(expected=IllegalArgumentException::class)
+    fun downscaleNeedsPositiveSize() {
+        Downscale(0)
+        }
+
+    @Test
+    fun lensesSerializeWithOperationTypes() {
+        val lens=Lens(listOf(Zoom(2f, 0.75f, 0.25f), Crop(RelativeRect(0f, 0f, 0.5f, 1f)), Downscale(1024)))
+
+        val json=Json.encodeToString(lens)
+
+        assertTrue(json.contains("\"type\":\"zoom\""))
+        assertTrue(json.contains("\"type\":\"crop\""))
+        assertTrue(json.contains("\"type\":\"downscale\""))
+        assertEquals(lens, Json.decodeFromString<Lens>(json))
+        }
+
+    @Test(expected=IllegalArgumentException::class)
+    fun invalidSerializedOperationsAreRejected() {
+        Json.decodeFromString<Lens>("""{"operations":[{"type":"downscale","maxDimension":0}]}""")
         }
 
     }

@@ -15,9 +15,13 @@
 */
 package com.rastislavkish.vscan.core.imagesource
 
+import kotlinx.serialization.*
+
+import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.image.ImageRect
 
 // A rectangle in coordinates relative to the image size, 0 being the left / top edge and 1 the right / bottom one
+@Serializable
 data class RelativeRect(
     val left: Float,
     val top: Float,
@@ -52,30 +56,77 @@ data class RelativeRect(
         }
     }
 
-// The transformation of a lens, cutting out a region of the image and optionally downscaling it
-// Lenses never upscale, as that adds no information, zooming is done by cropping the full-resolution image
-data class Lens(
-    val region: RelativeRect=RelativeRect.FULL,
-    // The maximum length of the longer side of the result, null for no downscaling
-    val maxDimension: Int?=null,
-    ) {
+// A single image transformation of a lens
+// Operations returning their input unchanged keep the original encoded image, which then passes through without re-encoding
+// Geometric operations are cheap on encoded images, decoding only the needed region or a subsampled image, so they're best placed first
+@Serializable
+sealed class LensOperation {
+
+    abstract fun apply(image: ImageData): ImageData
+    }
+
+// Cuts out a region at full resolution
+@Serializable
+@SerialName("crop")
+data class Crop(
+    val region: RelativeRect,
+    ): LensOperation() {
+
+    override fun apply(image: ImageData): ImageData {
+        if (region.isFull)
+        return image
+
+        return image.crop(region.toPixels(image.width, image.height))
+        }
+    }
+
+// Magnifies the image zoom times around the given relative point, by cropping, so without inventing any detail
+// The region is shifted rather than cut where it would reach over the image edge
+@Serializable
+@SerialName("zoom")
+data class Zoom(
+    val zoom: Float,
+    val centerX: Float=0.5f,
+    val centerY: Float=0.5f,
+    ): LensOperation() {
 
     init {
-        require(maxDimension==null || maxDimension>0) { "The maximum dimension must be positive" }
+        require(zoom>=1f) { "Zoom must be at least 1" }
         }
 
-    companion object {
+    val region: RelativeRect
+    get() {
+        val size=1f/zoom
+        val left=(centerX-size/2).coerceIn(0f, 1f-size)
+        val top=(centerY-size/2).coerceIn(0f, 1f-size)
 
-        // A lens magnifying the image zoom times around the given relative point
-        // The region is shifted rather than cut where it would reach over the image edge
-        fun zoom(zoom: Float, centerX: Float=0.5f, centerY: Float=0.5f, maxDimension: Int?=null): Lens {
-            require(zoom>=1f) { "Zoom must be at least 1" }
+        return RelativeRect(left, top, minOf(left+size, 1f), minOf(top+size, 1f))
+        }
 
-            val size=1f/zoom
-            val left=(centerX-size/2).coerceIn(0f, 1f-size)
-            val top=(centerY-size/2).coerceIn(0f, 1f-size)
+    override fun apply(image: ImageData): ImageData = Crop(region).apply(image)
+    }
 
-            return Lens(RelativeRect(left, top, minOf(left+size, 1f), minOf(top+size, 1f)), maxDimension)
-            }
+// Shrinks the image so its longer side doesn't exceed maxDimension, never enlarging it
+@Serializable
+@SerialName("downscale")
+data class Downscale(
+    val maxDimension: Int,
+    ): LensOperation() {
+
+    init {
+        require(maxDimension>0) { "The maximum dimension must be positive" }
+        }
+
+    override fun apply(image: ImageData): ImageData = image.scaled(maxDimension)
+    }
+
+// A pipeline of image transformations, applied in order
+@Serializable
+data class Lens(
+    val operations: List<LensOperation> = listOf(),
+    ) {
+
+    fun apply(image: ImageData): ImageData {
+        return operations.fold(image) { current, operation -> operation.apply(current) }
         }
     }

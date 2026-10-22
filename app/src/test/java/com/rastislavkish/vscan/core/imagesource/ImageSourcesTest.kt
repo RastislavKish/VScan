@@ -81,7 +81,7 @@ class ImageSourcesTest {
 
     @Test
     fun lensZoomsIntoTheRegion() = runBlocking {
-        val lens=LensSource(FakeSource(), Lens.zoom(2f, 0.75f, 0.25f))
+        val lens=LensSource(FakeSource(), Lens(listOf(Zoom(2f, 0.75f, 0.25f))))
 
         val image=lens.capture(false)
 
@@ -92,7 +92,7 @@ class ImageSourcesTest {
 
     @Test
     fun lensAppliesToVideoFramesToo() = runBlocking {
-        val lens=LensSource(FakeSource(), Lens(RelativeRect(0f, 0.5f, 0.5f, 1f)))
+        val lens=LensSource(FakeSource(), Lens(listOf(Crop(RelativeRect(0f, 0.5f, 0.5f, 1f)))))
 
         assertEquals(Color.BLUE, centerColor(lens.getVideoFrame()))
         }
@@ -101,8 +101,8 @@ class ImageSourcesTest {
     fun lensDownscales() = runBlocking {
         val upstream=FakeSource()
 
-        val full=LensSource(upstream, Lens(maxDimension=100)).capture(false)
-        val zoomed=LensSource(upstream, Lens.zoom(2f, maxDimension=50)).capture(false)
+        val full=LensSource(upstream, Lens(listOf(Downscale(100)))).capture(false)
+        val zoomed=LensSource(upstream, Lens(listOf(Zoom(2f), Downscale(50)))).capture(false)
 
         assertEquals(100, full.width)
         assertEquals(50, full.height)
@@ -114,15 +114,41 @@ class ImageSourcesTest {
         val upstream=FakeSource()
 
         assertSame(upstream.image, LensSource(upstream, Lens()).capture(false))
-        assertSame(upstream.image, LensSource(upstream, Lens(maxDimension=1000)).capture(false))
+        assertSame(upstream.image, LensSource(upstream, Lens(listOf(Downscale(1000), Zoom(1f)))).capture(false))
+        }
+
+    @Test
+    fun operationsApplyInOrder() = runBlocking {
+        // The right half, then its bottom half, which is the white quadrant
+        val lens=LensSource(FakeSource(), Lens(listOf(
+            Crop(RelativeRect(0.5f, 0f, 1f, 1f)),
+            Crop(RelativeRect(0f, 0.5f, 1f, 1f)),
+            )))
+
+        val image=lens.capture(false)
+
+        assertEquals(200, image.width)
+        assertEquals(100, image.height)
+        assertEquals(Color.WHITE, centerColor(image))
+        }
+
+    @Test
+    fun operationOrderMatters() = runBlocking {
+        val upstream=FakeSource()
+
+        val zoomFirst=LensSource(upstream, Lens(listOf(Zoom(2f), Downscale(100)))).capture(false)
+        val downscaleFirst=LensSource(upstream, Lens(listOf(Downscale(100), Zoom(2f)))).capture(false)
+
+        assertEquals(100, zoomFirst.width)
+        assertEquals(50, downscaleFirst.width)
         }
 
     @Test
     fun lensesChain() = runBlocking {
         // The right half, then its bottom half, which is the white quadrant
         val lens=LensSource(
-            LensSource(FakeSource(), Lens(RelativeRect(0.5f, 0f, 1f, 1f))),
-            Lens(RelativeRect(0f, 0.5f, 1f, 1f)),
+            LensSource(FakeSource(), Lens(listOf(Crop(RelativeRect(0.5f, 0f, 1f, 1f))))),
+            Lens(listOf(Crop(RelativeRect(0f, 0.5f, 1f, 1f)))),
             )
 
         val image=lens.capture(false)
@@ -135,7 +161,7 @@ class ImageSourcesTest {
     @Test
     fun lensPassesFlashlightStreamAndTorchToUpstream() = runBlocking {
         val upstream=FakeSource()
-        val lens=LensSource(upstream, Lens.zoom(2f))
+        val lens=LensSource(upstream, Lens(listOf(Zoom(2f))))
 
         lens.capture(true)
         val stream=lens.openStream()

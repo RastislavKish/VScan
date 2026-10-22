@@ -36,13 +36,6 @@ class LensSource(
 
     // Decoding may take a while for full-resolution photos
     private suspend fun apply(image: ImageData): ImageData = withContext(Dispatchers.Default) {
-        if (lens.region.isFull) {
-            if (lens.maxDimension!=null)
-            image.scaled(lens.maxDimension)
-            else
-            image
-            }
-        else
-        image.crop(lens.region.toPixels(image.width, image.height), lens.maxDimension)
+        lens.apply(image)
         }
     }
