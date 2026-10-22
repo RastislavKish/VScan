@@ -116,6 +116,7 @@ class ConfigManager(
         for (i in 0 until configurations.size) {
             if (configurations[i].id==config.id) {
                 configurations.removeAt(i)
+                saveImplementation()
                 return
                 }
             }
