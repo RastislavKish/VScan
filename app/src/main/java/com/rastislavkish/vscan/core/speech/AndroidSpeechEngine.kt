@@ -21,6 +21,9 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
+
+import com.rastislavkish.vscan.core.speech.SpeechSystem.Companion.TAG
 
 // The system text to speech as a SpeechEngine
 // All callbacks are delivered on the main thread
@@ -45,22 +48,31 @@ class AndroidSpeechEngine(
     init {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
 
-            override fun onStart(utteranceId: String) {}
+            override fun onStart(utteranceId: String) {
+                Log.d(TAG, "Started $utteranceId")
+                }
 
             override fun onDone(utteranceId: String) {
+                Log.d(TAG, "Done $utteranceId")
                 handler.post { onUtteranceDone(utteranceId) }
                 }
 
             @Suppress("OVERRIDE_DEPRECATION")
             override fun onError(utteranceId: String) {
+                Log.d(TAG, "Error $utteranceId")
                 handler.post { onUtteranceDone(utteranceId) }
                 }
             override fun onError(utteranceId: String, errorCode: Int) {
+                Log.d(TAG, "Error $utteranceId, code $errorCode")
                 handler.post { onUtteranceDone(utteranceId) }
                 }
 
-            // Utterances are stopped only on the scheduler's request, which doesn't wait for their end
-            override fun onStop(utteranceId: String, interrupted: Boolean) {}
+            // Besides the stops the scheduler requests, whose late reports it ignores, the engine may stop an utterance on its own, e.g. for other speech like TalkBack's
+            // Such an utterance never reports being done, so it must end here, or the scheduler would wait for it forever
+            override fun onStop(utteranceId: String, interrupted: Boolean) {
+                Log.d(TAG, "Stopped $utteranceId")
+                handler.post { onUtteranceDone(utteranceId) }
+                }
             })
         }
 
@@ -73,6 +85,7 @@ class AndroidSpeechEngine(
         }
 
     override fun stop() {
+        Log.d(TAG, "Stopping")
         pending=null
 
         if (ready)
@@ -109,7 +122,11 @@ class AndroidSpeechEngine(
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build())
 
-        if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)==TextToSpeech.ERROR)
-        handler.post { onUtteranceDone(utteranceId) }
+        Log.d(TAG, "Speaking $utteranceId: $text")
+
+        if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)==TextToSpeech.ERROR) {
+            Log.d(TAG, "Speaking $utteranceId failed")
+            handler.post { onUtteranceDone(utteranceId) }
+            }
         }
     }

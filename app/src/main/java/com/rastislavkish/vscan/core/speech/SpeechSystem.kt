@@ -22,6 +22,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import android.widget.Toast
 
 import com.rastislavkish.vscan.core.Settings
@@ -54,7 +56,11 @@ class SpeechSystem private constructor(context: Context) {
             // Most sensors are binary, reporting either 0 or their maximum range
             val near=event.values[0]<minOf(sensor.maximumRange, 5f)
 
-            if (waveDetector.onReading(near, event.timestamp/1_000_000))
+            // Sensor event timestamps don't have the same time base on all devices
+            val wave=waveDetector.onReading(near, SystemClock.elapsedRealtime())
+            Log.d(TAG, "Proximity ${if (near) "near" else "far"}${if (wave) ", wave" else ""}")
+
+            if (wave)
             scheduler.stop()
             }
 
@@ -88,7 +94,7 @@ class SpeechSystem private constructor(context: Context) {
         if (listeningToProximity || proximitySensor==null)
         return
 
-        waveDetector.reset()
+        waveDetector.reset(SystemClock.elapsedRealtime())
         sensorManager?.registerListener(proximityListener, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL, handler)
         listeningToProximity=true
         }
@@ -101,6 +107,8 @@ class SpeechSystem private constructor(context: Context) {
         }
 
     companion object {
+
+        const val TAG="VScanSpeech"
 
         private var instance: SpeechSystem?=null
 

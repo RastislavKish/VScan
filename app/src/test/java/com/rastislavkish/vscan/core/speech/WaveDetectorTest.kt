@@ -20,10 +20,17 @@ import org.junit.Test
 
 class WaveDetectorTest {
 
+    // A detector enabled at time 0
+    private fun enabled(): WaveDetector {
+        val detector=WaveDetector()
+        detector.reset(0)
+        return detector
+        }
+
     @Test
     fun briefCoverIsAWave() {
-        val detector=WaveDetector()
-        detector.onReading(false, 0)
+        val detector=enabled()
+        detector.onReading(false, 10)
 
         assertFalse(detector.onReading(true, 1000))
         assertTrue(detector.onReading(false, 1400))
@@ -31,41 +38,60 @@ class WaveDetectorTest {
 
     @Test
     fun longCoverIsNotAWave() {
-        val detector=WaveDetector()
-        detector.onReading(false, 0)
+        val detector=enabled()
 
         detector.onReading(true, 1000)
         assertFalse(detector.onReading(false, 5000))
         }
 
     @Test
-    fun uncoveringAfterEnablingIsNotAWave() {
-        // E.g. pulling the phone out of a pocket just as speech starts
-        val detector=WaveDetector()
+    fun coverWithoutInitialReadingIsAWave() {
+        // Android doesn't always report the current state when the sensor is enabled again
+        val detector=enabled()
 
-        assertFalse(detector.onReading(true, 0))
+        assertFalse(detector.onReading(true, 2000))
+        assertTrue(detector.onReading(false, 2300))
+        }
+
+    @Test
+    fun wavesAfterReenablingAreDetected() {
+        val detector=enabled()
+        detector.onReading(true, 1000)
+        assertTrue(detector.onReading(false, 1200))
+
+        // The next message enables the sensor again, which reports nothing until the next wave
+        detector.reset(5000)
+
+        assertFalse(detector.onReading(true, 7000))
+        assertTrue(detector.onReading(false, 7300))
+        }
+
+    @Test
+    fun alreadyCoveredSensorIsNotAWave() {
+        // E.g. pulling the phone out of a pocket just as speech starts
+        val detector=enabled()
+
+        assertFalse(detector.onReading(true, 20))
         assertFalse(detector.onReading(false, 300))
         }
 
     @Test
     fun repeatedFarReadingsAreNotWaves() {
-        val detector=WaveDetector()
-        detector.onReading(false, 0)
-        detector.onReading(true, 100)
+        val detector=enabled()
+        detector.onReading(true, 1000)
 
-        assertTrue(detector.onReading(false, 200))
-        assertFalse(detector.onReading(false, 300))
+        assertTrue(detector.onReading(false, 1100))
+        assertFalse(detector.onReading(false, 1200))
         }
 
     @Test
-    fun resetForgetsTheState() {
-        val detector=WaveDetector()
-        detector.onReading(false, 0)
-        detector.onReading(true, 100)
+    fun resetForgetsTheCover() {
+        val detector=enabled()
+        detector.onReading(true, 1000)
 
-        detector.reset()
+        detector.reset(1100)
 
-        assertFalse(detector.onReading(false, 200))
+        assertFalse(detector.onReading(false, 1200))
         }
 
     }

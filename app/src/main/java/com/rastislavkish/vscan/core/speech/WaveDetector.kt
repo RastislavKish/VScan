@@ -16,23 +16,20 @@
 package com.rastislavkish.vscan.core.speech
 
 // Recognizes a hand briefly waved over the proximity sensor
-// A sensor covered for longer, e.g. in a pocket, doesn't count, and neither does the reading reported right after the sensor is enabled
+// A sensor covered for longer, e.g. in a pocket, doesn't count, and neither does one already covered when enabled
+// Android may or may not report the current state on enabling the sensor, so a covered state is taken as preexisting only if reported right away
 class WaveDetector(
     private val maxCoveredMillis: Long=1000,
+    private val initialReadingMillis: Long=250,
     ) {
 
-    private var receivedFirstReading=false
+    private var enabledAt=0L
     private var coveredSince: Long?=null
 
     // Returns true when the reading completes a wave
     fun onReading(near: Boolean, timeMillis: Long): Boolean {
-        if (!receivedFirstReading) {
-            receivedFirstReading=true
-            return false
-            }
-
         if (near) {
-            coveredSince=timeMillis
+            coveredSince=if (timeMillis-enabledAt<initialReadingMillis) null else timeMillis
             return false
             }
 
@@ -42,8 +39,9 @@ class WaveDetector(
         return timeMillis-since<=maxCoveredMillis
         }
 
-    fun reset() {
-        receivedFirstReading=false
+    // To be called when the sensor gets enabled
+    fun reset(timeMillis: Long) {
+        enabledAt=timeMillis
         coveredSince=null
         }
     }
