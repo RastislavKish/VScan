@@ -23,7 +23,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class ConfigSelectionActivityOutput(
-    val configIds: List<Int>,
+    val configIds: List<String>,
     ) {
 
     companion object {

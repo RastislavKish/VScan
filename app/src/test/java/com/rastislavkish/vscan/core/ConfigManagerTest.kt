@@ -48,29 +48,40 @@ class ConfigManagerTest {
     fun startsWithBuiltInConfigs() {
         val ids=freshManager().getList().map { it.id }
 
-        assertEquals(listOf(-1, -3), ids)
+        assertEquals(listOf("base", "file-description"), ids)
         }
 
     @Test
-    fun addConfigAssignsFreeIdAndPersists() {
+    fun addConfigDerivesIdFromNameAndPersists() {
         val manager=freshManager()
 
-        val first=manager.addConfig(Config().withName("First"))
-        val second=manager.addConfig(Config().withName("Second"))
+        val config=manager.addConfig(Config().withName("Bus lines"))
 
-        assertEquals(0, first.id)
-        assertEquals(1, second.id)
-        assertEquals("Second", freshManager().getConfig(1)?.name)
+        assertEquals("bus-lines", config.id)
+        assertEquals("Bus lines", freshManager().getConfig("bus-lines")?.name)
         }
 
     @Test
-    fun updateConfigPersists() {
+    fun addConfigAvoidsTakenIds() {
+        val manager=freshManager()
+
+        val first=manager.addConfig(Config().withName("Bus lines"))
+        val second=manager.addConfig(first)
+        // Deriving a config from the base one keeps its name
+        val derived=manager.addConfig(Config())
+
+        assertEquals("bus-lines-2", second.id)
+        assertEquals("base-2", derived.id)
+        }
+
+    @Test
+    fun renamingKeepsId() {
         val manager=freshManager()
         val config=manager.addConfig(Config().withName("Before"))
 
         manager.updateConfig(config.withName("After"))
 
-        assertEquals("After", freshManager().getConfig(config.id)?.name)
+        assertEquals("After", freshManager().getConfig("before")?.name)
         }
 
     @Test
@@ -89,17 +100,17 @@ class ConfigManagerTest {
         val manager=freshManager()
         manager.updateConfig(manager.getBaseConfig().withUserPrompt("Tampered"))
 
-        assertEquals(Config().userPrompt, freshManager().getConfig(-1)?.userPrompt)
+        assertEquals(Config().userPrompt, freshManager().getConfig("base")?.userPrompt)
         }
 
     @Test
     fun loadMigratesLegacyModelNames() {
-        val legacy="""[{"id":0,"name":"A","model":"GPT_4O"},{"id":1,"name":"B","model":"GPT_4O_MINI"}]"""
+        val legacy="""[{"id":"a","name":"A","model":"GPT_4O"},{"id":"b","name":"B","model":"GPT_4O_MINI"}]"""
         preferences.edit().putString("configurations", legacy).commit()
 
         val manager=freshManager()
-        assertEquals("vscan-gpt-4o", manager.getConfig(0)?.model)
-        assertEquals("vscan-gpt-4o-mini", manager.getConfig(1)?.model)
+        assertEquals("vscan-gpt-4o", manager.getConfig("a")?.model)
+        assertEquals("vscan-gpt-4o-mini", manager.getConfig("b")?.model)
         }
 
     }

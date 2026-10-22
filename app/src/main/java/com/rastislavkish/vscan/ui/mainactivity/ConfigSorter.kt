@@ -23,10 +23,11 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.StringIdMigration
 
 class ConfigSorter(preferences: SharedPreferences) {
 
-    private var selectionData: MutableMap<Int, Long> = mutableMapOf()
+    private var selectionData: MutableMap<String, Long> = mutableMapOf()
     private val preferences=preferences
 
     fun load() {
@@ -41,7 +42,7 @@ class ConfigSorter(preferences: SharedPreferences) {
         .commit()
         }
 
-    fun markSelection(id: Int) {
+    fun markSelection(id: String) {
         selectionData[id]=System.currentTimeMillis()
         save()
         }
@@ -60,6 +61,7 @@ class ConfigSorter(preferences: SharedPreferences) {
 
         fun getInstance(context: Context): ConfigSorter {
             if (instance==null) {
+                StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanConfigSorter", Context.MODE_PRIVATE)
                 instance=ConfigSorter(preferences)
                 instance?.load()

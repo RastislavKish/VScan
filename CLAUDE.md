@@ -30,10 +30,12 @@ JVM unit tests live in `app/src/test`, mirroring the main package layout. Pure-K
 
 The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." A Config bundles everything needed for one scanning purpose: camera choice, resolution, flashlight mode, the system/user prompts, the model, max completion tokens, and reasoning effort. The app ships two immutable built-in configs created in code by `ConfigManager`:
 
-- **Base** (id `-1`): general "What's in the image?" using `vscan-gpt-4o`.
-- **File description** (id `-3`): generates filenames for saved images, using `vscan-gpt-4o-mini`.
+- **Base** (id `base`): general "What's in the image?" using `vscan-gpt-4o`.
+- **File description** (id `file-description`): generates filenames for saved images, using `vscan-gpt-4o-mini`.
 
 These two cannot be edited; users derive their own configs from them. `ConfigManager.loadImplementation()` always re-injects fresh copies of both on load, so editing their definitions in code is how you change the built-in behavior.
+
+Configs and providers have human-readable string ids derived from their name by `Ids.generate()` (`"Bus lines"` → `bus-lines`, deduplicated with `-2`, `-3`, …, never purely numeric). The id is assigned on creation and does not change on rename. `ConfigManager.isBuiltInConfigId()` identifies the built-ins.
 
 `Config` is an immutable `@Serializable` data class with hand-written `withX()` copy methods (one per field). When adding a field to Config you must update the constructor, every `withX()` method, and any `Conversation`/`TabAdapter` construction sites that copy config fields across.
 
@@ -58,7 +60,7 @@ State lives in three separate `SharedPreferences` files, each owned by a singlet
 - **`ConfigManager`** (`VScanConfigurations`) — the list of configs, JSON-serialized.
 - **`ProvidersManager`** (`VScanProviders`) — providers, the default provider, and per-model→provider mappings. In `getProviderForModel()`, a model with no mapping falls back to the default provider, while a model explicitly mapped to `null` has no provider.
 
-All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. Follow these patterns when changing serialized shapes.
+All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. `StringIdMigration` (run once per process from every manager's `getInstance()`) converts the integer ids of versions ≤ 0.2.x across all stores, backing up replaced values under `<key>_v1` keys. Follow these patterns when changing serialized shapes, and note that `Json` omits default values, so legacy data may lack fields entirely.
 
 ### Request flow
 

@@ -164,7 +164,7 @@ class ProviderActivity : AppCompatActivity() {
             return
             }
 
-        val provider=Provider(-1, name, baseUrl, apiKey, models)
+        val provider=Provider("", name, baseUrl, apiKey, models)
 
         val inputProvider=this.inputProvider
 

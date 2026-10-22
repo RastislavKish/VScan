@@ -20,7 +20,7 @@ import kotlinx.serialization.*
 
 @Serializable
 data class Provider(
-    val id: Int=-1,
+    val id: String="",
     val name: String,
     val baseUrl: String,
     val apiKey: String,
@@ -70,7 +70,7 @@ data class Provider(
         return models.containsKey(model) || preset?.models?.containsKey(model)==true
         }
 
-    fun withId(id: Int) = Provider(
+    fun withId(id: String) = Provider(
         id,
         name,
         baseUrl,

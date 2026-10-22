@@ -97,7 +97,7 @@ class ProvidersActivity : AppCompatActivity() {
         defaultProviderSelector.text="Default provider: $defaultProviderName"
         }
 
-    fun startProviderActivity(provider: Int?=null) {
+    fun startProviderActivity(provider: String?=null) {
         val intent=ProviderActivityInput(provider)
         .toIntent(this)
         startActivity(intent)

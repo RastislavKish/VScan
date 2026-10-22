@@ -32,7 +32,7 @@ class ScanWithActiveConfigAction: Action() {
     }
 
 @Serializable
-class ScanWithConfigAction(val config: Int=-1): Action() {
+class ScanWithConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Action() {
 
     override fun toString(configManager: ConfigManager): String {
         val configName=configManager.getConfig(config)?.name
@@ -43,7 +43,7 @@ class ScanWithConfigAction(val config: Int=-1): Action() {
     }
 
 @Serializable
-class ConsultConfigAction(val config: Int=-1): Action() {
+class ConsultConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Action() {
 
     override fun toString(configManager: ConfigManager): String {
         val configName=configManager.getConfig(config)?.name

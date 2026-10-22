@@ -23,7 +23,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class ProviderSelectionActivityOutput(
-    val provider: Int,
+    val provider: String,
     ) {
 
     companion object {

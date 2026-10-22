@@ -56,7 +56,7 @@ class ConfigManager(
             }}
         }
 
-    fun getConfig(id: Int): Config? {
+    fun getConfig(id: String): Config? {
         var result: Config?=null
         runBlocking { configurationsMutex.withLock {
             for (config in configurations) {
@@ -93,7 +93,7 @@ class ConfigManager(
     // The implementations of the public methods without locks
 
     private fun addConfigImplementation(config: Config): Config {
-        val newConfig=config.withId(getFreeId())
+        val newConfig=config.withId(getFreeId(config.name))
         configurations.add(newConfig)
         saveImplementation()
         return newConfig
@@ -142,19 +142,15 @@ class ConfigManager(
         .commit()
         }
 
-    private fun getFreeId(): Int {
-        var maxUsedId=-1
-        for (config in configurations) {
-            if (config.id>maxUsedId)
-            maxUsedId=config.id
-            }
-        return maxUsedId+1
+    private fun getFreeId(name: String): String {
+        val taken=configurations.map { it.id }.toSet()+builtInConfigIds
+        return Ids.generate(name, "config", taken)
         }
 
     private fun baseConfig(): Config = Config()
     private fun fileDescriptionConfig(): Config {
         return Config()
-        .withId(-3)
+        .withId(FILE_DESCRIPTION_CONFIG_ID)
         .withUserPrompt("Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.")
         .withModel("vscan-gpt-4o-mini")
         .withName("File description")
@@ -174,10 +170,18 @@ class ConfigManager(
 
     companion object {
 
+        const val BASE_CONFIG_ID="base"
+        const val FILE_DESCRIPTION_CONFIG_ID="file-description"
+
+        private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID)
+
+        fun isBuiltInConfigId(id: String): Boolean = id in builtInConfigIds
+
         private var instance: ConfigManager?=null
 
         fun getInstance(context: Context): ConfigManager {
             if (instance==null) {
+                StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanConfigurations", Context.MODE_PRIVATE)
                 instance=ConfigManager(preferences)
                 instance?.load()

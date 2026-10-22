@@ -32,9 +32,9 @@ class Settings(
     var describeSavedImages=false
     var markdownRendering=false
 
-    var defaultConfigId: Int=-1
-    var shareConfigId: Int=-1
-    var fileDescriptionConfigId: Int=-3
+    var defaultConfigId: String=ConfigManager.BASE_CONFIG_ID
+    var shareConfigId: String=ConfigManager.BASE_CONFIG_ID
+    var fileDescriptionConfigId: String=ConfigManager.FILE_DESCRIPTION_CONFIG_ID
 
     var shakeAction: Action? = null
     var volumeUpPressAction: Action? = null
@@ -46,9 +46,9 @@ class Settings(
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
         markdownRendering=preferences.getBoolean("markdownRendering", false)
 
-        defaultConfigId=preferences.getInt("defaultConfigId", -1)
-        shareConfigId=preferences.getInt("shareConfigId", -1)
-        fileDescriptionConfigId=preferences.getInt("fileDescriptionConfigId", -3)
+        defaultConfigId=preferences.getString("defaultConfig", null) ?: ConfigManager.BASE_CONFIG_ID
+        shareConfigId=preferences.getString("shareConfig", null) ?: ConfigManager.BASE_CONFIG_ID
+        fileDescriptionConfigId=preferences.getString("fileDescriptionConfig", null) ?: ConfigManager.FILE_DESCRIPTION_CONFIG_ID
 
         shakeAction=getAction("shakeAction")
         volumeUpPressAction=getAction("volumeUpPressAction")
@@ -60,9 +60,9 @@ class Settings(
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
         .putBoolean("markdownRendering", markdownRendering)
-        .putInt("defaultConfigId", defaultConfigId)
-        .putInt("shareConfigId", shareConfigId)
-        .putInt("fileDescriptionConfigId", fileDescriptionConfigId)
+        .putString("defaultConfig", defaultConfigId)
+        .putString("shareConfig", shareConfigId)
+        .putString("fileDescriptionConfig", fileDescriptionConfigId)
         .putString("shakeAction", Json.encodeToString(shakeAction))
         .putString("volumeUpPressAction", Json.encodeToString(volumeUpPressAction))
         .putString("volumeDownPressAction", Json.encodeToString(volumeDownPressAction))
@@ -110,6 +110,7 @@ class Settings(
 
         fun getInstance(context: Context): Settings {
             if (instance==null) {
+                StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanSettings", Context.MODE_PRIVATE)
                 instance=Settings(preferences)
                 instance?.load()

@@ -50,9 +50,9 @@ class ActionSelectionActivity : AppCompatActivity() {
 
     private lateinit var configManager: ConfigManager
 
-    private var scanWithConfigConfig: Int=-1
+    private var scanWithConfigConfig: String=ConfigManager.BASE_CONFIG_ID
 
-    private var consultConfigConfig: Int=-1
+    private var consultConfigConfig: String=ConfigManager.BASE_CONFIG_ID
 
     private lateinit var scanWithConfigConfigSelector: TextView
     private lateinit var consultConfigConfigSelector: TextView
@@ -125,7 +125,7 @@ class ActionSelectionActivity : AppCompatActivity() {
         scanWithConfigConfigSelector.text=getConfigName(scanWithConfigConfig)
         consultConfigConfigSelector.text=getConfigName(consultConfigConfig)
         }
-    private fun getConfigName(id: Int): String {
+    private fun getConfigName(id: String): String {
         return configManager.getConfig(id)?.name
         ?: configManager.getBaseConfig().name
         }

@@ -22,7 +22,7 @@ import com.rastislavkish.vscan.core.openai.SystemMessage
 
 @Serializable
 data class Config(
-    val id: Int=-1,
+    val id: String=ConfigManager.BASE_CONFIG_ID,
     val name: String="Base",
     val systemPrompt: String="",
     val userPrompt: String="What's in the image?",
@@ -37,7 +37,7 @@ data class Config(
     val systemPromptOrNull: SystemMessage?
     get() = if (!systemPrompt.isEmpty()) SystemMessage(systemPrompt) else null
 
-    fun withId(id: Int): Config = Config(
+    fun withId(id: String): Config = Config(
         id,
         name,
         systemPrompt,

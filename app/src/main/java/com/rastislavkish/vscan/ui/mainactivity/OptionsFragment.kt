@@ -453,8 +453,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         if (uiConfig.name!=activeConfig.name)
         nameInput.setText(activeConfig.name)
 
-        updateButton.setClickable(activeConfig.id>=0)
-        deleteButton.setClickable(activeConfig.id>=0)
+        updateButton.setClickable(!ConfigManager.isBuiltInConfigId(activeConfig.id))
+        deleteButton.setClickable(!ConfigManager.isBuiltInConfigId(activeConfig.id))
         }
 
     private fun startTextInputActivity(title: String, text: String, context: String) {

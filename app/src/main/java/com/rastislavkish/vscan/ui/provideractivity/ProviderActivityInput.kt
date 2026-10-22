@@ -23,7 +23,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class ProviderActivityInput(
-    val provider: Int?=null,
+    val provider: String?=null,
     ) {
 
     fun toIntent(launchingActivity: androidx.appcompat.app.AppCompatActivity): Intent {
