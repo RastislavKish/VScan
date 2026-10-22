@@ -50,6 +50,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var flashlightSwitch: Switch
     private lateinit var soundsSwitch: Switch
     private lateinit var describeSavedImagesSwitch: Switch
+    private lateinit var speakResultsSwitch: Switch
+    private lateinit var speechUsesAccessibilityVolumeSwitch: Switch
+    private lateinit var stopSpeechOnProximityWaveSwitch: Switch
 
     private lateinit var defaultConfigSelector: TextView
     private lateinit var shareConfigSelector: TextView
@@ -74,6 +77,9 @@ class SettingsActivity : AppCompatActivity() {
         flashlightSwitch=findViewById(R.id.flashlightSwitch)
         soundsSwitch=findViewById(R.id.soundsSwitch)
         describeSavedImagesSwitch=findViewById(R.id.describeSavedImagesSwitch)
+        speakResultsSwitch=findViewById(R.id.speakResultsSwitch)
+        speechUsesAccessibilityVolumeSwitch=findViewById(R.id.speechUsesAccessibilityVolumeSwitch)
+        stopSpeechOnProximityWaveSwitch=findViewById(R.id.stopSpeechOnProximityWaveSwitch)
 
         defaultConfigSelector=findViewById(R.id.defaultConfigSelector)
         shareConfigSelector=findViewById(R.id.shareConfigSelector)
@@ -91,6 +97,9 @@ class SettingsActivity : AppCompatActivity() {
         flashlightSwitch.setChecked(settings.useFlashlight)
         soundsSwitch.setChecked(settings.useSounds)
         describeSavedImagesSwitch.setChecked(settings.describeSavedImages)
+        speakResultsSwitch.setChecked(settings.speakResults)
+        speechUsesAccessibilityVolumeSwitch.setChecked(settings.speechUsesAccessibilityVolume)
+        stopSpeechOnProximityWaveSwitch.setChecked(settings.stopSpeechOnProximityWave)
 
         refreshSelectors()
 
@@ -100,6 +109,9 @@ class SettingsActivity : AppCompatActivity() {
         settings.useFlashlight=flashlightSwitch.isChecked()
         settings.useSounds=soundsSwitch.isChecked()
         settings.describeSavedImages=describeSavedImagesSwitch.isChecked()
+        settings.speakResults=speakResultsSwitch.isChecked()
+        settings.speechUsesAccessibilityVolume=speechUsesAccessibilityVolumeSwitch.isChecked()
+        settings.stopSpeechOnProximityWave=stopSpeechOnProximityWaveSwitch.isChecked()
 
         settings.save()
 

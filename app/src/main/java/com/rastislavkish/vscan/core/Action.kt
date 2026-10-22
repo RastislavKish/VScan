@@ -74,3 +74,10 @@ class SetUserPromptAction: Action() {
     = "Set user prompt"
     }
 
+@Serializable
+class StopSpeechAction: Action() {
+
+    override fun toString(configManager: ConfigManager): String
+    = "Stop speech"
+    }
+

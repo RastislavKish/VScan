@@ -80,6 +80,10 @@ The smartphone camera is owned by the app-wide singleton `core/camera/PhoneCamer
 
 Under Robolectric, image tests need `@GraphicsMode(GraphicsMode.Mode.NATIVE)`. Robolectric doesn't implement `BitmapRegionDecoder`, so that path is covered by the instrumented `ImageDataInstrumentedTest`.
 
+### Speech
+
+All spoken output goes through the app-wide `core/speech/SpeechSystem` (`say(text, SpeechPriority)`, `stop()`, callable from any thread). The priority rules live in the pure-Kotlin `SpeechScheduler`: CRITICAL messages queue and pause everything else and ignore `stop()`; a HIGH message replaces any other HIGH one and pauses NORMAL; NORMAL and LOW share a FIFO queue; LOW messages are dropped when HIGH or CRITICAL appears; `stop()` (the user's silence request) clears everything but CRITICAL. Messages are split into sentences by `SentenceSplitter`, and a preempted message resumes from the start of the interrupted sentence. `AndroidSpeechEngine` wraps the system `TextToSpeech` (accessibility or media volume per `Settings`), and the proximity sensor is listened to only while speech is active, a brief cover (`WaveDetector`) acting as `stop()`. Scan results are spoken at NORMAL priority when `Settings.speakResults` is on, otherwise toasted; `StopSpeechAction` lets a hardware button stop speech.
+
 ### UI structure
 
 `MainActivity` hosts a single-activity nav-graph with a `BottomNavigationView` and four fragments: **ScanFragment** (the heart — capture, action dispatch), **ConfigListFragment**, **OptionsFragment** (full editor for the active config), **ConversationFragment**. Swipes navigate between tabs (handled by `RtkKotlinAndroid`'s `TouchWrapper`). All other screens (`ui/<name>activity/`) are separate `Activity`s launched for results, each with paired `...ActivityInput`/`...ActivityOutput` data classes for typed intent extras.
@@ -88,7 +92,7 @@ Under Robolectric, image tests need `@GraphicsMode(GraphicsMode.Mode.NATIVE)`. R
 
 Device input (volume keys) is delivered from `MainActivity.onKeyDown` to `ScanFragment` via **EventBus** (`DeviceInputEvent`). `ScanFragment.performAction()` maps an `Action` (sealed class in `core/Action.kt`) to a behavior, letting users bind hardware buttons / shake to scan/ask/consult. Sharing an image into the app (`ACTION_SEND`) routes through `ShareBox` (a singleton hand-off buffer) and is auto-consulted with the share config on resume.
 
-The app is built accessibility-first (TalkBack): results are announced via `Toast`, prompts can be set by voice via `STT` (long-press the prompt buttons), and screens are locked to portrait.
+The app is built accessibility-first (TalkBack): results are announced via `Toast` (or the speech system), prompts can be set by voice via `STT` (long-press the prompt buttons), and screens are locked to portrait.
 
 ## Code style conventions
 

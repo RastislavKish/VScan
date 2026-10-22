@@ -25,6 +25,31 @@
         android:layout_height="wrap_content"
         />
 
+    <TextView
+        android:text="Speech"
+        android:accessibilityHeading="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <Switch
+        android:id="@+id/speakResultsSwitch"
+        android:text="Read results aloud instead of showing them as toasts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <Switch
+        android:id="@+id/speechUsesAccessibilityVolumeSwitch"
+        android:text="Use the accessibility volume for speech, instead of the media volume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <Switch
+        android:id="@+id/stopSpeechOnProximityWaveSwitch"
+        android:text="Stop speech by waving a hand over the proximity sensor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"

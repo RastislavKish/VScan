@@ -42,6 +42,7 @@ import com.rastislavkish.vscan.core.ConsultConfigAction
 import com.rastislavkish.vscan.core.AskAction
 import com.rastislavkish.vscan.core.SetSystemPromptAction
 import com.rastislavkish.vscan.core.SetUserPromptAction
+import com.rastislavkish.vscan.core.StopSpeechAction
 
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivity
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivityOutput
@@ -105,6 +106,10 @@ class ActionSelectionActivity : AppCompatActivity() {
 
     fun onSetUserPromptClick(v: View) {
         returnResult(SetUserPromptAction())
+        }
+
+    fun onStopSpeechClick(v: View) {
+        returnResult(StopSpeechAction())
         }
 
     fun onNoneClick(v: View) {

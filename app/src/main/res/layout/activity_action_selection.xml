@@ -105,6 +105,20 @@
         android:layout_height="wrap_content"
         >
         <TextView
+            android:id="@+id/stopSpeechLabel"
+            android:text="Stop speech"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onStopSpeechClick"
+            />
+        </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        >
+        <TextView
             android:id="@+id/noneLabel"
             android:text="None"
             android:layout_width="wrap_content"

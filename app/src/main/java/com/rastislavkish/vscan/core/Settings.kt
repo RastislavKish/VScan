@@ -32,6 +32,10 @@ class Settings(
     var describeSavedImages=false
     var markdownRendering=false
 
+    var speakResults=false
+    var speechUsesAccessibilityVolume=true
+    var stopSpeechOnProximityWave=true
+
     var defaultConfigId: String=ConfigManager.BASE_CONFIG_ID
     var shareConfigId: String=ConfigManager.BASE_CONFIG_ID
     var fileDescriptionConfigId: String=ConfigManager.FILE_DESCRIPTION_CONFIG_ID
@@ -45,6 +49,10 @@ class Settings(
         useSounds=preferences.getBoolean("useSounds", true)
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
         markdownRendering=preferences.getBoolean("markdownRendering", false)
+
+        speakResults=preferences.getBoolean("speakResults", false)
+        speechUsesAccessibilityVolume=preferences.getBoolean("speechUsesAccessibilityVolume", true)
+        stopSpeechOnProximityWave=preferences.getBoolean("stopSpeechOnProximityWave", true)
 
         defaultConfigId=preferences.getString("defaultConfig", null) ?: ConfigManager.BASE_CONFIG_ID
         shareConfigId=preferences.getString("shareConfig", null) ?: ConfigManager.BASE_CONFIG_ID
@@ -60,6 +68,9 @@ class Settings(
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
         .putBoolean("markdownRendering", markdownRendering)
+        .putBoolean("speakResults", speakResults)
+        .putBoolean("speechUsesAccessibilityVolume", speechUsesAccessibilityVolume)
+        .putBoolean("stopSpeechOnProximityWave", stopSpeechOnProximityWave)
         .putString("defaultConfig", defaultConfigId)
         .putString("shareConfig", shareConfigId)
         .putString("fileDescriptionConfig", fileDescriptionConfigId)

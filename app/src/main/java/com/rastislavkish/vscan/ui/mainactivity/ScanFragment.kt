@@ -79,6 +79,8 @@ import com.rastislavkish.vscan.core.camera.CaptureException
 import com.rastislavkish.vscan.core.camera.CaptureSettings
 import com.rastislavkish.vscan.core.camera.PhoneCamera
 import com.rastislavkish.vscan.core.image.ImageData
+import com.rastislavkish.vscan.core.speech.SpeechPriority
+import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.openai.*
 
 import com.rastislavkish.vscan.core.Action
@@ -88,6 +90,7 @@ import com.rastislavkish.vscan.core.ConsultConfigAction
 import com.rastislavkish.vscan.core.AskAction
 import com.rastislavkish.vscan.core.SetSystemPromptAction
 import com.rastislavkish.vscan.core.SetUserPromptAction
+import com.rastislavkish.vscan.core.StopSpeechAction
 
 class ScanFragment: Fragment(), CoroutineScope {
 
@@ -106,6 +109,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var providersManager: ProvidersManager
     private lateinit var configManager: ConfigManager
     private lateinit var phoneCamera: PhoneCamera
+    private lateinit var speechSystem: SpeechSystem
     private lateinit var touchWrapper: TouchWrapper
 
     private lateinit var scanButton: Button
@@ -132,6 +136,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         providersManager=ProvidersManager.getInstance(context!!)
         configManager=ConfigManager.getInstance(context!!)
         phoneCamera=PhoneCamera.getInstance(context!!)
+        speechSystem=SpeechSystem.getInstance(context!!)
         touchWrapper=TouchWrapper()
         touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
         touchWrapper.addSwipeRightListener(this::onSwipeRight)
@@ -446,6 +451,9 @@ class ScanFragment: Fragment(), CoroutineScope {
             is SetUserPromptAction -> {
                 userPromptButtonClick(userPromptButton)
                 }
+            is StopSpeechAction -> {
+                speechSystem.stop()
+                }
             }
         }
 
@@ -554,9 +562,15 @@ class ScanFragment: Fragment(), CoroutineScope {
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
+    fun announceResult(text: String) {
+        if (settings.speakResults)
+        speechSystem.say(text, SpeechPriority.NORMAL)
+        else
+        toast(text)
+        }
     fun toastResponse(response: AssistantMessage) {
         if (!response.text.isEmpty())
-        toast(response.text)
+        announceResult(response.text)
         else if (response.finishReason=="length")
         toast("Error: Reasoning exceeded the token limit")
         else
