@@ -46,10 +46,19 @@ class PermissionRequester(context: Context) {
     private val context=context
 
     fun requestPermissions(activity: Activity) {
-        ActivityCompat.requestPermissions(activity, arrayOf(
+        val permissions=if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q)
+        arrayOf(
             "android.permission.CAMERA",
             "android.permission.RECORD_AUDIO",
             "android.permission.READ_EXTERNAL_STORAGE",
-            "android.permission.WRITE_EXTERNAL_STORAGE"), 1)
+            "android.permission.WRITE_EXTERNAL_STORAGE",
+            )
+        else
+        arrayOf(
+            "android.permission.CAMERA",
+            "android.permission.RECORD_AUDIO",
+            )
+
+        ActivityCompat.requestPermissions(activity, permissions, 1)
         }
     }
