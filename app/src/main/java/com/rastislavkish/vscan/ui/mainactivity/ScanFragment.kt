@@ -76,9 +76,8 @@ import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.camera.CaptureException
-import com.rastislavkish.vscan.core.camera.CaptureSettings
-import com.rastislavkish.vscan.core.camera.PhoneCamera
 import com.rastislavkish.vscan.core.image.ImageData
+import com.rastislavkish.vscan.core.imagesource.ImageSources
 import com.rastislavkish.vscan.core.speech.SpeechPriority
 import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.openai.*
@@ -108,7 +107,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var settings: Settings
     private lateinit var providersManager: ProvidersManager
     private lateinit var configManager: ConfigManager
-    private lateinit var phoneCamera: PhoneCamera
+    private lateinit var imageSources: ImageSources
     private lateinit var speechSystem: SpeechSystem
     private lateinit var touchWrapper: TouchWrapper
 
@@ -135,7 +134,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         settings=Settings.getInstance(context!!)
         providersManager=ProvidersManager.getInstance(context!!)
         configManager=ConfigManager.getInstance(context!!)
-        phoneCamera=PhoneCamera.getInstance(context!!)
+        imageSources=ImageSources.getInstance(context!!)
         speechSystem=SpeechSystem.getInstance(context!!)
         touchWrapper=TouchWrapper()
         touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
@@ -172,7 +171,7 @@ class ScanFragment: Fragment(), CoroutineScope {
 
         launch {
             try {
-                phoneCamera.prepare()
+                imageSources.phoneCamera.prepare()
                 }
             catch (e: CaptureException) {
                 toast(e.message ?: "Error")
@@ -454,14 +453,12 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
 
     fun takePictureToAdapter(adapter: TabAdapter, callback: suspend (TabAdapter) -> Unit) {
-        val captureSettings=CaptureSettings(
-            shouldUseFlashlight(adapter),
-            )
+        val flashlight=shouldUseFlashlight(adapter)
 
         launch {
             val image=try {
                 Timing.measure("Capture") {
-                    phoneCamera.capture(captureSettings)
+                    imageSources.default.capture(flashlight)
                     }
                 }
             catch (e: CaptureException) {
