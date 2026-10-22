@@ -28,6 +28,7 @@ class Settings(
     ) {
 
     var useFlashlight=false
+    var useFrontCamera=false
     var useSounds=true
     var describeSavedImages=false
     var markdownRendering=false
@@ -46,6 +47,7 @@ class Settings(
 
     fun load() {
         useFlashlight=preferences.getBoolean("useFlashlight", false)
+        useFrontCamera=preferences.getBoolean("useFrontCamera", false)
         useSounds=preferences.getBoolean("useSounds", true)
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
         markdownRendering=preferences.getBoolean("markdownRendering", false)
@@ -65,6 +67,7 @@ class Settings(
     fun save() {
         preferences.edit()
         .putBoolean("useFlashlight", useFlashlight)
+        .putBoolean("useFrontCamera", useFrontCamera)
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
         .putBoolean("markdownRendering", markdownRendering)

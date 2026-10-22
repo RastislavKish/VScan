@@ -48,6 +48,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var settings: Settings
 
     private lateinit var flashlightSwitch: Switch
+    private lateinit var frontCameraSwitch: Switch
     private lateinit var soundsSwitch: Switch
     private lateinit var describeSavedImagesSwitch: Switch
     private lateinit var speakResultsSwitch: Switch
@@ -75,6 +76,7 @@ class SettingsActivity : AppCompatActivity() {
         settings=Settings.getInstance(this)
 
         flashlightSwitch=findViewById(R.id.flashlightSwitch)
+        frontCameraSwitch=findViewById(R.id.frontCameraSwitch)
         soundsSwitch=findViewById(R.id.soundsSwitch)
         describeSavedImagesSwitch=findViewById(R.id.describeSavedImagesSwitch)
         speakResultsSwitch=findViewById(R.id.speakResultsSwitch)
@@ -95,6 +97,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         flashlightSwitch.setChecked(settings.useFlashlight)
+        frontCameraSwitch.setChecked(settings.useFrontCamera)
         soundsSwitch.setChecked(settings.useSounds)
         describeSavedImagesSwitch.setChecked(settings.describeSavedImages)
         speakResultsSwitch.setChecked(settings.speakResults)
@@ -107,6 +110,7 @@ class SettingsActivity : AppCompatActivity() {
         }
     override fun onPause() {
         settings.useFlashlight=flashlightSwitch.isChecked()
+        settings.useFrontCamera=frontCameraSwitch.isChecked()
         settings.useSounds=soundsSwitch.isChecked()
         settings.describeSavedImages=describeSavedImagesSwitch.isChecked()
         settings.speakResults=speakResultsSwitch.isChecked()

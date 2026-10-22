@@ -46,7 +46,6 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
-import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.ReasoningEffort
 
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivity
@@ -72,7 +71,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     private lateinit var flashlightModeSpinner: Spinner
 
-    private lateinit var cameraSpinner: Spinner
     private lateinit var modelInput: TextInputEditText
     private lateinit var selectModelButton: Button
     private lateinit var maxCompletionTokensInput: TextInputEditText
@@ -113,17 +111,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
         flashlightModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
                 onFlashlightModeSpinnerItemSelected(v ?: return, position)
-                }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-            })
-
-        cameraSpinner=view.findViewById(R.id.cameraSpinner)
-        val cameraSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, cameraSpinnerOptions)
-        cameraSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        cameraSpinner.setAdapter(cameraSpinnerAdapter)
-        cameraSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
-                onCameraSpinnerItemSelected(v ?: return, position)
                 }
             override fun onNothingSelected(parent: AdapterView<*>) {}
             })
@@ -227,14 +214,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
             }}
         }
 
-    fun onCameraSpinnerItemSelected(v: View, position: Int) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val camera=getSelectedCamera()
-            if (camera!=activeConfig.camera)
-            adapter.activeConfig=activeConfig.withCamera(camera)
-            }}
-        }
     fun onModelInputTextChange(text: String) {
         launch { adapter.mutex.withLock {
             val activeConfig=adapter.activeConfig
@@ -331,7 +310,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
             adapter.activeConfig.systemPrompt,
             adapter.activeConfig.userPrompt,
             getSelectedFlashlightMode(),
-            getSelectedCamera(),
             modelInput.text.toString(),
             maxCompletionTokens,
             getSelectedReasoningEffort(),
@@ -355,20 +333,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
             })
         }
 
-    val cameraSpinnerOptions=arrayOf("Back camera", "Front camera")
-    fun getSelectedCamera(): UsedCamera {
-        return when (cameraSpinner.selectedItemPosition) {
-            0 -> UsedCamera.BACK_CAMERA
-            1 -> UsedCamera.FRONT_CAMERA
-            else -> throw Exception("Unknown camera ${cameraSpinner.selectedItem}")
-            }
-        }
-    fun setSelectedCamera(camera: UsedCamera) {
-        cameraSpinner.setSelection(when (camera) {
-            UsedCamera.BACK_CAMERA -> 0
-            UsedCamera.FRONT_CAMERA -> 1
-            })
-        }
 
     val reasoningEffortSpinnerOptions=arrayOf(
         "Unspecified",
@@ -422,9 +386,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
         setSelectedFlashlightMode(activeConfig.flashlightMode)
-
-        if (uiConfig.camera!=activeConfig.camera)
-        setSelectedCamera(activeConfig.camera)
 
         if (uiConfig.model!=activeConfig.model)
         modelInput.setText(activeConfig.model)

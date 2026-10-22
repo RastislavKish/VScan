@@ -54,26 +54,6 @@
             android:layout_weight="1"
             />
         </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        >
-        <TextView
-            android:text="Camera"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android_layout_weight="0"
-            />
-        <Spinner
-            android:id="@+id/cameraSpinner"
-            android:hint="Camera"
-            android:spinnerMode="dropdown"
-            android:layout_height="wrap_content"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            />
-        </LinearLayout>
 
     <TextView
         android:id="@+id/modelHeading"

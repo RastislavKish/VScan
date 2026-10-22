@@ -37,11 +37,11 @@ import kotlin.coroutines.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 
+import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.UsedCamera
 import com.rastislavkish.vscan.core.image.ImageData
 
 data class CaptureSettings(
-    val camera: UsedCamera,
     val flashlight: Boolean,
     )
 
@@ -53,6 +53,7 @@ class PhoneCamera private constructor(context: Context) {
 
     private val context=context.applicationContext
     private val lifecycleOwner: LifecycleOwner=ProcessLifecycleOwner.get()
+    private val settings=Settings.getInstance(context)
 
     // Guards the provider and the binding, and serializes captures
     private val mutex=Mutex()
@@ -97,23 +98,26 @@ class PhoneCamera private constructor(context: Context) {
         }
 
     // Binds the camera ahead of time, so the first capture with these settings doesn't wait for the camera to open
-    suspend fun prepare(camera: UsedCamera) {
+    suspend fun prepare() {
         mutex.withLock {
-            ensureBound(camera)
+            ensureBound()
             }
         }
 
-    suspend fun capture(settings: CaptureSettings): ImageData {
+    suspend fun capture(captureSettings: CaptureSettings): ImageData {
         return mutex.withLock {
-            ensureBound(settings.camera)
+            ensureBound()
 
-            imageCapture.setFlashMode(if (settings.flashlight) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
+            imageCapture.setFlashMode(if (captureSettings.flashlight) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
 
             takePicture(imageCapture)
             }
         }
 
-    private suspend fun ensureBound(camera: UsedCamera) = withContext(Dispatchers.Main) {
+    // The camera direction is a global setting, so changing it takes effect on the next capture
+    private suspend fun ensureBound() = withContext(Dispatchers.Main) {
+        val camera=if (settings.useFrontCamera) UsedCamera.FRONT_CAMERA else UsedCamera.BACK_CAMERA
+
         if (camera==boundCamera)
         return@withContext
 

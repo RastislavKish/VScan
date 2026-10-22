@@ -171,12 +171,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         multipurposeInput.setOnEditorActionListener(this::onMultipurposeInputEditorAction)
 
         launch {
-            val camera=adapter.mutex.withLock {
-                adapter.activeConfig.camera
-                }
-
             try {
-                phoneCamera.prepare(camera)
+                phoneCamera.prepare()
                 }
             catch (e: CaptureException) {
                 toast(e.message ?: "Error")
@@ -459,7 +455,6 @@ class ScanFragment: Fragment(), CoroutineScope {
 
     fun takePictureToAdapter(adapter: TabAdapter, callback: suspend (TabAdapter) -> Unit) {
         val captureSettings=CaptureSettings(
-            adapter.activeConfig.camera,
             shouldUseFlashlight(adapter),
             )
 

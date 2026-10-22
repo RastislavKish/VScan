@@ -115,13 +115,13 @@ class ConfigManagerTest {
 
     @Test
     fun loadIgnoresRemovedFields() {
-        val legacy="""[{"id":"a","name":"A","highRes":true,"camera":"FRONT_CAMERA"}]"""
+        val legacy="""[{"id":"a","name":"A","highRes":true,"camera":"FRONT_CAMERA","model":"vscan-x"}]"""
         preferences.edit().putString("configurations", legacy).commit()
 
         val config=freshManager().getConfig("a")
 
         assertEquals("A", config?.name)
-        assertEquals(UsedCamera.FRONT_CAMERA, config?.camera)
+        assertEquals("vscan-x", config?.model)
         }
 
     }
