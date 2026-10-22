@@ -113,4 +113,15 @@ class ConfigManagerTest {
         assertEquals("vscan-gpt-4o-mini", manager.getConfig("b")?.model)
         }
 
+    @Test
+    fun loadIgnoresRemovedFields() {
+        val legacy="""[{"id":"a","name":"A","highRes":true,"camera":"FRONT_CAMERA"}]"""
+        preferences.edit().putString("configurations", legacy).commit()
+
+        val config=freshManager().getConfig("a")
+
+        assertEquals("A", config?.name)
+        assertEquals(UsedCamera.FRONT_CAMERA, config?.camera)
+        }
+
     }

@@ -22,6 +22,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.HttpResponse
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -92,18 +95,22 @@ class Conversation(
         if (modelId.startsWith("vscan-"))
         throw Exception("Error: The chosen provider does not support this model.")
 
-        val messages=mutableListOf<Msg>()
-        for (message in this.messages) {
-            messages.add(message.render())
-            }
-        val bodyObject=OpenaiRequest(
-            modelId,
-            messages,
-            maxCompletionTokens,
-            reasoningEffortValue(),
-            )
+        // Rendering may decode and re-encode images, so it's kept off the main thread
+        val body=withContext(Dispatchers.Default) {
+            val messages=mutableListOf<Msg>()
+            for (message in this@Conversation.messages) {
+                messages.add(message.render())
+                }
+            val bodyObject=OpenaiRequest(
+                modelId,
+                messages,
+                maxCompletionTokens,
+                reasoningEffortValue(),
+                )
 
-        val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
+            val format=Json { explicitNulls=false } //In order to make the null entries in Content disappear during serialization
+            format.encodeToString(bodyObject)
+            }
 
         val client=HttpClient(CIO) {
             engine {
@@ -115,7 +122,7 @@ class Conversation(
             client.post("$baseUrl/chat/completions") {
                 header("Content-Type", "application/json")
                 bearerAuth(apiKey)
-                setBody(format.encodeToString(bodyObject))
+                setBody(body)
                 }
             }
         catch (e: Exception) {

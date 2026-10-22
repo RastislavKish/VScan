@@ -28,7 +28,7 @@ JVM unit tests live in `app/src/test`, mirroring the main package layout. Pure-K
 
 ### The config-centric model
 
-The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." A Config bundles everything needed for one scanning purpose: camera choice, resolution, flashlight mode, the system/user prompts, the model, max completion tokens, and reasoning effort. The app ships two immutable built-in configs created in code by `ConfigManager`:
+The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." A Config bundles everything needed for one scanning purpose: camera choice, flashlight mode, the system/user prompts, the model, max completion tokens, and reasoning effort. The app ships two immutable built-in configs created in code by `ConfigManager`:
 
 - **Base** (id `base`): general "What's in the image?" using `vscan-gpt-4o`.
 - **File description** (id `file-description`): generates filenames for saved images, using `vscan-gpt-4o-mini`.
@@ -60,7 +60,7 @@ State lives in three separate `SharedPreferences` files, each owned by a singlet
 - **`ConfigManager`** (`VScanConfigurations`) — the list of configs, JSON-serialized.
 - **`ProvidersManager`** (`VScanProviders`) — providers, the default provider, and per-model→provider mappings. In `getProviderForModel()`, a model with no mapping falls back to the default provider, while a model explicitly mapped to `null` has no provider.
 
-All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. `StringIdMigration` (run once per process from every manager's `getInstance()`) converts the integer ids of versions ≤ 0.2.x across all stores, backing up replaced values under `<key>_v1` keys. Follow these patterns when changing serialized shapes, and note that `Json` omits default values, so legacy data may lack fields entirely.
+All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. `StringIdMigration` (run once per process from every manager's `getInstance()`) converts the integer ids of versions ≤ 0.2.x across all stores, backing up replaced values under `<key>_v1` keys. `ConfigManager` decodes with `ignoreUnknownKeys`, so removing a `Config` field needs no migration. Follow these patterns when changing serialized shapes, and note that `Json` omits default values, so legacy data may lack fields entirely.
 
 ### Request flow
 
@@ -76,7 +76,7 @@ The `Message` hierarchy (`Message`, `TextMessage`, `ImageMessage`, `SystemMessag
 
 `core/image/ImageData` is the app's single internal image type. It holds either the original encoded bytes (camera JPEGs, shared files) or a bitmap produced by a transformation, and derives everything lazily: format (`EncodedFormat.detect()` by magic bytes), EXIF `Orientation`, dimensions (upright, without decoding), and the JPEG / base64 encodings. `encoded`/`encodedFormat` pass the original bytes through when providers accept the format (JPEG, PNG, WebP, GIF) and re-encode to JPEG otherwise. `crop()` (region decoding via `BitmapRegionDecoder`, with a full-decode fallback) and `scaled()`/`decode(maxDimension)` (subsampled decoding) work in upright coordinates and never upscale. Avoid holding full-resolution bitmaps around; a 12 MP one takes ~48 MB.
 
-The smartphone camera is owned by the app-wide singleton `core/camera/PhoneCamera`, not by any screen. It binds CameraX to `ProcessLifecycleOwner` (so it is available while the app is in the foreground), tracks the device orientation itself, and exposes `suspend fun capture(CaptureSettings): ImageData`, rebinding whenever the requested camera or resolution differs from the current binding. Failures surface as `CaptureException` with a user-facing message.
+The smartphone camera is owned by the app-wide singleton `core/camera/PhoneCamera`, not by any screen. It captures at the highest available 4:3 resolution, binds CameraX to `ProcessLifecycleOwner` (so it is available while the app is in the foreground), tracks the device orientation itself, and exposes `suspend fun capture(CaptureSettings): ImageData`, rebinding whenever the requested camera differs from the current binding. Until lenses handle downscaling, `LocalImage` caps sent images at a 2048 px longer side; `Conversation` renders requests on `Dispatchers.Default` since that may decode images. Failures surface as `CaptureException` with a user-facing message.
 
 Under Robolectric, image tests need `@GraphicsMode(GraphicsMode.Mode.NATIVE)`. Robolectric doesn't implement `BitmapRegionDecoder`, so that path is covered by the instrumented `ImageDataInstrumentedTest`.
 

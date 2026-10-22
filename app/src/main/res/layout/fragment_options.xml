@@ -34,12 +34,6 @@
         android:layout_width="wrap_content"
         />
 
-    <Switch
-        android:id="@+id/highResSwitch"
-        android:text="High res"
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        />
     <LinearLayout
         android:orientation="horizontal"
         android:layout_height="wrap_content"

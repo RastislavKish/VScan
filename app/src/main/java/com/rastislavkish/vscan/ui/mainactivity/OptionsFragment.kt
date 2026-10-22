@@ -31,7 +31,6 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import com.google.android.material.textfield.TextInputLayout
@@ -71,7 +70,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var systemPromptLink: TextView
     private lateinit var userPromptLink: TextView
 
-    private lateinit var highResSwitch: Switch
     private lateinit var flashlightModeSpinner: Spinner
 
     private lateinit var cameraSpinner: Spinner
@@ -107,8 +105,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
         userPromptLink=view.findViewById(R.id.userPromptLink)
         userPromptLink.setOnClickListener(this::onUserPromptLinkClick)
 
-        highResSwitch=view.findViewById(R.id.highResSwitch)
-        highResSwitch.setOnCheckedChangeListener(this::onHighResSwitchCheckedChange)
 
         flashlightModeSpinner=view.findViewById(R.id.flashlightModeSpinner)
         val flashlightModeSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, flashlightModeSpinnerOptions)
@@ -222,13 +218,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
         userPromptLink.setText("User prompt: $message")
         }
 
-    fun onHighResSwitchCheckedChange(v: View, checked: Boolean) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            if (checked!=activeConfig.highRes)
-            adapter.activeConfig=activeConfig.withHighRes(checked)
-            }}
-        }
     fun onFlashlightModeSpinnerItemSelected(v: View, position: Int) {
         launch { adapter.mutex.withLock {
             val activeConfig=adapter.activeConfig
@@ -341,7 +330,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
             nameInput.toString(),
             adapter.activeConfig.systemPrompt,
             adapter.activeConfig.userPrompt,
-            highResSwitch.isChecked(),
             getSelectedFlashlightMode(),
             getSelectedCamera(),
             modelInput.text.toString(),
@@ -431,9 +419,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         updateSystemPromptLink(adapter)
         updateUserPromptLink(adapter)
-
-        if (uiConfig.highRes!=activeConfig.highRes)
-        highResSwitch.setChecked(activeConfig.highRes)
 
         if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
         setSelectedFlashlightMode(activeConfig.flashlightMode)

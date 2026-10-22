@@ -17,7 +17,6 @@ package com.rastislavkish.vscan.core.camera
 
 import android.content.Context
 import android.graphics.ImageFormat
-import android.util.Size
 import android.view.OrientationEventListener
 
 import androidx.camera.core.CameraSelector
@@ -25,6 +24,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.UseCase
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -42,7 +42,6 @@ import com.rastislavkish.vscan.core.image.ImageData
 
 data class CaptureSettings(
     val camera: UsedCamera,
-    val highRes: Boolean,
     val flashlight: Boolean,
     )
 
@@ -60,30 +59,21 @@ class PhoneCamera private constructor(context: Context) {
 
     private var cameraProvider: ProcessCameraProvider?=null
     private var boundCamera: UsedCamera?=null
-    private var boundHighRes: Boolean?=null
 
     private val imageCapture: ImageCapture
-    private val highResImageCapture: ImageCapture
 
     private val orientationEventListener: OrientationEventListener
     private var lastRotationValue=-1
 
     init {
+        // Full sensor resolution, downscaling is up to the consumers of the images
         val resolutionSelector=ResolutionSelector.Builder()
-        .setResolutionStrategy(ResolutionStrategy(Size(512, 512), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-        .build()
-
-        val highResResolutionSelector=ResolutionSelector.Builder()
-        .setResolutionStrategy(ResolutionStrategy(Size(1024, 1024), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+        .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+        .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
         .build()
 
         imageCapture=ImageCapture.Builder()
         .setResolutionSelector(resolutionSelector)
-        .setFlashMode(ImageCapture.FLASH_MODE_ON)
-        .build()
-
-        highResImageCapture=ImageCapture.Builder()
-        .setResolutionSelector(highResResolutionSelector)
         .setFlashMode(ImageCapture.FLASH_MODE_ON)
         .build()
 
@@ -107,25 +97,24 @@ class PhoneCamera private constructor(context: Context) {
         }
 
     // Binds the camera ahead of time, so the first capture with these settings doesn't wait for the camera to open
-    suspend fun prepare(camera: UsedCamera, highRes: Boolean) {
+    suspend fun prepare(camera: UsedCamera) {
         mutex.withLock {
-            ensureBound(camera, highRes)
+            ensureBound(camera)
             }
         }
 
     suspend fun capture(settings: CaptureSettings): ImageData {
         return mutex.withLock {
-            ensureBound(settings.camera, settings.highRes)
+            ensureBound(settings.camera)
 
-            val useCase=if (settings.highRes) highResImageCapture else imageCapture
-            useCase.setFlashMode(if (settings.flashlight) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
+            imageCapture.setFlashMode(if (settings.flashlight) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
 
-            takePicture(useCase)
+            takePicture(imageCapture)
             }
         }
 
-    private suspend fun ensureBound(camera: UsedCamera, highRes: Boolean) = withContext(Dispatchers.Main) {
-        if (camera==boundCamera && highRes==boundHighRes)
+    private suspend fun ensureBound(camera: UsedCamera) = withContext(Dispatchers.Main) {
+        if (camera==boundCamera)
         return@withContext
 
         val provider=getCameraProvider()
@@ -137,16 +126,14 @@ class PhoneCamera private constructor(context: Context) {
             }
 
         try {
-            provider.bindToLifecycle(lifecycleOwner, cameraSelector, if (highRes) highResImageCapture else imageCapture)
+            provider.bindToLifecycle(lifecycleOwner, cameraSelector, imageCapture)
             }
         catch (e: Exception) {
             boundCamera=null
-            boundHighRes=null
             throw CaptureException("Error opening the camera")
             }
 
         boundCamera=camera
-        boundHighRes=highRes
         }
 
     private suspend fun getCameraProvider(): ProcessCameraProvider {
@@ -215,7 +202,6 @@ class PhoneCamera private constructor(context: Context) {
 
         if (rotation!=lastRotationValue) {
             imageCapture.setTargetRotation(rotation)
-            highResImageCapture.setTargetRotation(rotation)
 
             lastRotationValue=rotation
             }

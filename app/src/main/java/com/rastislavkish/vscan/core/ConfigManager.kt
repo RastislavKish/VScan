@@ -130,7 +130,7 @@ class ConfigManager(
 
         serializedList=fixBackwardCompatibility(serializedList)
 
-        configurations=Json.decodeFromString(serializedList)
+        configurations=json.decodeFromString(serializedList)
 
         //In case the base config was out of date or missing
         updateConfigImplementation(baseConfig())
@@ -174,6 +174,9 @@ class ConfigManager(
         const val FILE_DESCRIPTION_CONFIG_ID="file-description"
 
         private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID)
+
+        // Fields removed from Config (e.g. highRes) remain in data saved by older versions, and newer versions may add fields an older build doesn't know
+        private val json=Json { ignoreUnknownKeys=true }
 
         fun isBuiltInConfigId(id: String): Boolean = id in builtInConfigIds
 

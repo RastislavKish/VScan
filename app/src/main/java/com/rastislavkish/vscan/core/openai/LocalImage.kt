@@ -24,13 +24,24 @@ class LocalImage(
     val image: ImageData,
     ): Image() {
 
+    // Full-resolution camera images are too large to send, some providers reject images over ~5 MB
+    // Until image sources and lenses take over the downscaling, images are capped here
+    private val sentImage: ImageData by lazy {
+        image.scaled(MAX_DIMENSION)
+        }
+
     override fun render(): Content {
         return Content(
             "image_url",
             null,
             ImageUrl(
-                "data:${image.encodedFormat.mimeType};base64,${image.base64}"
+                "data:${sentImage.encodedFormat.mimeType};base64,${sentImage.base64}"
                 ),
             )
+        }
+
+    companion object {
+
+        const val MAX_DIMENSION=2048
         }
     }
