@@ -19,6 +19,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.ReasoningEffort
 import com.rastislavkish.vscan.core.template.Template
@@ -30,7 +31,7 @@ object ConfigV1Migration {
     // The defaults are the ones of the old Config, since the old versions didn't store default values
     @Serializable
     private data class LegacyConfig(
-        val id: String,
+        val id: String=ConfigManager.BASE_CONFIG_ID,
         val name: String="Base",
         val systemPrompt: String="",
         val userPrompt: String="What's in the image?",

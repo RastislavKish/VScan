@@ -154,6 +154,17 @@ class ConfigManagerTest {
         }
 
     @Test
+    fun migratesTheV1BaseConfigStoredWithoutId() {
+        // The old versions omitted the id when it was the default one
+        val legacy="""[{"name":"Base"},{"id":"a","name":"A"}]"""
+        preferences.edit().putString("configurations", legacy).commit()
+
+        val ids=freshManager().getList().map { it.id }
+
+        assertEquals(listOf("base", "a", "file-description"), ids)
+        }
+
+    @Test
     fun migrationKeepsV1ConfigsAndRunsOnce() {
         val legacy="""[{"id":"a","name":"A"}]"""
         preferences.edit().putString("configurations", legacy).commit()
