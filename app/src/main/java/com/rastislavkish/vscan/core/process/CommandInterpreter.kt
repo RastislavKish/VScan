@@ -18,7 +18,7 @@ package com.rastislavkish.vscan.core.process
 import com.rastislavkish.vscan.core.Config
 
 // Carries out command prompt lines, returning the message for the user
-// The built-in commands are ps, kill and killall, any other name starts the config it's the command or the id of
+// The built-in commands are ps, kill, killall, fg and bg, any other name starts the config it's the command or the id of
 class CommandInterpreter(
     private val configs: () -> List<Config>,
     private val processManager: ProcessManager,
@@ -34,7 +34,9 @@ class CommandInterpreter(
                 "ps" -> ps()
                 "kill" -> kill(arguments)
                 "killall" -> killAll()
-                else -> spawn(command, commandLine)
+                "fg" -> foreground(commandLine.shifted())
+                "bg" -> background()
+                else -> spawn(commandLine)
                 }
             }
         catch (e: ProcessException) {
@@ -47,7 +49,10 @@ class CommandInterpreter(
         if (processes.isEmpty())
         return "No processes"
 
-        return processes.joinToString(". ") { "${it.pid} ${it.config.name}, iteration ${it.iteration}" }
+        return processes.joinToString(". ") {
+            val foreground=if (it.foreground) ", foreground" else ""
+            "${it.pid} ${it.config.name}, iteration ${it.iteration}$foreground"
+            }
         }
 
     private fun kill(arguments: List<String>): String {
@@ -75,13 +80,39 @@ class CommandInterpreter(
             }
         }
 
-    private fun spawn(command: String, commandLine: CommandLine): String {
-        val list=configs()
-        val config=list.firstOrNull { it.command==command }
-        ?: list.firstOrNull { it.id==command }
-        ?: return "Unknown command $command"
-
+    private fun spawn(commandLine: CommandLine): String {
+        val config=findConfig(commandLine)
         val process=processManager.spawn(config, commandLine.bind(config))
         return "Started ${config.name} as ${process.pid}"
+        }
+
+    // fg pid brings a background process to the foreground, fg command... loads a config there
+    // Config ids are never numbers, so the two can't be confused
+    private fun foreground(commandLine: CommandLine): String {
+        val command=commandLine.command ?: return "Usage: fg pid, or fg command..."
+
+        val pid=command.toIntOrNull()
+        if (pid!=null && commandLine.arguments.isEmpty()) {
+            val process=processManager.bringToForeground(pid) ?: return "No process $pid"
+            return "${process.config.name} is in the foreground"
+            }
+
+        val config=findConfig(commandLine)
+        processManager.setForeground(config, commandLine.bind(config))
+        return "${config.name} is in the foreground"
+        }
+
+    private fun background(): String {
+        val process=processManager.background() ?: return "No foreground process"
+        return "${process.config.name} runs in the background as ${process.pid}"
+        }
+
+    private fun findConfig(commandLine: CommandLine): Config {
+        val command=commandLine.command ?: throw ProcessException("No command")
+        val list=configs()
+
+        return list.firstOrNull { it.command==command }
+        ?: list.firstOrNull { it.id==command }
+        ?: throw ProcessException("Unknown command $command")
         }
     }

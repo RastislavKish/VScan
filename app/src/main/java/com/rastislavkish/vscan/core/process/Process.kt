@@ -20,10 +20,12 @@ import java.io.Closeable
 import java.util.IdentityHashMap
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.*
 
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
+import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.openai.Conversation
@@ -43,23 +45,38 @@ interface ProcessListener {
 
     fun onError(process: Process, message: String)
     fun onEnd(process: Process)
+    // An image taken for the image parameter
+    fun onCapture(process: Process, image: ImageData) {}
     }
 
 // A running config
 // Iterations run one after another, each analyzing the input and running the operations on the result
-// The state is changed only by the process' own coroutine, other threads may read it
+// The state is changed only by the running iteration, other threads may read it
+// The foreground process is the one the scan screen works with: it runs iterations on demand, loops only when started, and stays when its iterations end
 class Process(
     val pid: Int,
-    val config: Config,
+    config: Config,
     // The values of all the config's parameters, lenses already applied
     val arguments: Map<String, Any?>,
-    private val analyzer: AnalyzerRuntime,
+    analyzer: AnalyzerRuntime,
     private val executor: OperationExecutor,
     private val listener: ProcessListener,
     // The global flashlight setting, for the default flashlight mode
     private val defaultFlashlight: Boolean,
+    // The argument texts it was called with
+    val given: Map<String, String> = mapOf(),
     private val clock: () -> Long,
     ) {
+
+    // The config and its analyzer, replaced together
+    private class Program(val config: Config, val analyzer: AnalyzerRuntime)
+
+    @Volatile private var program=Program(config, analyzer)
+
+    val config: Config
+    get() = program.config
+
+    @Volatile var foreground=false
 
     @Volatile var status=ProcessStatus.RUNNING
     private set
@@ -78,11 +95,13 @@ class Process(
     @Volatile var usage=Usage()
     private set
 
+    // The user may continue the conversation, or start one before the first iteration
     @Volatile var lastConversation: Conversation?=null
-    private set
 
-    private var startTime=0L
-    private var job: Job?=null
+    private val startTime=clock()
+    @Volatile private var job: Job?=null
+    // Iterations on demand and the own ones take turns
+    private val iterationMutex=Mutex()
     // Errors of the previous and the current iteration
     private var previousErrors=setOf<String>()
     private var currentErrors=mutableSetOf<String>()
@@ -90,30 +109,61 @@ class Process(
     val elapsedSeconds: Double
     get() = (clock()-startTime)/1000.0
 
-    private val lifetime=config.lifetime
+    private val lifetime
+    get() = config.lifetime
 
-    private val captureMode=when (lifetime.capture) {
+    private val captureMode
+    get() = when (lifetime.capture) {
         CaptureMode.AUTO -> if (lifetime.isLooping) CaptureMode.FRAME else CaptureMode.PHOTO
         else -> lifetime.capture
         }
-    private val useFlashlight=when (lifetime.flashlight) {
+    private val useFlashlight
+    get() = when (lifetime.flashlight) {
         FlashlightMode.DEFAULT -> defaultFlashlight
         FlashlightMode.ON -> true
         FlashlightMode.OFF -> false
         }
 
+    // Starts the iterations, unless they already run
     fun start(scope: CoroutineScope) {
-        startTime=clock()
-        job=scope.launch { run() }
+        synchronized(this) {
+            if (job?.isActive==true)
+            return
+            job=scope.launch { run() }
+            }
         }
 
+    // Ends a background process, the foreground one only stops iterating
     fun kill() {
         job?.cancel()
+        }
+
+    // Takes effect from the next iteration
+    fun update(config: Config, analyzer: AnalyzerRuntime) {
+        program=Program(config, analyzer)
         }
 
     // False from the moment it's killed, even before it has stopped
     val isRunning: Boolean
     get() = job?.isActive ?: true
+
+    // Whether its own iterations run, false for a foreground process waiting for scans
+    val isIterating: Boolean
+    get() = job?.isActive==true
+
+    // Runs one iteration now, taking photos, and returns whether it succeeded
+    // reportAsChange makes the operations see the result as a change even when the output stayed the same, lastOutput and history still changing only with the output
+    // onCapture is called with the image taken for the image parameter
+    suspend fun scan(reportAsChange: Boolean, onCapture: (ImageData) -> Unit = {}): Boolean {
+        return iterationMutex.withLock {
+            // Asked for, so its errors are always reported
+            previousErrors=setOf()
+            val succeeded=runIteration(CaptureMode.PHOTO, reportAsChange, onCapture)
+            previousErrors=currentErrors
+            currentErrors=mutableSetOf()
+            succeeded
+            }
+        }
 
     suspend fun join() {
         job?.join()
@@ -123,6 +173,7 @@ class Process(
         // Frames are captured from a running stream, with the torch on for the whole time, rather than starting them for every iteration
         val handles=mutableListOf<Closeable>()
         var endStatus=ProcessStatus.FINISHED
+        val captureMode=captureMode
 
         try {
             if (captureMode==CaptureMode.FRAME) {
@@ -134,9 +185,9 @@ class Process(
                 }
 
             val completed=if (lifetime.maxDuration>0.0)
-            withTimeoutOrNull((lifetime.maxDuration*1000).toLong()) { iterate() } ?: true
+            withTimeoutOrNull((lifetime.maxDuration*1000).toLong()) { iterate(captureMode) } ?: true
             else
-            iterate()
+            iterate(captureMode)
 
             if (!completed)
             endStatus=ProcessStatus.FAILED
@@ -149,22 +200,25 @@ class Process(
             for (handle in handles)
             handle.close()
 
-            status=endStatus
+            status=if (foreground) ProcessStatus.RUNNING else endStatus
             executor.release(this)
             listener.onEnd(this)
             }
         }
 
     // Returns false when a single-shot process failed
-    private suspend fun iterate(): Boolean {
+    private suspend fun iterate(captureMode: CaptureMode): Boolean {
         while (true) {
-            if (limitReached())
-            return true
-
             val iterationStart=clock()
-            val succeeded=runIteration()
-            previousErrors=currentErrors
-            currentErrors=mutableSetOf()
+            val succeeded=iterationMutex.withLock {
+                if (limitReached())
+                return true
+
+                val succeeded=runIteration(captureMode, false)
+                previousErrors=currentErrors
+                currentErrors=mutableSetOf()
+                succeeded
+                }
 
             if (!lifetime.isLooping)
             return succeeded
@@ -194,16 +248,25 @@ class Process(
         return false
         }
 
-    private suspend fun runIteration(): Boolean {
+    private suspend fun runIteration(captureMode: CaptureMode, reportAsChange: Boolean, onCapture: (ImageData) -> Unit = {}): Boolean {
         iteration++
+        val program=program
 
+        val imageArgument=arguments[Parameter.IMAGE_PARAMETER_NAME]
         val captures=IdentityHashMap<ImageSource, ImageData>()
         val input=AnalysisInput(variables(), lastOutput) { source ->
-            captures.getOrPut(source) { capture(source) }
+            captures.getOrPut(source) {
+                capture(source, captureMode).also { image ->
+                    if (source===imageArgument) {
+                        onCapture(image)
+                        listener.onCapture(this, image)
+                        }
+                    }
+                }
             }
 
         val result=try {
-            analyzer.analyze(input)
+            program.analyzer.analyze(input)
             }
         catch (e: CancellationException) {
             throw e
@@ -221,11 +284,11 @@ class Process(
             }
         val scope=ScriptEngine.newScope(variables()+mapOf(
             "rawOutput" to result.output,
-            "changed" to result.changed,
+            "changed" to (result.changed || reportAsChange),
             ))
 
         // A failing operation doesn't keep the others from running
-        for (operation in config.operations) {
+        for (operation in program.config.operations) {
             val condition=operation.condition
             if (condition!=null && !evaluateOrReport("operation condition") { scope.evaluateBoolean(condition) })
             continue
@@ -244,7 +307,7 @@ class Process(
         return true
         }
 
-    private suspend fun capture(source: ImageSource): ImageData {
+    private suspend fun capture(source: ImageSource, captureMode: CaptureMode): ImageData {
         return when (captureMode) {
             CaptureMode.FRAME -> source.getVideoFrame()
             else -> source.capture(useFlashlight)

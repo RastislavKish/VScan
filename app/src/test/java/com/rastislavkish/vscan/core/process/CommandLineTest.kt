@@ -94,4 +94,19 @@ class CommandLineTest {
             assertEquals("Unexpected argument 1", e.message)
             }
         }
+    
+    @Test
+    fun parsesArgumentsAlone() {
+        val line=CommandLine.parseArguments("red keys")
+        assertNull(line.command)
+        assertEquals(mapOf("object" to "red keys"), line.bind(Config(parameters=listOf(Parameter("object", ParameterType.STRING, positional=true, rest=true)))))
+        }
+
+    @Test
+    fun shiftedLineStartsWithTheNextToken() {
+        val line=CommandLine.parse("fg find  red keys").shifted()
+        assertEquals("find", line.command)
+        assertEquals(listOf("red", "keys"), line.arguments.map { it.text })
+        assertEquals(mapOf("object" to "red keys"), line.bind(Config(parameters=listOf(Parameter("object", ParameterType.STRING, positional=true, rest=true)))))
+        }
     }

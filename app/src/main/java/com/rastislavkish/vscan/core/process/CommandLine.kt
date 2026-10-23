@@ -26,6 +26,8 @@ import com.rastislavkish.vscan.core.config.ParameterType
 class CommandLine private constructor(
     val line: String,
     val tokens: List<Token>,
+    // False for a line of arguments only
+    private val hasCommand: Boolean=true,
     ) {
 
     class Token(
@@ -36,11 +38,14 @@ class CommandLine private constructor(
         )
 
     val command: String?
-    get() = tokens.firstOrNull()?.text
+    get() = if (hasCommand) tokens.firstOrNull()?.text else null
 
     // The tokens after the command
     val arguments: List<Token>
-    get() = tokens.drop(1)
+    get() = if (hasCommand) tokens.drop(1) else tokens
+
+    // The line without its command, the first argument becoming the command, e.g. for fg
+    fun shifted(): CommandLine = CommandLine(line, arguments)
 
     // Assigns the arguments to the config's parameters, as texts for Arguments.resolve
     fun bind(config: Config): Map<String, String> {
@@ -100,6 +105,7 @@ class CommandLine private constructor(
     companion object {
 
         fun parse(line: String): CommandLine = CommandLine(line, tokenize(line))
+        fun parseArguments(line: String): CommandLine = CommandLine(line, tokenize(line), false)
 
         private fun tokenize(line: String): List<Token> {
             val tokens=mutableListOf<Token>()

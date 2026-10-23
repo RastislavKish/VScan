@@ -56,8 +56,11 @@ class CommandInterpreterTest {
             { testScheduler.currentTime },
             )
 
+        this@CommandInterpreterTest.manager=manager
         return CommandInterpreter({ configs }, manager)
         }
+
+    private lateinit var manager: ProcessManager
 
     @Test
     fun startsConfigsByCommandOrId() = runTest {
@@ -90,5 +93,31 @@ class CommandInterpreterTest {
 
         assertEquals("Killed 1 process", interpreter.execute("killall"))
         assertEquals("No processes", interpreter.execute("ps"))
+        }
+    
+    @Test
+    fun movesProcessesBetweenForegroundAndBackground() = runTest {
+        val interpreter=interpreter()
+        assertEquals("No foreground process", interpreter.execute("bg"))
+        assertEquals("Usage: fg pid, or fg command...", interpreter.execute("fg"))
+
+        assertEquals("Find is in the foreground", interpreter.execute("fg find red keys"))
+        assertEquals(mapOf("object" to "red keys"), manager.foreground?.given)
+        assertEquals("Missing object", interpreter.execute("fg find"))
+        assertEquals("Find", manager.foreground?.config?.name)
+
+        interpreter.execute("fg blr")
+        assertEquals("No processes", interpreter.execute("ps"))
+        assertEquals("Bus lines runs in the background as 2", interpreter.execute("bg"))
+        advanceTimeBy(100)
+        assertEquals("2 Bus lines, iteration 1", interpreter.execute("ps"))
+
+        assertEquals("Bus lines is in the foreground", interpreter.execute("fg 2"))
+        advanceTimeBy(100)
+        assertEquals("2 Bus lines, iteration 1, foreground", interpreter.execute("ps"))
+        assertEquals("No process 7", interpreter.execute("fg 7"))
+
+        assertEquals("Killed 1 process", interpreter.execute("killall"))
+        assertEquals("Bus lines", manager.foreground?.config?.name)
         }
     }

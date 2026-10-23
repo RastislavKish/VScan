@@ -20,11 +20,13 @@ import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.config.ParameterType
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.imagesource.LensSource
+import com.rastislavkish.vscan.core.imagesource.StaticImageSource
 
 // Turns the texts a config is called with into the values of its parameters
-// Until the command language and the memory arrive, $default is the only global
+// Until the command language and the memory arrive, $default and $lastImage are the only globals
 class Arguments(
     private val defaultImageSource: ImageSource,
+    private val lastImage: LastImage=LastImage(),
     ) {
 
     // Missing arguments take their parameter's default, and the config's lens is applied to the image sources it's meant for
@@ -77,6 +79,8 @@ class Arguments(
                 }
             ParameterType.IMAGE_SOURCE -> when (text.trim()) {
                 "\$default" -> defaultImageSource
+                // The image at the time of the call
+                "\$lastImage" -> StaticImageSource(lastImage.taken?.image ?: throw ProcessException("No image taken yet"))
                 else -> throw ProcessException("${parameter.name}: Unknown image source $text")
                 }
             ParameterType.IMAGE -> throw ProcessException("${parameter.name}: Image parameters aren't supported yet")

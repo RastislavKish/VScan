@@ -285,4 +285,99 @@ class ProcessTest {
         assertEquals(1, source.flashes)
         assertEquals(0, source.frames)
         }
+    
+    @Test
+    fun scansReportEveryResultWhenAsked() = runTest {
+        val analyzer=analyzer("Left", "Left", "Right")
+        val process=Process(1, Config(), mapOf(), analyzer, executor, listener, false) { testScheduler.currentTime }
+
+        process.scan(true)
+        process.scan(true)
+        process.scan(false)
+
+        assertEquals(listOf(true, true, true), executor.executed.map { it["changed"] })
+        // The history changes only with the output
+        assertEquals(listOf("Left", "Right"), process.history)
+        assertEquals(3, process.iteration)
+        }
+
+    @Test
+    fun unchangedScansAreReportedOnlyWhenAsked() = runTest {
+        val analyzer=analyzer("Left")
+        val process=Process(1, Config(), mapOf(), analyzer, executor, listener, false) { testScheduler.currentTime }
+
+        process.scan(false)
+        process.scan(false)
+
+        assertEquals(listOf(true, false), executor.executed.map { it["changed"] })
+        }
+
+    @Test
+    fun scansReportRepeatedErrors() = runTest {
+        val process=Process(1, Config(), mapOf(), analyzer(null), executor, listener, false) { testScheduler.currentTime }
+
+        assertFalse(process.scan(true))
+        assertFalse(process.scan(true))
+        assertEquals(listOf("Failed", "Failed"), listener.errors)
+        }
+
+    @Test
+    fun scansTakePhotos() = runTest {
+        val source=CountingSource()
+        val analyzer=object: AnalyzerRuntime {
+            override suspend fun analyze(input: AnalysisInput): AnalysisResult {
+                input.capture(source)
+                return AnalysisResult("A", true)
+                }
+            }
+        val captured=mutableListOf<ImageData>()
+        val process=Process(1, looping(), mapOf("image" to source), analyzer, executor, listener, false) { testScheduler.currentTime }
+
+        process.scan(true) { captured.add(it) }
+
+        assertEquals(1, source.photos)
+        assertEquals(0, source.frames)
+        assertEquals(listOf(source.image), captured)
+        }
+
+    @Test
+    fun updatesTakeEffectFromTheNextIteration() = runTest {
+        val first=analyzer("A")
+        val second=analyzer("B")
+        val process=process(looping(), first)
+        advanceTimeBy(100)
+
+        process.update(looping(interval=1.0), second)
+        advanceTimeBy(3000)
+        process.kill()
+
+        assertEquals(1, first.inputs.size)
+        // Waits the old interval once, then the new one
+        assertEquals(listOf(2000L, 3000L), second.times)
+        assertEquals("B", process.lastOutput)
+        }
+
+    @Test
+    fun foregroundProcessStaysRunning() = runTest {
+        val process=Process(1, looping(maxIterations=2), mapOf(), analyzer("A"), executor, listener, false) { testScheduler.currentTime }
+        process.foreground=true
+
+        process.start(this)
+        process.join()
+        assertEquals(ProcessStatus.RUNNING, process.status)
+        assertFalse(process.isIterating)
+
+        // The limits count from the start of the process
+        process.start(this)
+        process.join()
+        assertEquals(2, process.iteration)
+
+        process.update(looping(), analyzer("A"))
+        process.start(this)
+        advanceTimeBy(100)
+        process.kill()
+        process.join()
+        assertEquals(ProcessStatus.RUNNING, process.status)
+        assertEquals(3, process.iteration)
+        }
     }
