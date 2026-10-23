@@ -184,6 +184,8 @@ class PhoneCamera private constructor(context: Context): ImageSource {
         if (direction==boundCamera && withStream==boundWithStream)
         return@withContext
 
+        Log.d(TAG, "Binding the ${direction.name.lowercase()}${if (withStream) " with stream" else ""}, lifecycle ${lifecycleOwner.lifecycle.currentState}")
+
         val provider=getCameraProvider()
         provider.unbindAll()
         camera=null
@@ -201,6 +203,7 @@ class PhoneCamera private constructor(context: Context): ImageSource {
             provider.bindToLifecycle(lifecycleOwner, cameraSelector, imageCapture)
             }
         catch (e: Exception) {
+            Log.d(TAG, "Binding failed: ${e.message}")
             throw CaptureException("Error opening the camera")
             }
 
@@ -237,12 +240,29 @@ class PhoneCamera private constructor(context: Context): ImageSource {
         return provider
         }
 
+    // Limited in time, as a capture that never completes would hold the camera for good
     private suspend fun takePicture(): ImageData = withContext(Dispatchers.Main) {
-        suspendCancellableCoroutine { continuation ->
+        Log.d(TAG, "Capturing")
+
+        try {
+            withTimeout(CAPTURE_TIMEOUT_MILLIS) {
+                awaitPicture()
+                }
+            }
+        catch (e: TimeoutCancellationException) {
+            Log.d(TAG, "Capture timed out")
+            throw CaptureException("The camera didn't deliver the image")
+            }
+        }
+
+    private suspend fun awaitPicture(): ImageData {
+        return suspendCancellableCoroutine { continuation ->
             imageCapture.takePicture(
                 ContextCompat.getMainExecutor(context),
                 object : ImageCapture.OnImageCapturedCallback() {
                     override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                        Log.d(TAG, "Captured")
+
                         try {
                             continuation.resume(extractImage(imageProxy))
                             }
@@ -252,6 +272,7 @@ class PhoneCamera private constructor(context: Context): ImageSource {
                         }
 
                     override fun onError(error: ImageCaptureException) {
+                        Log.d(TAG, "Capture failed: ${error.message}")
                         continuation.resumeWithException(CaptureException("Error capturing the image"))
                         }
                     },
@@ -358,6 +379,7 @@ class PhoneCamera private constructor(context: Context): ImageSource {
         // In the sensor's landscape orientation
         private val STREAM_RESOLUTION=Size(1440, 1080)
         private const val FRAME_TIMEOUT_MILLIS=5000L
+        private const val CAPTURE_TIMEOUT_MILLIS=15000L
         private const val IDLE_STREAM_TIMEOUT_MILLIS=10000L
 
         private var instance: PhoneCamera?=null

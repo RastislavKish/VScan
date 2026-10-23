@@ -53,14 +53,14 @@ class PhoneCameraInstrumentedTest {
         scenario.close()
         }
 
-    @Test
+    @Test(timeout=60000)
     fun capturesFullResolutionPhoto() = runBlocking {
         val image=camera.capture(false)
 
         assertTrue(maxOf(image.width, image.height)>=2000)
         }
 
-    @Test
+    @Test(timeout=60000)
     fun deliversVideoFramesWithAndWithoutOpenStream() = runBlocking {
         val single=camera.getVideoFrame()
         assertTrue(single.width>0 && single.height>0)
@@ -74,7 +74,7 @@ class PhoneCameraInstrumentedTest {
             }
         }
 
-    @Test
+    @Test(timeout=60000)
     fun capturesWhileStreamingAndWithTorch() = runBlocking {
         camera.openStream().use {
             camera.requestTorch().use {
