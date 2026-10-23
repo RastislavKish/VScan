@@ -115,7 +115,7 @@ class StringIdMigrationTest {
 
         val manager=loadConfigManager()
 
-        assertEquals(listOf("base", "file-description", "bus-lines", "bus-lines-2", "citanie"), manager.getList().map { it.id })
+        assertEquals(listOf("base", "file-description", "bus-lines", "bus-lines-2", "citanie", "find"), manager.getList().map { it.id })
         assertEquals("Line?", manager.getConfig("bus-lines")?.llm?.userPrompt)
         assertEquals("Čítanie", manager.getConfig("citanie")?.name)
         }

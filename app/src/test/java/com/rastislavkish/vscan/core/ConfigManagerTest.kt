@@ -28,6 +28,7 @@ import org.robolectric.RobolectricTestRunner
 
 import com.rastislavkish.vscan.core.config.*
 import com.rastislavkish.vscan.core.imagesource.Zoom
+import com.rastislavkish.vscan.core.process.CommandLine
 import com.rastislavkish.vscan.core.speech.SpeechPriority
 import com.rastislavkish.vscan.core.template.Template
 
@@ -53,7 +54,7 @@ class ConfigManagerTest {
     fun startsWithBuiltInConfigs() {
         val ids=freshManager().getList().map { it.id }
 
-        assertEquals(listOf("base", "file-description"), ids)
+        assertEquals(listOf("base", "file-description", "find"), ids)
         }
 
     @Test
@@ -161,7 +162,7 @@ class ConfigManagerTest {
 
         val ids=freshManager().getList().map { it.id }
 
-        assertEquals(listOf("base", "a", "file-description"), ids)
+        assertEquals(listOf("base", "a", "file-description", "find"), ids)
         }
 
     @Test
@@ -222,6 +223,17 @@ class ConfigManagerTest {
     @Test
     fun fileDescriptionConfigReportsNothing() {
         assertEquals(listOf<Operation>(), freshManager().getFileDescriptionConfig().operations)
+        }
+
+    @Test
+    fun findConfigTakesTheRestOfTheLine() {
+        val find=freshManager().getConfig(ConfigManager.FIND_CONFIG_ID)!!
+        val line=CommandLine.parse("fd red keys")
+
+        assertEquals("fd", line.command)
+        assertEquals(find.command, line.command)
+        assertEquals(mapOf("object" to "red keys"), line.bind(find))
+        assertTrue(find.lifetime.isLooping)
         }
 
     @Test

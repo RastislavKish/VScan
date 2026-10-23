@@ -27,7 +27,11 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.config.ConfigV1Migration
+import com.rastislavkish.vscan.core.config.Lifetime
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.ParameterType
+import com.rastislavkish.vscan.core.config.ToastOperation
 
 class ConfigManager(
     val preferences: SharedPreferences
@@ -38,7 +42,7 @@ class ConfigManager(
 
     private var job=Job()
 
-    private var configurations=mutableListOf(baseConfig(), fileDescriptionConfig())
+    private var configurations=mutableListOf(baseConfig(), fileDescriptionConfig(), findConfig())
     private val configurationsMutex=Mutex()
 
     fun addConfig(config: Config): Config {
@@ -139,6 +143,7 @@ class ConfigManager(
         //In case the base config was out of date or missing
         updateConfigImplementation(baseConfig())
         updateConfigImplementation(fileDescriptionConfig())
+        updateConfigImplementation(findConfig())
         }
     private fun saveImplementation() {
         preferences.edit()
@@ -164,17 +169,35 @@ class ConfigManager(
             operations=listOf(),
             )
         }
+    private fun findConfig(): Config {
+        // Looks for an object every second, reporting the zone it's in whenever that changes
+        return Config(
+            id=FIND_CONFIG_ID,
+            name="Find",
+            command="fd",
+            description="Reports the horizontal zone of an object",
+            parameters=listOf(
+                Parameter(name="object", type=ParameterType.STRING, positional=true, rest=true, description="What to look for"),
+                ),
+            analyzer=LlmAnalyzer(
+                userPrompt="I'm looking for {{ object }}. Imagine the image is horizontally split into 5 equally sized zones - Far left, Left, Center, Right and Far right. Report either the zone in which the object is located, or None if it's not present or visible in the image.",
+                ),
+            operations=listOf(ToastOperation(condition="changed")),
+            lifetime=Lifetime(interval=1.0),
+            )
+        }
 
     companion object {
 
         const val BASE_CONFIG_ID="base"
         const val FILE_DESCRIPTION_CONFIG_ID="file-description"
+        const val FIND_CONFIG_ID="find"
 
         private const val CONFIGS_KEY="configs"
         // The flat configs of versions up to 0.2.x
         private const val LEGACY_CONFIGS_KEY="configurations"
 
-        private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID)
+        private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID, FIND_CONFIG_ID)
 
         // Newer versions may add fields an older build doesn't know
         // Defaults are stored too, since the base config's definition consists of them, and changing it mustn't change the user's configs

@@ -30,12 +30,13 @@ Instrumented tests (`app/src/androidTest`) must not use `UiAutomation` (e.g. `ui
 
 ### The config-centric model
 
-The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." Configs are becoming programs that spawn processes; the schema is documented in `docs/config-v2.md`, with its parts in `core/config/`: `parameters` (the `image` ImageSource parameter is implicit, see `allParameters`), a `ConfigLens`, an `Analyzer` (sealed; only `LlmAnalyzer` so far, holding the prompts as templates, model, tokens, reasoning effort and its own `LlmChangeDetection`), a list of `Operation`s (toast, say, play, vibrate, each with an optional condition) and a `Lifetime`. Each analyzer type owns its change detection. The scanning UI and the editor work with `Config.llm` / `withLlm {}`. The app ships two immutable built-in configs created in code by `ConfigManager`:
+The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." Configs are becoming programs that spawn processes; the schema is documented in `docs/config-v2.md`, with its parts in `core/config/`: `parameters` (the `image` ImageSource parameter is implicit, see `allParameters`), a `ConfigLens`, an `Analyzer` (sealed; only `LlmAnalyzer` so far, holding the prompts as templates, model, tokens, reasoning effort and its own `LlmChangeDetection`), a list of `Operation`s (toast, say, play, vibrate, each with an optional condition) and a `Lifetime`. Each analyzer type owns its change detection. The scanning UI and the editor work with `Config.llm` / `withLlm {}`. The app ships three immutable built-in configs created in code by `ConfigManager`:
 
 - **Base** (id `base`): general "What's in the image?" using `vscan-gpt-4o`.
 - **File description** (id `file-description`): generates filenames for saved images, using `vscan-gpt-4o-mini`. It has no operations.
+- **Find** (id `find`, command `fd`): a looping config (1 s interval, app-driven change detection) taking the rest of the line as its String `object` parameter, toasting the horizontal zone of the object whenever it changes.
 
-These two cannot be edited; users derive their own configs from them. `ConfigManager.loadImplementation()` always re-injects fresh copies of both on load, so editing their definitions in code is how you change the built-in behavior.
+These cannot be edited; users derive their own configs from them. `ConfigManager.loadImplementation()` always re-injects fresh copies of them on load, so editing their definitions in code is how you change the built-in behavior.
 
 Configs and providers have human-readable string ids derived from their name by `Ids.generate()` (`"Bus lines"` → `bus-lines`, deduplicated with `-2`, `-3`, …, never purely numeric). The id is assigned on creation and does not change on rename. `ConfigManager.isBuiltInConfigId()` identifies the built-ins.
 
