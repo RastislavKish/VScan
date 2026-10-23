@@ -61,18 +61,18 @@ priority = "high"                             # critical | high | normal | low
 
 [[operations]]
 type = "play"
-sound = "beep.ogg"                    # optional; without a sound, still useful with stop_others
+sound = "beep"                        # optional; without a sound, still useful with stop_others
 repeat = 1                            # 0 = loop
 volume = { value = 0.8 }              # 0 to 1, full when not set
 pan = { extract = "json", path = "x" }    # -1 to 1, centered when not set
-instance = "process"                  # process: one instance per sound and process | new
+instance = "process"                  # process: one instance per sound and process; a looping one keeps
+                                      #   playing when played again, taking the new volume and pan | new
 stop_others = false                   # stop this process' other sounds first
 
 [[operations]]
-type = "vibrate"
+type = "vibrate"                      # replaces the current vibration, the device has only one
 pattern = [0, 100, 50, 100]           # alternating off / on milliseconds
 repeat = 1                            # 0 = loop
-stop_others = false
 
 [[operations]]
 type = "toast"
@@ -91,6 +91,12 @@ max_tokens = 0
 ```
 
 Default values may be omitted. The defaults make up the built-in Base config.
+
+## Sounds and vibrations
+
+Sounds are files in the app's `assets/sounds` folder, for now `beep`, `low-beep`, `high-beep` and `tick`. Configs will be able to bring their own sounds once they are stored as files. Names may omit the extension. Sounds play at the accessibility volume or the media volume, following the speech setting.
+
+When a process finishes, its last sounds and vibrations play out; only looping ones are stopped. A killed process stops all of them.
 
 ## Number values
 

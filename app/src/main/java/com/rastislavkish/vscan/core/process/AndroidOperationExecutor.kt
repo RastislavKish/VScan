@@ -24,9 +24,12 @@ import kotlinx.coroutines.withContext
 import com.rastislavkish.vscan.core.config.Operation
 import com.rastislavkish.vscan.core.config.PlayOperation
 import com.rastislavkish.vscan.core.config.SayOperation
+import com.rastislavkish.vscan.core.config.SoundInstance
 import com.rastislavkish.vscan.core.config.ToastOperation
 import com.rastislavkish.vscan.core.config.VibrateOperation
 import com.rastislavkish.vscan.core.script.ScriptScope
+import com.rastislavkish.vscan.core.sound.SoundPlayer
+import com.rastislavkish.vscan.core.sound.VibrationSystem
 import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.template.Template
 
@@ -36,6 +39,8 @@ class AndroidOperationExecutor(
 
     private val context=context.applicationContext
     private val speechSystem=SpeechSystem.getInstance(this.context)
+    private val soundPlayer=SoundPlayer.getInstance(this.context)
+    private val vibrationSystem=VibrationSystem.getInstance(this.context)
 
     // Operations run every iteration, so their templates are parsed once
     private val templates=object: LinkedHashMap<String, Template>(16, 0.75f, true) {
@@ -56,9 +61,26 @@ class AndroidOperationExecutor(
                 if (text.isNotBlank())
                 speechSystem.say(text, operation.priority)
                 }
-            is PlayOperation -> throw ProcessException("Playing sounds isn't supported yet")
-            is VibrateOperation -> throw ProcessException("Vibration isn't supported yet")
+            is PlayOperation -> {
+                val lastOutput=scope.evaluate("lastOutput") as? String
+                val volume=operation.volume?.let { OperationValues.evaluate(it, "volume", lastOutput, scope) } ?: 1.0
+                val pan=operation.pan?.let { OperationValues.evaluate(it, "pan", lastOutput, scope) } ?: 0.0
+                val (left, right)=OperationValues.stereoVolumes(volume, pan)
+
+                soundPlayer.play(process.pid, operation.sound, operation.repeat, left, right, operation.instance==SoundInstance.NEW, operation.stopOthers)
+                }
+            is VibrateOperation -> {
+                val (timings, repeatIndex)=OperationValues.waveform(operation.pattern, operation.repeat)
+                vibrationSystem.vibrate(process.pid, timings, repeatIndex)
+                }
             }
+        }
+
+    // A finished process lets its last sounds and vibrations play out, only looping ones are stopped
+    override fun release(process: Process) {
+        val loopingOnly=process.status!=ProcessStatus.KILLED
+        soundPlayer.stop(process.pid, loopingOnly)
+        vibrationSystem.stop(process.pid, loopingOnly)
         }
 
     private fun render(source: String, scope: ScriptScope): String {

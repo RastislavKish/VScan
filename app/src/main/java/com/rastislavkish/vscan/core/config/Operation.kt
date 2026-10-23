@@ -51,6 +51,8 @@ enum class SoundInstance {
     @SerialName("new") NEW,
     }
 
+// Sounds are files in the app's assets/sounds folder, named with or without the extension
+// A process instance of a looping sound keeps playing when played again, only taking the new volume and pan, so it can serve as a continuous indicator
 // Without a sound, the operation is still useful to stop the process' other sounds
 @Serializable
 @SerialName("play")
@@ -67,6 +69,7 @@ data class PlayOperation(
     val stopOthers: Boolean=false,
     ): Operation()
 
+// The device vibrates with one pattern at a time, so a vibration replaces the current one, whichever process started it
 @Serializable
 @SerialName("vibrate")
 data class VibrateOperation(
@@ -75,7 +78,6 @@ data class VibrateOperation(
     val pattern: List<Long> = listOf(0, 100),
     // 0 loops until stopped
     val repeat: Int=1,
-    val stopOthers: Boolean=false,
     ): Operation()
 
 @Serializable

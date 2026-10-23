@@ -186,7 +186,7 @@ class ConfigManagerTest {
                 ),
             operations=listOf(
                 SayOperation("changed", "Bus {{ lastOutput }}", SpeechPriority.HIGH),
-                PlayOperation(sound="beep.ogg", repeat=0, volume=NumberValue(value=0.8), pan=NumberValue(extract=Extraction.JSON, path="x"), instance=SoundInstance.NEW, stopOthers=true),
+                PlayOperation(sound="beep", repeat=0, volume=NumberValue(value=0.8), pan=NumberValue(extract=Extraction.JSON, path="x"), instance=SoundInstance.NEW, stopOthers=true),
                 VibrateOperation(pattern=listOf(0, 100, 50, 100), repeat=2),
                 ToastOperation(text="{{ rawOutput }}"),
                 ),
