@@ -32,6 +32,8 @@ class Settings(
     var useSounds=true
     var describeSavedImages=false
     var markdownRendering=false
+    // Whether the operations of a scan see its result as a change even when it's the same as the last one
+    var reportEveryScan=true
 
     var speechUsesAccessibilityVolume=true
     var stopSpeechOnProximityWave=true
@@ -50,6 +52,7 @@ class Settings(
         useSounds=preferences.getBoolean("useSounds", true)
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
         markdownRendering=preferences.getBoolean("markdownRendering", false)
+        reportEveryScan=preferences.getBoolean("reportEveryScan", true)
 
         speechUsesAccessibilityVolume=preferences.getBoolean("speechUsesAccessibilityVolume", true)
         stopSpeechOnProximityWave=preferences.getBoolean("stopSpeechOnProximityWave", true)
@@ -69,6 +72,7 @@ class Settings(
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
         .putBoolean("markdownRendering", markdownRendering)
+        .putBoolean("reportEveryScan", reportEveryScan)
         .putBoolean("speechUsesAccessibilityVolume", speechUsesAccessibilityVolume)
         .putBoolean("stopSpeechOnProximityWave", stopSpeechOnProximityWave)
         .putString("defaultConfig", defaultConfigId)

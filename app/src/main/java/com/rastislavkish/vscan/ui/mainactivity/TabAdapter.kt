@@ -16,8 +16,6 @@
 
 package com.rastislavkish.vscan.ui.mainactivity
 
-import java.time.LocalDateTime
-
 import android.content.Context
 
 import kotlinx.coroutines.sync.Mutex
@@ -25,72 +23,91 @@ import kotlinx.coroutines.sync.Mutex
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
-import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.Conversation
-import com.rastislavkish.vscan.core.openai.LocalImage
-import com.rastislavkish.vscan.core.openai.ImageMessage
-import com.rastislavkish.vscan.core.openai.AssistantMessage
+import com.rastislavkish.vscan.core.process.LastImage
+import com.rastislavkish.vscan.core.process.Process
+import com.rastislavkish.vscan.core.process.ProcessException
+import com.rastislavkish.vscan.core.process.ProcessManager
 import com.rastislavkish.vscan.core.Settings
 
-// Everything in this class is supposed dto be used only while holding its mutex property
+// The state the tabs share, which is the foreground process'
+// Everything in this class is supposed to be used only while holding its mutex property
 class TabAdapter(context: Context) {
 
     private val settings=Settings.getInstance(context)
     private val providersManager=ProvidersManager.getInstance(context)
     private val configManager=ConfigManager.getInstance(context)
+    private val processManager=ProcessManager.getInstance(context)
 
-    var activeConfig: Config=settings.getDefaultConfig(configManager)
-    get set
+    // The process the tabs work with, the commands fg and bg may replace it
+    val foreground: Process
+    get() = processManager.foreground ?: loadDefaultConfig()
 
-    var conversation: Conversation=Conversation(
-        providersManager,
-        activeConfig.llm.model,
-        activeConfig.llm.maxCompletionTokens,
-        activeConfig.llm.reasoningEffort,
-        activeConfig.systemPromptOrNull,
-        )
-    get set
+    // The foreground process' copy of its config, saved only by the Update button
+    var activeConfig: Config
+    get() = foreground.config
+    set(value) {
+        processManager.updateForeground(value)
+        }
 
-    var lastTakenImage: ImageData?=null
-    get set
+    // The conversation of the last iteration, which the user can continue
+    var conversation: Conversation
+    get() {
+        val process=foreground
+        return process.lastConversation ?: newConversation(process.config).also { process.lastConversation=it }
+        }
+    set(value) {
+        foreground.lastConversation=value
+        }
 
-    var lastTakenImageTimestamp: LocalDateTime?=null
-    get set
+    val lastImage: LastImage
+    get() = processManager.lastImage
+
+    // A config picked to be loaded, which waits for its arguments
+    var configAwaitingArguments: Config?=null
 
     val mutex: Mutex=Mutex()
     get
 
+    // Puts a new process of the config in the foreground, discarding the current one with its unsaved changes
+    // Throws ProcessException when the config can't be started with the arguments, e.g. a required one is missing
+    fun loadConfig(config: Config, given: Map<String, String> = mapOf()) {
+        processManager.setForeground(config, given)
+        }
+    // Restarts the foreground process with its saved config
     fun resetActiveConfig() {
-        activeConfig=configManager.getConfig(activeConfig.id) ?: Config()
+        val process=foreground
+        val config=configManager.getConfig(process.config.id) ?: Config()
+
+        try {
+            loadConfig(config, process.given)
+            }
+        catch (e: ProcessException) {
+            loadConfig(Config())
+            }
         }
     fun resetConversation() {
-        conversation=Conversation(
-            providersManager,
-            activeConfig.llm.model,
-            activeConfig.llm.maxCompletionTokens,
-            activeConfig.llm.reasoningEffort,
-            activeConfig.systemPromptOrNull,
-            )
+        foreground.lastConversation=null
         }
 
-    suspend fun consultConfig(config: Config): AssistantMessage? {
-        val image=lastTakenImage ?: return null
+    private fun loadDefaultConfig(): Process {
+        try {
+            return processManager.setForeground(settings.getDefaultConfig(configManager))
+            }
+        catch (e: ProcessException) {
+            // E.g. a default config with required parameters
+            return processManager.setForeground(Config())
+            }
+        }
 
-        conversation=Conversation(
+    private fun newConversation(config: Config): Conversation {
+        return Conversation(
             providersManager,
             config.llm.model,
             config.llm.maxCompletionTokens,
             config.llm.reasoningEffort,
             config.systemPromptOrNull,
             )
-
-        conversation.addMessage(ImageMessage(
-            config.llm.userPrompt,
-            LocalImage(image),
-            ))
-        val response=conversation.generateResponse()
-
-        return response
         }
 
     companion object {

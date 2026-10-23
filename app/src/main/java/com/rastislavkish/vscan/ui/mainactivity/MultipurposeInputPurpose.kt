@@ -22,4 +22,6 @@ enum class MultipurposeInputPurpose {
     MESSAGE,
     SYSTEM_PROMPT,
     USER_PROMPT,
+    // The arguments of a config to load into the foreground
+    ARGUMENTS,
     }

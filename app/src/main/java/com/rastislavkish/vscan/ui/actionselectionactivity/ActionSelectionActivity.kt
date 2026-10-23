@@ -43,9 +43,12 @@ import com.rastislavkish.vscan.core.AskAction
 import com.rastislavkish.vscan.core.SetSystemPromptAction
 import com.rastislavkish.vscan.core.SetUserPromptAction
 import com.rastislavkish.vscan.core.StopSpeechAction
+import com.rastislavkish.vscan.core.RunCommandAction
 
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivity
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivityOutput
+import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityInput
+import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityOutput
 
 class ActionSelectionActivity : AppCompatActivity() {
 
@@ -58,9 +61,13 @@ class ActionSelectionActivity : AppCompatActivity() {
     private lateinit var scanWithConfigConfigSelector: TextView
     private lateinit var consultConfigConfigSelector: TextView
 
+    private var runCommandCommand=""
+    private lateinit var runCommandCommandSelector: TextView
+
     private var lastActivatedConfigSelector: View?=null
 
     private lateinit var configSelectionActivityLauncher: ActivityResultLauncher<Intent>
+    private lateinit var textInputActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,10 +77,12 @@ class ActionSelectionActivity : AppCompatActivity() {
 
         scanWithConfigConfigSelector=findViewById(R.id.scanWithConfigConfigSelector)
         consultConfigConfigSelector=findViewById(R.id.consultConfigConfigSelector)
+        runCommandCommandSelector=findViewById(R.id.runCommandCommandSelector)
 
         refreshSelectors()
 
         configSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::configSelectionActivityResult)
+        textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::textInputActivityResult)
         }
 
     fun onScanWithActiveConfigClick(v: View) {
@@ -94,6 +103,20 @@ class ActionSelectionActivity : AppCompatActivity() {
     fun onConsultConfigConfigSelectorClick(v: View) {
         lastActivatedConfigSelector=consultConfigConfigSelector
         startConfigSelectionActivity()
+        }
+
+    fun onRunCommandClick(v: View) {
+        if (runCommandCommand.isBlank()) {
+            toast("Set the command first")
+            return
+            }
+
+        returnResult(RunCommandAction(runCommandCommand))
+        }
+    fun onRunCommandCommandSelectorClick(v: View) {
+        val intent=TextInputActivityInput("Command", runCommandCommand)
+        .toIntent(this)
+        textInputActivityLauncher.launch(intent)
         }
 
     fun onAskClick(v: View) {
@@ -129,6 +152,7 @@ class ActionSelectionActivity : AppCompatActivity() {
     private fun refreshSelectors() {
         scanWithConfigConfigSelector.text=getConfigName(scanWithConfigConfig)
         consultConfigConfigSelector.text=getConfigName(consultConfigConfig)
+        runCommandCommandSelector.text=if (runCommandCommand.isBlank()) "No command" else runCommandCommand
         }
     private fun getConfigName(id: String): String {
         return configManager.getConfig(id)?.name
@@ -153,6 +177,14 @@ class ActionSelectionActivity : AppCompatActivity() {
 
                 refreshSelectors()
                 }
+            }
+        }
+
+    private fun textInputActivityResult(result: ActivityResult) {
+        if (result.resultCode==RESULT_OK) {
+            val output=TextInputActivityOutput.fromIntent(result.data, "ActionSelectionActivity")
+            runCommandCommand=output.text.trim()
+            refreshSelectors()
             }
         }
 

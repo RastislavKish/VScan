@@ -30,6 +30,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         />
+    <Switch
+        android:id="@+id/reportEveryScanSwitch"
+        android:text="Report every scan, even when the result hasn't changed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
 
     <TextView
         android:text="Speech"

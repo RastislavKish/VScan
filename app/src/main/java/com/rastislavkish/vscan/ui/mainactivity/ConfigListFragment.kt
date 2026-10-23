@@ -38,10 +38,8 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.Config
-import com.rastislavkish.vscan.core.openai.Conversation
-import com.rastislavkish.vscan.core.openai.LocalImage
-import com.rastislavkish.vscan.core.openai.ImageMessage
-import com.rastislavkish.vscan.core.openai.AssistantMessage
+import com.rastislavkish.vscan.core.process.ProcessException
+import com.rastislavkish.vscan.core.process.ProcessManager
 
 class ConfigListFragment: Fragment(), CoroutineScope {
 
@@ -52,6 +50,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     private lateinit var settings: Settings
     private lateinit var tabAdapter: TabAdapter
+    private lateinit var processManager: ProcessManager
     private lateinit var configSorter: ConfigSorter
     private lateinit var configListAdapter: ConfigListAdapter
 
@@ -67,6 +66,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         job=Job()
         settings=Settings.getInstance(context!!)
         tabAdapter=TabAdapter.getInstance(context!!)
+        processManager=ProcessManager.getInstance(context!!)
         configSorter=ConfigSorter.getInstance(context!!)
         configListAdapter=ConfigListAdapter(context!!, configSorter)
         configListAdapter.setItemClickListener(this::configClick)
@@ -83,9 +83,17 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         super.onResume()
         }
 
+    // Loads the config into the foreground, the scan screen asking for its arguments when it can't start without them
     fun configClick(config: Config) {
         launch { tabAdapter.mutex.withLock {
-            tabAdapter.activeConfig=config
+            if (config.allParameters.any { it.default==null })
+            tabAdapter.configAwaitingArguments=config
+            else try {
+                tabAdapter.loadConfig(config)
+                }
+            catch (e: ProcessException) {
+                toast(e.message ?: "Error")
+                }
             configSorter.markSelection(config.id)
 
             val navHostFragment = activity!!.supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
@@ -93,16 +101,14 @@ class ConfigListFragment: Fragment(), CoroutineScope {
             navController.navigateUp()
             }}
         }
+    // Consults the config about the last image, in the background
     fun configLongClick(config: Config) {
-        launch { tabAdapter.mutex.withLock {
-            try {
-                val response=tabAdapter.consultConfig(config) ?: return@launch
-                toastResponse(response)
-                }
-            catch (e: Exception) {
-                toast(e.message ?: "Error")
-                }
-            }}
+        try {
+            processManager.spawn(config, mapOf("image" to "\$lastImage"))
+            }
+        catch (e: ProcessException) {
+            toast(e.message ?: "Error")
+            }
         }
     fun searchInputTextChange(text: String) {
         configListAdapter.setFilter(text)
@@ -110,13 +116,5 @@ class ConfigListFragment: Fragment(), CoroutineScope {
 
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
-        }
-    fun toastResponse(response: AssistantMessage) {
-        if (!response.text.isEmpty())
-        toast(response.text)
-        else if (response.finishReason=="length")
-        toast("Error: Reasoning exceeded the token limit")
-        else
-        toast("Error: Received empty output")
         }
     }

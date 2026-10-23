@@ -51,6 +51,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var frontCameraSwitch: Switch
     private lateinit var soundsSwitch: Switch
     private lateinit var describeSavedImagesSwitch: Switch
+    private lateinit var reportEveryScanSwitch: Switch
     private lateinit var speechUsesAccessibilityVolumeSwitch: Switch
     private lateinit var stopSpeechOnProximityWaveSwitch: Switch
 
@@ -78,6 +79,7 @@ class SettingsActivity : AppCompatActivity() {
         frontCameraSwitch=findViewById(R.id.frontCameraSwitch)
         soundsSwitch=findViewById(R.id.soundsSwitch)
         describeSavedImagesSwitch=findViewById(R.id.describeSavedImagesSwitch)
+        reportEveryScanSwitch=findViewById(R.id.reportEveryScanSwitch)
         speechUsesAccessibilityVolumeSwitch=findViewById(R.id.speechUsesAccessibilityVolumeSwitch)
         stopSpeechOnProximityWaveSwitch=findViewById(R.id.stopSpeechOnProximityWaveSwitch)
 
@@ -98,6 +100,7 @@ class SettingsActivity : AppCompatActivity() {
         frontCameraSwitch.setChecked(settings.useFrontCamera)
         soundsSwitch.setChecked(settings.useSounds)
         describeSavedImagesSwitch.setChecked(settings.describeSavedImages)
+        reportEveryScanSwitch.setChecked(settings.reportEveryScan)
         speechUsesAccessibilityVolumeSwitch.setChecked(settings.speechUsesAccessibilityVolume)
         stopSpeechOnProximityWaveSwitch.setChecked(settings.stopSpeechOnProximityWave)
 
@@ -110,6 +113,7 @@ class SettingsActivity : AppCompatActivity() {
         settings.useFrontCamera=frontCameraSwitch.isChecked()
         settings.useSounds=soundsSwitch.isChecked()
         settings.describeSavedImages=describeSavedImagesSwitch.isChecked()
+        settings.reportEveryScan=reportEveryScanSwitch.isChecked()
         settings.speechUsesAccessibilityVolume=speechUsesAccessibilityVolumeSwitch.isChecked()
         settings.stopSpeechOnProximityWave=stopSpeechOnProximityWaveSwitch.isChecked()
 

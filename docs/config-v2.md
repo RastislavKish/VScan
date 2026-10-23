@@ -122,7 +122,9 @@ When an iteration is not a change, `lastOutput` keeps its previous value.
 
 ## Process variables
 
-These are visible to templates and expressions. Templates see only the process scope. Globals reach a process through parameter defaults, such as `--image=$glasses`.
+These are visible to templates and expressions. Templates see only the process scope. Globals reach a process through parameter defaults, such as `--image=$glasses`. Until the command language arrives, the globals are the image sources `$default` (the current camera) and `$lastImage` (the image the foreground process took last, or the one shared into the app, as it was when the config was called).
+
+Scans of the foreground process count as changes even when the output stays the same, unless the setting "Report every scan" is off. `lastOutput` and `history` still change only with the output. Looping always uses the change detection.
 
 | Variable | Meaning |
 |---|---|

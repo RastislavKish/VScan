@@ -54,6 +54,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
@@ -79,6 +80,8 @@ import com.rastislavkish.vscan.core.camera.CaptureException
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
 import com.rastislavkish.vscan.core.process.CommandInterpreter
+import com.rastislavkish.vscan.core.process.CommandLine
+import com.rastislavkish.vscan.core.process.ProcessException
 import com.rastislavkish.vscan.core.process.ProcessManager
 import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.openai.*
@@ -91,6 +94,7 @@ import com.rastislavkish.vscan.core.AskAction
 import com.rastislavkish.vscan.core.SetSystemPromptAction
 import com.rastislavkish.vscan.core.SetUserPromptAction
 import com.rastislavkish.vscan.core.StopSpeechAction
+import com.rastislavkish.vscan.core.RunCommandAction
 
 class ScanFragment: Fragment(), CoroutineScope {
 
@@ -110,6 +114,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var configManager: ConfigManager
     private lateinit var imageSources: ImageSources
     private lateinit var speechSystem: SpeechSystem
+    private lateinit var processManager: ProcessManager
     private lateinit var commandInterpreter: CommandInterpreter
     private lateinit var touchWrapper: TouchWrapper
 
@@ -120,6 +125,9 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var multipurposeInputLayout: TextInputLayout
     private lateinit var multipurposeInput: TextInputEditText
     private var multipurposeInputPurpose=MultipurposeInputPurpose.COMMAND
+    // The config the arguments are for
+    private var argumentsConfig: Config?=null
+    private var scanButtonActionIds=listOf<Int>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -138,7 +146,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         configManager=ConfigManager.getInstance(context!!)
         imageSources=ImageSources.getInstance(context!!)
         speechSystem=SpeechSystem.getInstance(context!!)
-        commandInterpreter=CommandInterpreter(configManager::getList, ProcessManager.getInstance(context!!))
+        processManager=ProcessManager.getInstance(context!!)
+        commandInterpreter=CommandInterpreter(configManager::getList, processManager)
         touchWrapper=TouchWrapper()
         touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
         touchWrapper.addSwipeRightListener(this::onSwipeRight)
@@ -193,6 +202,8 @@ class ScanFragment: Fragment(), CoroutineScope {
         super.onResume()
 
         checkShareBox()
+        checkConfigAwaitingArguments()
+        updateScanButtonActions()
         }
     override fun onPause() {
         resetMultipurposeInput()
@@ -218,10 +229,58 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
 
+    // Runs an iteration of the foreground process, its operations reporting the result
     fun scanButtonClick(v: View) {
-        launch { adapter.mutex.withLock {
-            scanWithConfig(adapter, adapter.activeConfig)
-            }}
+        launch {
+            val foreground=adapter.mutex.withLock { adapter.foreground }
+            val start=Timing.now()
+
+            foreground.scan(settings.reportEveryScan) {
+                if (settings.useSounds)
+                launch { resources.shutterSound.play() }
+                }
+            Timing.logSince("Scan total", start)
+            }
+        }
+    // The accessibility actions of the scan button, labeled by the foreground process' state
+    fun updateScanButtonActions() {
+        for (id in scanButtonActionIds)
+        ViewCompat.removeAccessibilityAction(scanButton, id)
+
+        val looping=adapter.foreground.isIterating
+        scanButtonActionIds=listOf(
+            ViewCompat.addAccessibilityAction(scanButton, if (looping) "Stop looping" else "Start looping") { _, _ ->
+                toggleLooping()
+                true
+                },
+            ViewCompat.addAccessibilityAction(scanButton, "Set arguments") { _, _ ->
+                launch {
+                    val config=adapter.mutex.withLock { adapter.activeConfig }
+                    requestArguments(config)
+                    }
+                true
+                },
+            )
+        }
+    fun toggleLooping() {
+        launch {
+            adapter.mutex.withLock {
+                val foreground=adapter.foreground
+                val name=foreground.config.name
+
+                if (foreground.isIterating) {
+                    processManager.stopForeground()
+                    toast("Stopped looping")
+                    }
+                else if (!foreground.config.lifetime.isLooping)
+                toast("$name doesn't loop")
+                else {
+                    processManager.startForeground()
+                    toast("Looping $name")
+                    }
+                }
+            updateScanButtonActions()
+            }
         }
 
     fun askButtonClick(v: View) {
@@ -270,8 +329,9 @@ class ScanFragment: Fragment(), CoroutineScope {
         }
     fun saveButtonClick(v: View) {
         launch { adapter.mutex.withLock {
-            val image=adapter.lastTakenImage ?: return@launch
-            val timestamp=adapter.lastTakenImageTimestamp ?: return@launch
+            val taken=adapter.lastImage.taken ?: return@launch
+            val image=taken.image
+            val timestamp=taken.timestamp
 
 
 
@@ -333,12 +393,12 @@ class ScanFragment: Fragment(), CoroutineScope {
     fun resetConfigButtonClick(v: View) {
         launch { adapter.mutex.withLock {
             adapter.resetActiveConfig()
-            adapter.resetConversation()
-            adapter.lastTakenImage=null
-            adapter.lastTakenImageTimestamp=null
+            adapter.lastImage.clear()
 
             toast("Reset to ${adapter.activeConfig.name}")
-            }}
+            }
+            updateScanButtonActions()
+            }
         }
 
     fun onMultipurposeInputEditorAction(v: View, actionId: Int, event: KeyEvent?): Boolean {
@@ -383,6 +443,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             MultipurposeInputPurpose.MESSAGE -> "Message"
             MultipurposeInputPurpose.SYSTEM_PROMPT -> "System prompt"
             MultipurposeInputPurpose.USER_PROMPT -> "User prompt"
+            MultipurposeInputPurpose.ARGUMENTS -> "Arguments for ${argumentsConfig?.name}"
             }
 
         if (focus) {
@@ -413,6 +474,12 @@ class ScanFragment: Fragment(), CoroutineScope {
         // A leading space sends a message instead of a command
         if (purpose==MultipurposeInputPurpose.COMMAND && !text.startsWith(" ")) {
             toast(commandInterpreter.execute(text))
+            // fg and bg may have changed the foreground process
+            updateScanButtonActions()
+            return
+            }
+        if (purpose==MultipurposeInputPurpose.ARGUMENTS) {
+            loadWithArguments(text)
             return
             }
 
@@ -427,8 +494,47 @@ class ScanFragment: Fragment(), CoroutineScope {
                 MultipurposeInputPurpose.USER_PROMPT -> {
                     setUserPrompt(adapter, text)
                     }
+                MultipurposeInputPurpose.ARGUMENTS -> {}
                 }
             }}
+        }
+
+    // Asks for the arguments to load the config into the foreground with
+    fun requestArguments(config: Config) {
+        argumentsConfig=config
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.ARGUMENTS, true)
+        }
+    fun checkConfigAwaitingArguments() {
+        launch {
+            val config=adapter.mutex.withLock {
+                val config=adapter.configAwaitingArguments
+                adapter.configAwaitingArguments=null
+                config
+                } ?: return@launch
+
+            requestArguments(config)
+            }
+        }
+    // Returns to the command line once loaded, an error leaves the arguments to correct
+    fun loadWithArguments(text: String) {
+        val config=argumentsConfig ?: return
+
+        launch {
+            try {
+                adapter.mutex.withLock {
+                    adapter.loadConfig(config, CommandLine.parseArguments(text).bind(config))
+                    }
+                }
+            catch (e: ProcessException) {
+                multipurposeInput.setText(text)
+                toast(e.message ?: "Error")
+                return@launch
+                }
+
+            resetMultipurposeInput()
+            updateScanButtonActions()
+            toast("${config.name} is in the foreground")
+            }
         }
 
     fun performAction(action: Action) {
@@ -436,21 +542,22 @@ class ScanFragment: Fragment(), CoroutineScope {
             is ScanWithActiveConfigAction -> {
                 scanButtonClick(scanButton)
                 }
+            // These run in the background
             is ScanWithConfigAction -> {
                 val config=configManager.getConfig(action.config)
                 ?: configManager.getBaseConfig()
 
-                launch { adapter.mutex.withLock {
-                    scanWithConfig(adapter, config)
-                    }}
+                spawn(config)
                 }
             is ConsultConfigAction -> {
                 val config=configManager.getConfig(action.config)
                 ?: configManager.getBaseConfig()
 
-                launch { adapter.mutex.withLock {
-                    consultConfig(adapter, config)
-                    }}
+                spawn(config, mapOf("image" to "\$lastImage"))
+                }
+            is RunCommandAction -> {
+                toast(commandInterpreter.execute(action.command))
+                updateScanButtonActions()
                 }
             is AskAction -> {
                 askButtonClick(askButton)
@@ -467,55 +574,11 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
 
-    fun takePictureToAdapter(adapter: TabAdapter, callback: suspend (TabAdapter) -> Unit) {
-        val flashlight=shouldUseFlashlight(adapter)
-
-        launch {
-            val image=try {
-                Timing.measure("Capture") {
-                    imageSources.default.capture(flashlight)
-                    }
-                }
-            catch (e: CaptureException) {
-                toast(e.message ?: "Error")
-                return@launch
-                }
-            val timestamp=LocalDateTime.now()
-            Timing.log("Captured ${image.width}x${image.height}, ${image.encoded.size/1024} kB")
-
-            adapter.mutex.withLock {
-                adapter.lastTakenImage=image
-                adapter.lastTakenImageTimestamp=timestamp
-
-                callback(adapter)
-                }
-            }
-        }
-    fun scanWithConfig(adapter: TabAdapter, config: Config) {
-        val start=Timing.now()
-
-        takePictureToAdapter(adapter, callback@{adapter ->
-            if (settings.useSounds)
-            resources.shutterSound.play()
-
-            try {
-                val response=adapter.consultConfig(config) ?: return@callback
-                toastResponse(response)
-                }
-            catch (e: Exception) {
-                toast(e.message ?: "Error")
-                }
-            finally {
-                Timing.logSince("Scan total", start)
-                }
-            })
-        }
-    suspend fun consultConfig(adapter: TabAdapter, config: Config) {
+    fun spawn(config: Config, given: Map<String, String> = mapOf()) {
         try {
-            val response=adapter.consultConfig(config) ?: return
-            toastResponse(response)
+            processManager.spawn(config, given)
             }
-        catch (e: Exception) {
+        catch (e: ProcessException) {
             toast(e.message ?: "Error")
             }
         }
@@ -546,25 +609,13 @@ class ScanFragment: Fragment(), CoroutineScope {
         else
         toast("${message} set as user prompt")
         }
+    // A shared image becomes the last image, consulted with the share config in the background
     fun checkShareBox() {
         val shareBox=ShareBox.getInstance(context!!)
         val image=shareBox.popImage() ?: return
-        val timestamp=LocalDateTime.now()
 
-        launch { adapter.mutex.withLock {
-            adapter.lastTakenImage=image
-            adapter.lastTakenImageTimestamp=timestamp
-
-            val config=settings.getShareConfig(configManager)
-            consultConfig(adapter, config)
-            }}
-        }
-    fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
-        return when (adapter.activeConfig.lifetime.flashlight) {
-            FlashlightMode.DEFAULT -> settings.useFlashlight
-            FlashlightMode.ON -> true
-            FlashlightMode.OFF -> false
-            }
+        adapter.lastImage.set(image)
+        spawn(settings.getShareConfig(configManager), mapOf("image" to "\$lastImage"))
         }
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()

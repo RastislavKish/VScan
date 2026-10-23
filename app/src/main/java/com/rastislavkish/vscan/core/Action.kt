@@ -81,3 +81,10 @@ class StopSpeechAction: Action() {
     = "Stop speech"
     }
 
+// Runs a command prompt line, e.g. starting a config in the background
+@Serializable
+class RunCommandAction(val command: String=""): Action() {
+
+    override fun toString(configManager: ConfigManager): String
+    = "Run $command"
+    }
