@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Since Android 11, the user's chosen TTS engine and speech recognizer are visible only when declared here, otherwise the system falls back to a preinstalled one -->
     <queries>
@@ -96,6 +99,11 @@
             android:screenOrientation="portrait"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:windowSoftInputMode="stateVisible"
+            />
+
+        <service android:name=".core.process.VScanService"
+            android:foregroundServiceType="camera"
+            android:exported="false"
             />
 
         <provider

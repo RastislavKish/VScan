@@ -37,11 +37,15 @@ class PermissionRequester(context: Context) {
     val writeExternalStoragePermission: Boolean
     get() = ContextCompat.checkSelfPermission(context, "android.permission.WRITE_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED
 
+    // Shows the notification telling the user VScan is running
+    val postNotificationsPermission: Boolean
+    get() = Build.VERSION.SDK_INT<Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(context, "android.permission.POST_NOTIFICATIONS")==PackageManager.PERMISSION_GRANTED
+
     val permissionsGranted: Boolean
     get() = if (Build.VERSION.SDK_INT<Build.VERSION_CODES.Q)
     cameraPermission && recordAudioPermission && readExternalStoragePermission && writeExternalStoragePermission
     else
-    cameraPermission && recordAudioPermission
+    cameraPermission && recordAudioPermission && postNotificationsPermission
 
     private val context=context
 
@@ -53,10 +57,16 @@ class PermissionRequester(context: Context) {
             "android.permission.READ_EXTERNAL_STORAGE",
             "android.permission.WRITE_EXTERNAL_STORAGE",
             )
+        else if (Build.VERSION.SDK_INT<Build.VERSION_CODES.TIRAMISU)
+        arrayOf(
+            "android.permission.CAMERA",
+            "android.permission.RECORD_AUDIO",
+            )
         else
         arrayOf(
             "android.permission.CAMERA",
             "android.permission.RECORD_AUDIO",
+            "android.permission.POST_NOTIFICATIONS",
             )
 
         ActivityCompat.requestPermissions(activity, permissions, 1)

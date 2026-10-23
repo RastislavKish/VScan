@@ -40,7 +40,9 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ProcessLifecycleOwner
 
 import kotlin.coroutines.*
@@ -57,12 +59,20 @@ import com.rastislavkish.vscan.core.imagesource.RefCounter
 class CaptureException(message: String): Exception(message)
 
 // The app-wide owner of the smartphone camera, as an image source
-// The camera is bound to the process lifecycle, so it is available while the app is in the foreground, independently of any particular screen
+// The camera is open while the app is in the foreground, independently of any particular screen, and in the background while something uses it
+// In the background, Android allows that only with VScan's foreground service running
 // The video stream and the torch are shared by reference counting, and the stream is bound only while somebody holds it open
 class PhoneCamera private constructor(context: Context): ImageSource {
 
     private val context=context.applicationContext
-    private val lifecycleOwner: LifecycleOwner=ProcessLifecycleOwner.get()
+    // Started while the camera should be open, changed on the main thread only
+    private val lifecycleOwner=object: LifecycleOwner {
+        val registry=LifecycleRegistry(this)
+        override val lifecycle: Lifecycle
+        get() = registry
+        }
+    private var appInForeground=false
+    private var captures=0
     private val settings=Settings.getInstance(context)
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
 
@@ -122,7 +132,21 @@ class PhoneCamera private constructor(context: Context): ImageSource {
                 }
             }
 
-        // Track the device orientation only while the app is in the foreground, like the camera itself
+        lifecycleOwner.registry.currentState=Lifecycle.State.CREATED
+
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+
+            override fun onStart(owner: LifecycleOwner) {
+                appInForeground=true
+                updateLifecycle()
+                }
+            override fun onStop(owner: LifecycleOwner) {
+                appInForeground=false
+                updateLifecycle()
+                }
+            })
+
+        // Track the device orientation only while the camera is open
         lifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
 
             override fun onStart(owner: LifecycleOwner) {
@@ -143,13 +167,26 @@ class PhoneCamera private constructor(context: Context): ImageSource {
 
     override suspend fun capture(flashlight: Boolean): ImageData {
         return mutex.withLock {
-            ensureBound()
+            withContext(Dispatchers.Main) {
+                captures++
+                updateLifecycle()
+                }
 
-            // With the torch on, a flash would only disturb the exposure
-            val flash=flashlight && !torchUsers.isActive
-            imageCapture.setFlashMode(if (flash) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
+            try {
+                ensureBound()
 
-            takePicture()
+                // With the torch on, a flash would only disturb the exposure
+                val flash=flashlight && !torchUsers.isActive
+                imageCapture.setFlashMode(if (flash) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF)
+
+                takePicture()
+                }
+            finally {
+                withContext(Dispatchers.Main+NonCancellable) {
+                    captures--
+                    updateLifecycle()
+                    }
+                }
             }
         }
 
@@ -161,9 +198,11 @@ class PhoneCamera private constructor(context: Context): ImageSource {
     override fun openStream(): Closeable = streamUsers.acquire()
     override fun requestTorch(): Closeable = torchUsers.acquire()
 
-    // Brings the binding and the torch in line with the current users and settings
+    // Brings the lifecycle, the binding and the torch in line with the current users and settings
     private fun refresh() {
         scope.launch {
+            updateLifecycle()
+
             try {
                 mutex.withLock {
                     ensureBound()
@@ -212,6 +251,17 @@ class PhoneCamera private constructor(context: Context): ImageSource {
 
         // Rebinding turns the torch off
         applyTorch()
+        }
+
+    // Opens the camera while the app is in the foreground or somebody uses it, closes it otherwise
+    private fun updateLifecycle() {
+        val inUse=appInForeground || captures>0 || streamUsers.isActive || torchUsers.isActive
+        val state=if (inUse) Lifecycle.State.STARTED else Lifecycle.State.CREATED
+
+        if (lifecycleOwner.registry.currentState!=state) {
+            Log.d(TAG, "Camera lifecycle ${state.name.lowercase()}")
+            lifecycleOwner.registry.currentState=state
+            }
         }
 
     private fun applyTorch() {

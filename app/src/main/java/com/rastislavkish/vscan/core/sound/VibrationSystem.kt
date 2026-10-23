@@ -63,6 +63,13 @@ class VibrationSystem private constructor(context: Context) {
             }
         }
 
+    fun stopAll() {
+        synchronized(lock) {
+            vibrator.cancel()
+            owner=null
+            }
+        }
+
     companion object {
 
         private var instance: VibrationSystem?=null

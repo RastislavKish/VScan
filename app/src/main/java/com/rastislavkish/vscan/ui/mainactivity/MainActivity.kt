@@ -35,6 +35,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.SystemClock
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
@@ -48,7 +49,10 @@ import com.rastislavkish.vscan.R
 import com.rastislavkish.vscan.core.PermissionRequester
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.image.ImageData
+import com.rastislavkish.vscan.core.process.AppExit
+import com.rastislavkish.vscan.core.process.VScanService
 
+import androidx.activity.OnBackPressedCallback
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
@@ -59,6 +63,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var container: FragmentContainerView
 
+    private var lastBackPressTime=0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -67,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         if (!permissionRequester.permissionsGranted) {
             permissionRequester.requestPermissions(this)
             }
+        VScanService.start(this)
 
         when {
             intent?.action==Intent.ACTION_SEND -> {
@@ -81,6 +88,30 @@ class MainActivity : AppCompatActivity() {
         val bottomNavigationView: BottomNavigationView=findViewById(R.id.bottomNavigationView)
 
         NavigationUI.setupWithNavController(bottomNavigationView, navController)
+
+        // Back leads to the scan screen, and pressed twice there, exits VScan with everything running
+        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (navController.currentDestination?.id!=R.id.scanFragment) {
+                    bottomNavigationView.setSelectedItemId(R.id.scanFragment)
+                    return
+                    }
+
+                val now=SystemClock.elapsedRealtime()
+                if (now-lastBackPressTime<=DOUBLE_BACK_MILLIS) {
+                    AppExit.exit(this@MainActivity)
+                    return
+                    }
+
+                lastBackPressTime=now
+                toast("Press back again to exit")
+                }
+            })
+        }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        VScanService.start(this)
         }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -140,5 +171,10 @@ class MainActivity : AppCompatActivity() {
 
     fun toast(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+        }
+
+    companion object {
+
+        private const val DOUBLE_BACK_MILLIS=2000L
         }
     }

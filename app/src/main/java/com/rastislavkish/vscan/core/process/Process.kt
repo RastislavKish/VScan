@@ -111,6 +111,10 @@ class Process(
         job?.cancel()
         }
 
+    // False from the moment it's killed, even before it has stopped
+    val isRunning: Boolean
+    get() = job?.isActive ?: true
+
     suspend fun join() {
         job?.join()
         }

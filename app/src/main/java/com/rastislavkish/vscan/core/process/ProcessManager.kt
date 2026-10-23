@@ -43,6 +43,9 @@ class ProcessManager(
     private val processes=linkedMapOf<Int, Process>()
     private var nextPid=1
 
+    // Called on any thread whenever a process starts or ends
+    @Volatile var onChange: (() -> Unit)?=null
+
     // Throws ProcessException when the config can't be started with the given arguments
     fun spawn(config: Config, given: Map<String, String> = mapOf()): Process {
         val values=arguments.resolve(config, given)
@@ -64,16 +67,17 @@ class ProcessManager(
             }
 
         process.start(scope)
+        onChange?.invoke()
         return process
         }
 
     fun get(pid: Int): Process? = synchronized(processes) { processes[pid] }
 
     // The running processes, oldest first
-    fun list(): List<Process> = synchronized(processes) { processes.values.toList() }
+    fun list(): List<Process> = synchronized(processes) { processes.values.filter { it.isRunning } }
 
     fun kill(pid: Int): Boolean {
-        val process=get(pid) ?: return false
+        val process=get(pid)?.takeIf { it.isRunning } ?: return false
         process.kill()
         return true
         }
@@ -90,6 +94,7 @@ class ProcessManager(
             processes.remove(process.pid)
             }
         listener.onEnd(process)
+        onChange?.invoke()
         }
 
     companion object {

@@ -17,6 +17,8 @@
 package com.rastislavkish.vscan.ui.mainactivity
 
 enum class MultipurposeInputPurpose {
+    // The default
+    COMMAND,
     MESSAGE,
     SYSTEM_PROMPT,
     USER_PROMPT,

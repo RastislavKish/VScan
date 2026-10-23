@@ -78,6 +78,8 @@ import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.camera.CaptureException
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
+import com.rastislavkish.vscan.core.process.CommandInterpreter
+import com.rastislavkish.vscan.core.process.ProcessManager
 import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.openai.*
 
@@ -108,6 +110,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var configManager: ConfigManager
     private lateinit var imageSources: ImageSources
     private lateinit var speechSystem: SpeechSystem
+    private lateinit var commandInterpreter: CommandInterpreter
     private lateinit var touchWrapper: TouchWrapper
 
     private lateinit var scanButton: Button
@@ -116,7 +119,7 @@ class ScanFragment: Fragment(), CoroutineScope {
     private lateinit var userPromptButton: Button
     private lateinit var multipurposeInputLayout: TextInputLayout
     private lateinit var multipurposeInput: TextInputEditText
-    private var multipurposeInputPurpose=MultipurposeInputPurpose.MESSAGE
+    private var multipurposeInputPurpose=MultipurposeInputPurpose.COMMAND
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -135,6 +138,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         configManager=ConfigManager.getInstance(context!!)
         imageSources=ImageSources.getInstance(context!!)
         speechSystem=SpeechSystem.getInstance(context!!)
+        commandInterpreter=CommandInterpreter(configManager::getList, ProcessManager.getInstance(context!!))
         touchWrapper=TouchWrapper()
         touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
         touchWrapper.addSwipeRightListener(this::onSwipeRight)
@@ -375,6 +379,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         multipurposeInputPurpose=purpose
 
         multipurposeInputLayout.hint=when (purpose) {
+            MultipurposeInputPurpose.COMMAND -> "Command"
             MultipurposeInputPurpose.MESSAGE -> "Message"
             MultipurposeInputPurpose.SYSTEM_PROMPT -> "System prompt"
             MultipurposeInputPurpose.USER_PROMPT -> "User prompt"
@@ -388,22 +393,33 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
     fun resetMultipurposeInput() {
-        setMultipurposeInputPurpose(MultipurposeInputPurpose.MESSAGE)
+        setMultipurposeInputPurpose(MultipurposeInputPurpose.COMMAND)
         }
+    // The purpose stays until an empty input returns the field to the command line
     fun confirmMultipurposeInput() {
         val text=multipurposeInput.text?.toString() ?: return
         val purpose=multipurposeInputPurpose
 
-        resetMultipurposeInput()
-
         if (text.isBlank()) {
+            if (purpose!=MultipurposeInputPurpose.COMMAND) {
+                resetMultipurposeInput()
+                toast("Command line")
+                }
+            return
+            }
+
+        multipurposeInput.text?.clear()
+
+        // A leading space sends a message instead of a command
+        if (purpose==MultipurposeInputPurpose.COMMAND && !text.startsWith(" ")) {
+            toast(commandInterpreter.execute(text))
             return
             }
 
         launch { adapter.mutex.withLock() {
             when (purpose) {
-                MultipurposeInputPurpose.MESSAGE -> {
-                    sendMessage(adapter, text)
+                MultipurposeInputPurpose.COMMAND, MultipurposeInputPurpose.MESSAGE -> {
+                    sendMessage(adapter, text.trim())
                     }
                 MultipurposeInputPurpose.SYSTEM_PROMPT -> {
                     setSystemPrompt(adapter, text)
