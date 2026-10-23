@@ -181,6 +181,7 @@ class ConfigManager(
                 ),
             analyzer=LlmAnalyzer(
                 model="vscan-qwen-3.8-27b",
+                maxCompletionTokens=5000,
                 userPrompt="I'm looking for {{ object }}. Imagine the image is horizontally split into 5 equally sized zones - Far left, Left, Center, Right and Far right. Report either the zone in which the object is located, or None if it's not present or visible in the image.",
                 ),
             operations=listOf(ToastOperation(condition="changed")),
