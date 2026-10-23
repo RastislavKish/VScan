@@ -16,6 +16,7 @@
 package com.rastislavkish.vscan.core.camera
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
@@ -29,6 +30,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 
 import kotlinx.coroutines.runBlocking
 
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -48,6 +50,7 @@ class PhoneCameraInstrumentedTest {
     val timeout: Timeout=Timeout.seconds(60)
 
     private lateinit var camera: PhoneCamera
+    private var activity: Activity?=null
 
     @Before
     fun setUp() {
@@ -59,15 +62,23 @@ class PhoneCameraInstrumentedTest {
         assumeTrue("Grant the camera permission first: adb shell pm grant $packageName android.permission.CAMERA", granted)
 
         // The camera is bound to the process lifecycle, which needs a started activity
-        // Started directly rather than by ActivityScenario, whose helper activities would live in the test APK's process
+        // Android 10+ blocks activity starts from background apps, which the instrumentation is exempt from, unlike Context.startActivity
         val intent=Intent(instrumentation.targetContext, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        instrumentation.targetContext.startActivity(intent)
+        activity=instrumentation.startActivitySync(intent)
         waitForForeground()
 
         // Created on the main thread, as it observes the process lifecycle
         instrumentation.runOnMainSync {
             camera=PhoneCamera.getInstance(instrumentation.targetContext)
+            }
+        }
+
+    @After
+    fun tearDown() {
+        val activity=activity ?: return
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            activity.finish()
             }
         }
 
