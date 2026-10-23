@@ -16,6 +16,9 @@
 package com.rastislavkish.vscan.core.camera
 
 import android.Manifest
+import android.content.pm.PackageManager
+
+import androidx.core.content.ContextCompat
 
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,6 +28,7 @@ import kotlinx.coroutines.runBlocking
 
 import org.junit.After
 import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +45,11 @@ class PhoneCameraInstrumentedTest {
     @Before
     fun setUp() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
-        instrumentation.uiAutomation.grantRuntimePermission(instrumentation.targetContext.packageName, Manifest.permission.CAMERA)
+        val packageName=instrumentation.targetContext.packageName
+
+        // Granting it from the test would need UiAutomation, which suspends accessibility services like TalkBack while connected
+        val granted=ContextCompat.checkSelfPermission(instrumentation.targetContext, Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED
+        assumeTrue("Grant the camera permission first: adb shell pm grant $packageName android.permission.CAMERA", granted)
 
         // The camera is bound to the process lifecycle, which needs a started activity
         scenario=ActivityScenario.launch(MainActivity::class.java)
@@ -50,6 +58,7 @@ class PhoneCameraInstrumentedTest {
 
     @After
     fun tearDown() {
+        if (::scenario.isInitialized)
         scenario.close()
         }
 

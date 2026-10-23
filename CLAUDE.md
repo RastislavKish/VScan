@@ -24,6 +24,8 @@ Standard Gradle Android project. Use the wrapper:
 
 JVM unit tests live in `app/src/test`, mirroring the main package layout. Pure-Kotlin logic is tested with plain JUnit; classes that need Android (e.g. the SharedPreferences-backed managers, which take a `SharedPreferences` in their constructor) run under Robolectric (`@RunWith(RobolectricTestRunner::class)`, context via `ApplicationProvider`). minSdk is 26.
 
+Instrumented tests (`app/src/androidTest`) must not use `UiAutomation` (e.g. `uiAutomation.grantRuntimePermission`): connecting it suspends accessibility services, so it turns TalkBack off for the developer while the tests run. Tests needing a permission check for it and skip via `assumeTrue` instead. Run them with `./gradlew installDebug installDebugAndroidTest` and `adb shell am instrument -w <applicationId>.test/androidx.test.runner.AndroidJUnitRunner`; `connectedAndroidTest` uninstalls the app afterwards, deleting its data.
+
 ## Architecture
 
 ### The config-centric model
