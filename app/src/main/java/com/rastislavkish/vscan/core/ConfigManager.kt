@@ -180,6 +180,7 @@ class ConfigManager(
                 Parameter(name="object", type=ParameterType.STRING, positional=true, rest=true, description="What to look for"),
                 ),
             analyzer=LlmAnalyzer(
+                model="vscan-qwen-3.8-27b",
                 userPrompt="I'm looking for {{ object }}. Imagine the image is horizontally split into 5 equally sized zones - Far left, Left, Center, Right and Far right. Report either the zone in which the object is located, or None if it's not present or visible in the image.",
                 ),
             operations=listOf(ToastOperation(condition="changed")),
