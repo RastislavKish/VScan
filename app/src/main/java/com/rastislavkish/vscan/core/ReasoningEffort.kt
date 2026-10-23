@@ -20,10 +20,10 @@ import kotlinx.serialization.*
 
 @Serializable
 enum class ReasoningEffort {
-    NONE,
-    MINIMAL,
-    LOW,
-    MEDIUM,
-    HIGH,
-    XHIGH,
+    @SerialName("none") NONE,
+    @SerialName("minimal") MINIMAL,
+    @SerialName("low") LOW,
+    @SerialName("medium") MEDIUM,
+    @SerialName("high") HIGH,
+    @SerialName("xhigh") XHIGH,
     }

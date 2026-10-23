@@ -27,7 +27,6 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.openai.Conversation
-import com.rastislavkish.vscan.core.openai.SystemMessage
 import com.rastislavkish.vscan.core.openai.LocalImage
 import com.rastislavkish.vscan.core.openai.ImageMessage
 import com.rastislavkish.vscan.core.openai.AssistantMessage
@@ -45,10 +44,10 @@ class TabAdapter(context: Context) {
 
     var conversation: Conversation=Conversation(
         providersManager,
-        activeConfig.model,
-        activeConfig.maxCompletionTokens,
-        activeConfig.reasoningEffort,
-        if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
+        activeConfig.llm.model,
+        activeConfig.llm.maxCompletionTokens,
+        activeConfig.llm.reasoningEffort,
+        activeConfig.systemPromptOrNull,
         )
     get set
 
@@ -67,10 +66,10 @@ class TabAdapter(context: Context) {
     fun resetConversation() {
         conversation=Conversation(
             providersManager,
-            activeConfig.model,
-            activeConfig.maxCompletionTokens,
-            activeConfig.reasoningEffort,
-            if (!activeConfig.systemPrompt.isEmpty()) SystemMessage(activeConfig.systemPrompt) else null,
+            activeConfig.llm.model,
+            activeConfig.llm.maxCompletionTokens,
+            activeConfig.llm.reasoningEffort,
+            activeConfig.systemPromptOrNull,
             )
         }
 
@@ -79,14 +78,14 @@ class TabAdapter(context: Context) {
 
         conversation=Conversation(
             providersManager,
-            config.model,
-            config.maxCompletionTokens,
-            config.reasoningEffort,
+            config.llm.model,
+            config.llm.maxCompletionTokens,
+            config.llm.reasoningEffort,
             config.systemPromptOrNull,
             )
 
         conversation.addMessage(ImageMessage(
-            config.userPrompt,
+            config.llm.userPrompt,
             LocalImage(image),
             ))
         val response=conversation.generateResponse()

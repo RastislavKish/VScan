@@ -30,16 +30,16 @@ Instrumented tests (`app/src/androidTest`) must not use `UiAutomation` (e.g. `ui
 
 ### The config-centric model
 
-The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." A Config bundles everything needed for one scanning purpose: flashlight mode, the system/user prompts, the model, max completion tokens, and reasoning effort. The app ships two immutable built-in configs created in code by `ConfigManager`:
+The central domain concept is a **Config** (`core/Config.kt`) — the README calls these "cognitive tools." Configs are becoming programs that spawn processes; the schema is documented in `docs/config-v2.md`, with its parts in `core/config/`: `parameters` (the `image` ImageSource parameter is implicit, see `allParameters`), a `ConfigLens`, an `Analyzer` (sealed; only `LlmAnalyzer` so far, holding the prompts as templates, model, tokens, reasoning effort and its own `LlmChangeDetection`), a list of `Operation`s (toast, say, play, vibrate, each with an optional condition) and a `Lifetime`. Each analyzer type owns its change detection. The scanning UI and the editor work with `Config.llm` / `withLlm {}`. The app ships two immutable built-in configs created in code by `ConfigManager`:
 
 - **Base** (id `base`): general "What's in the image?" using `vscan-gpt-4o`.
-- **File description** (id `file-description`): generates filenames for saved images, using `vscan-gpt-4o-mini`.
+- **File description** (id `file-description`): generates filenames for saved images, using `vscan-gpt-4o-mini`. It has no operations.
 
 These two cannot be edited; users derive their own configs from them. `ConfigManager.loadImplementation()` always re-injects fresh copies of both on load, so editing their definitions in code is how you change the built-in behavior.
 
 Configs and providers have human-readable string ids derived from their name by `Ids.generate()` (`"Bus lines"` → `bus-lines`, deduplicated with `-2`, `-3`, …, never purely numeric). The id is assigned on creation and does not change on rename. `ConfigManager.isBuiltInConfigId()` identifies the built-ins.
 
-`Config` is an immutable `@Serializable` data class with hand-written `withX()` copy methods (one per field). When adding a field to Config you must update the constructor, every `withX()` method, and any `Conversation`/`TabAdapter` construction sites that copy config fields across.
+`Config` and its parts are immutable `@Serializable` data classes, changed with the generated `copy()` (nested, e.g. `config.copy(lifetime=config.lifetime.copy(...))`). Polymorphic parts (`Analyzer`, `Operation`, `LensOperation`) use a `type` discriminator, and enum values carry the `@SerialName`s the TOML files will use (`"llm_driven"`, `"ImageSource"`, `"high"`). When adding a field, update `docs/config-v2.md` and any `Conversation`/`TabAdapter` construction sites that copy config fields across.
 
 ### The `vscan-` model abstraction
 
@@ -59,10 +59,10 @@ When adding a new model, update both `Model.presets` and the relevant provider e
 State lives in three separate `SharedPreferences` files, each owned by a singleton manager accessed via `getInstance(context)`:
 
 - **`Settings`** (`VScanSettings`) — global toggles and the default/share/file-description config ids, plus the gesture/volume-key `Action` bindings.
-- **`ConfigManager`** (`VScanConfigurations`) — the list of configs, JSON-serialized.
+- **`ConfigManager`** (`VScanConfigurations`) — the list of configs, JSON-serialized under `configs`, with default values encoded (the base config's definition consists of defaults, so changing them mustn't alter stored configs). The flat configs of versions ≤ 0.2.x under `configurations` are converted by `ConfigV1Migration` on the first load and kept as a backup.
 - **`ProvidersManager`** (`VScanProviders`) — providers, the default provider, and per-model→provider mappings. In `getProviderForModel()`, a model with no mapping falls back to the default provider, while a model explicitly mapped to `null` has no provider.
 
-All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigManager.fixBackwardCompatibility()` string-replaces the raw JSON before decoding, and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. `StringIdMigration` (run once per process from every manager's `getInstance()`) converts the integer ids of versions ≤ 0.2.x across all stores, backing up replaced values under `<key>_v1` keys. `ConfigManager` decodes with `ignoreUnknownKeys`, so removing a `Config` field needs no migration. Follow these patterns when changing serialized shapes, and note that `Json` omits default values, so legacy data may lack fields entirely.
+All three serialize with `kotlinx.serialization` JSON and call `.commit()` on every mutation. Migrations of old persisted data run on load: `ConfigV1Migration` string-replaces legacy model names in the raw JSON before decoding (and escapes the old prompts with `Template.escape`, since prompts are templates now), and `ProvidersManager.cleanRedundantProviderModels()` strips preset mappings that older versions copied into `Provider.models`. `StringIdMigration` (run once per process from every manager's `getInstance()`) converts the integer ids of versions ≤ 0.2.x across all stores, backing up replaced values under `<key>_v1` keys. `ConfigManager` decodes with `ignoreUnknownKeys`, so removing a `Config` field needs no migration. Follow these patterns when changing serialized shapes, and note that `Json` omits default values unless `encodeDefaults` is set, so legacy data may lack fields entirely.
 
 ### Request flow
 
@@ -88,7 +88,7 @@ The smartphone camera is owned by the app-wide singleton `core/camera/PhoneCamer
 
 ### Speech
 
-All spoken output goes through the app-wide `core/speech/SpeechSystem` (`say(text, SpeechPriority)`, `stop()`, callable from any thread). The priority rules live in the pure-Kotlin `SpeechScheduler`: CRITICAL messages queue and pause everything else and ignore `stop()`; a HIGH message replaces any other HIGH one and pauses NORMAL; NORMAL and LOW share a FIFO queue; LOW messages are dropped when HIGH or CRITICAL appears; `stop()` (the user's silence request) clears everything but CRITICAL. Messages are split into sentences by `SentenceSplitter`, and a preempted message resumes from the start of the interrupted sentence. `AndroidSpeechEngine` wraps the system `TextToSpeech` (accessibility or media volume per `Settings`), and the proximity sensor is listened to only while speech is active, a brief cover (`WaveDetector`) acting as `stop()`. The engine can stop utterances on its own (e.g. for TalkBack), so `onStop` ends an utterance like `onDone` does. Engine callbacks and proximity readings are logged under the `VScanSpeech` tag. Scan results are spoken at NORMAL priority when `Settings.speakResults` is on, otherwise toasted; `StopSpeechAction` lets a hardware button stop speech.
+All spoken output goes through the app-wide `core/speech/SpeechSystem` (`say(text, SpeechPriority)`, `stop()`, callable from any thread). The priority rules live in the pure-Kotlin `SpeechScheduler`: CRITICAL messages queue and pause everything else and ignore `stop()`; a HIGH message replaces any other HIGH one and pauses NORMAL; NORMAL and LOW share a FIFO queue; LOW messages are dropped when HIGH or CRITICAL appears; `stop()` (the user's silence request) clears everything but CRITICAL. Messages are split into sentences by `SentenceSplitter`, and a preempted message resumes from the start of the interrupted sentence. `AndroidSpeechEngine` wraps the system `TextToSpeech` (accessibility or media volume per `Settings`), and the proximity sensor is listened to only while speech is active, a brief cover (`WaveDetector`) acting as `stop()`. The engine can stop utterances on its own (e.g. for TalkBack), so `onStop` ends an utterance like `onDone` does. Engine callbacks and proximity readings are logged under the `VScanSpeech` tag. Scan results are toasted for now (the `say` operation will speak); `StopSpeechAction` lets a hardware button stop speech.
 
 ### Scripting and templates
 
@@ -119,6 +119,6 @@ This codebase has a distinctive, consistent style — match it:
 - **No spaces around `=`** in assignments/declarations or around `==`: `val id=getFreeId()`, `if (instance==null)`.
 - Imports are grouped with blank lines by origin (androidx, kotlinx, project), not alphabetized.
 - Singletons use the `companion object { private var instance; fun getInstance(context) }` pattern backed by SharedPreferences.
-- Prefer immutable `@Serializable` data classes with explicit `withX()` copy methods over mutation.
+- Prefer immutable `@Serializable` data classes over mutation. Older classes (e.g. `Provider`) have explicit `withX()` copy methods; `Config` and its parts use the generated `copy()`.
 
 Source files carry a GPLv3 header; keep it on new files.

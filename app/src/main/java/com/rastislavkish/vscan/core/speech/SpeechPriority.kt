@@ -15,14 +15,17 @@
 */
 package com.rastislavkish.vscan.core.speech
 
+import kotlinx.serialization.*
+
+@Serializable
 enum class SpeechPriority {
 
     // Queues, and is dropped whenever a high or critical message appears
-    LOW,
+    @SerialName("low") LOW,
     // Queues, and is paused while higher priority messages are spoken, then resumed
-    NORMAL,
+    @SerialName("normal") NORMAL,
     // Interrupts everything up to its own priority, can be stopped by the user
-    HIGH,
+    @SerialName("high") HIGH,
     // Pauses everything else, queues behind other critical messages, and can't be stopped by the user
-    CRITICAL,
+    @SerialName("critical") CRITICAL,
     }

@@ -26,6 +26,9 @@ import kotlinx.coroutines.sync.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.config.ConfigV1Migration
+import com.rastislavkish.vscan.core.config.LlmAnalyzer
+
 class ConfigManager(
     val preferences: SharedPreferences
     ): CoroutineScope {
@@ -93,7 +96,7 @@ class ConfigManager(
     // The implementations of the public methods without locks
 
     private fun addConfigImplementation(config: Config): Config {
-        val newConfig=config.withId(getFreeId(config.name))
+        val newConfig=config.copy(id=getFreeId(config.name))
         configurations.add(newConfig)
         saveImplementation()
         return newConfig
@@ -123,14 +126,15 @@ class ConfigManager(
         }
 
     private fun loadImplementation() {
-        var serializedList=preferences.getString("configurations", "") ?: ""
+        val serializedList=preferences.getString(CONFIGS_KEY, null)
 
-        if (serializedList.isEmpty())
-        return
-
-        serializedList=fixBackwardCompatibility(serializedList)
-
+        if (serializedList!=null)
         configurations=json.decodeFromString(serializedList)
+        else {
+            // The old configs stay under their key, as a backup
+            val legacyList=preferences.getString(LEGACY_CONFIGS_KEY, null) ?: return
+            configurations=ConfigV1Migration.migrate(legacyList).toMutableList()
+            }
 
         //In case the base config was out of date or missing
         updateConfigImplementation(baseConfig())
@@ -138,7 +142,7 @@ class ConfigManager(
         }
     private fun saveImplementation() {
         preferences.edit()
-        .putString("configurations", Json.encodeToString(configurations))
+        .putString(CONFIGS_KEY, json.encodeToString(configurations))
         .commit()
         }
 
@@ -149,23 +153,16 @@ class ConfigManager(
 
     private fun baseConfig(): Config = Config()
     private fun fileDescriptionConfig(): Config {
-        return Config()
-        .withId(FILE_DESCRIPTION_CONFIG_ID)
-        .withUserPrompt("Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.")
-        .withModel("vscan-gpt-4o-mini")
-        .withName("File description")
-        }
-
-    private fun fixBackwardCompatibility(serializedList: String): String {
-        var input=serializedList
-
-        if (input.contains("\"model\":\"GPT_4O\""))
-        input=input.replace("\"model\":\"GPT_4O\"", "\"model\":\"vscan-gpt-4o\"")
-
-        if (input.contains("\"model\":\"GPT_4O_MINI\""))
-        input=input.replace("\"model\":\"GPT_4O_MINI\"", "\"model\":\"vscan-gpt-4o-mini\"")
-
-        return input
+        // Its output is used as the filename, so it reports nothing itself
+        return Config(
+            id=FILE_DESCRIPTION_CONFIG_ID,
+            name="File description",
+            analyzer=LlmAnalyzer(
+                model="vscan-gpt-4o-mini",
+                userPrompt="Generate a few word description of this image, which could serve as its filename in Pictures folder. Answer with the filename only, no comments and omit the extension.",
+                ),
+            operations=listOf(),
+            )
         }
 
     companion object {
@@ -173,10 +170,18 @@ class ConfigManager(
         const val BASE_CONFIG_ID="base"
         const val FILE_DESCRIPTION_CONFIG_ID="file-description"
 
+        private const val CONFIGS_KEY="configs"
+        // The flat configs of versions up to 0.2.x
+        private const val LEGACY_CONFIGS_KEY="configurations"
+
         private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID)
 
-        // Fields removed from Config (e.g. highRes) remain in data saved by older versions, and newer versions may add fields an older build doesn't know
-        private val json=Json { ignoreUnknownKeys=true }
+        // Newer versions may add fields an older build doesn't know
+        // Defaults are stored too, since the base config's definition consists of them, and changing it mustn't change the user's configs
+        private val json=Json {
+            ignoreUnknownKeys=true
+            encodeDefaults=true
+            }
 
         fun isBuiltInConfigId(id: String): Boolean = id in builtInConfigIds
 

@@ -203,4 +203,17 @@ class TemplateTest {
             }
         }
 
-    }
+        @Test
+    fun escapedTextRendersToItself() {
+        val texts=listOf(
+            "Plain text",
+            "{{ object }} and {% if x %} and {# comment #}",
+            "{{{ {%% {## }} %} #} {\"line\": 42} {",
+            "{% if x %}\nalone on a line\n{% endif %}\n",
+            )
+
+        for (text in texts)
+        assertEquals(text, render(Template.escape(text)))
+        }
+
+}

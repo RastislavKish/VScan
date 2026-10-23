@@ -18,104 +18,48 @@ package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 
+import com.rastislavkish.vscan.core.config.Analyzer
+import com.rastislavkish.vscan.core.config.ConfigLens
+import com.rastislavkish.vscan.core.config.Lifetime
+import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.config.Operation
+import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.ToastOperation
 import com.rastislavkish.vscan.core.openai.SystemMessage
 
+// A program, run as processes: what to call it with, how to analyze the input, what to do with the output, and for how long
+// The defaults make up the built-in base config
+// The nested parts are copied with the generated copy()
 @Serializable
 data class Config(
     val id: String=ConfigManager.BASE_CONFIG_ID,
     val name: String="Base",
-    val systemPrompt: String="",
-    val userPrompt: String="What's in the image?",
-    val flashlightMode: FlashlightMode=FlashlightMode.DEFAULT,
-    val model: String="vscan-gpt-4o",
-    val maxCompletionTokens: Int=300,
-    val reasoningEffort: ReasoningEffort?=null,
+    // The name to call it by from the command prompt
+    val command: String?=null,
+    val description: String="",
+    // The image parameter is implicit, see allParameters
+    val parameters: List<Parameter> = listOf(),
+    val lens: ConfigLens=ConfigLens(),
+    val analyzer: Analyzer=LlmAnalyzer(),
+    val operations: List<Operation> = listOf(ToastOperation()),
+    val lifetime: Lifetime=Lifetime(),
     ) {
 
+    // The declared parameters, with the image parameter first unless the config declares it itself
+    val allParameters: List<Parameter>
+    get() {
+        if (parameters.any { it.name==Parameter.IMAGE_PARAMETER_NAME })
+        return parameters
+
+        return listOf(Parameter.defaultImageParameter)+parameters
+        }
+
+    // The LLM analyzer, the only analyzer type so far, which the scanning UI and the editor work with
+    val llm: LlmAnalyzer
+    get() = analyzer as LlmAnalyzer
+
     val systemPromptOrNull: SystemMessage?
-    get() = if (!systemPrompt.isEmpty()) SystemMessage(systemPrompt) else null
+    get() = if (!llm.systemPrompt.isEmpty()) SystemMessage(llm.systemPrompt) else null
 
-    fun withId(id: String): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-    fun withName(name: String): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-    fun withSystemPrompt(systemPrompt: String): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-    fun withUserPrompt(userPrompt: String): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-
-    fun withFlashlightMode(flashlightMode: FlashlightMode): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-
-    fun withModel(model: String): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-    fun withMaxCompletionTokens(maxCompletionTokens: Int): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-    fun withReasoningEffort(reasoningEffort: ReasoningEffort?): Config = Config(
-        id,
-        name,
-        systemPrompt,
-        userPrompt,
-        flashlightMode,
-        model,
-        maxCompletionTokens,
-        reasoningEffort,
-        )
-
+    fun withLlm(transform: (LlmAnalyzer) -> LlmAnalyzer): Config = copy(analyzer=transform(llm))
     }

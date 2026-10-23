@@ -38,12 +38,6 @@
         android:layout_height="wrap_content"
         />
     <Switch
-        android:id="@+id/speakResultsSwitch"
-        android:text="Read results aloud instead of showing them as toasts"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        />
-    <Switch
         android:id="@+id/speechUsesAccessibilityVolumeSwitch"
         android:text="Use the accessibility volume for speech, instead of the media volume"
         android:layout_width="wrap_content"

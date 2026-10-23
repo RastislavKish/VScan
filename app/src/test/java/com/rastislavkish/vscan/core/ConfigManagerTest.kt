@@ -26,6 +26,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+import com.rastislavkish.vscan.core.config.*
+import com.rastislavkish.vscan.core.imagesource.Zoom
+import com.rastislavkish.vscan.core.speech.SpeechPriority
+import com.rastislavkish.vscan.core.template.Template
+
 @RunWith(RobolectricTestRunner::class)
 class ConfigManagerTest {
 
@@ -55,7 +60,7 @@ class ConfigManagerTest {
     fun addConfigDerivesIdFromNameAndPersists() {
         val manager=freshManager()
 
-        val config=manager.addConfig(Config().withName("Bus lines"))
+        val config=manager.addConfig(Config(name="Bus lines"))
 
         assertEquals("bus-lines", config.id)
         assertEquals("Bus lines", freshManager().getConfig("bus-lines")?.name)
@@ -65,7 +70,7 @@ class ConfigManagerTest {
     fun addConfigAvoidsTakenIds() {
         val manager=freshManager()
 
-        val first=manager.addConfig(Config().withName("Bus lines"))
+        val first=manager.addConfig(Config(name="Bus lines"))
         val second=manager.addConfig(first)
         // Deriving a config from the base one keeps its name
         val derived=manager.addConfig(Config())
@@ -77,9 +82,9 @@ class ConfigManagerTest {
     @Test
     fun renamingKeepsId() {
         val manager=freshManager()
-        val config=manager.addConfig(Config().withName("Before"))
+        val config=manager.addConfig(Config(name="Before"))
 
-        manager.updateConfig(config.withName("After"))
+        manager.updateConfig(config.copy(name="After"))
 
         assertEquals("After", freshManager().getConfig("before")?.name)
         }
@@ -87,7 +92,7 @@ class ConfigManagerTest {
     @Test
     fun deleteConfigPersists() {
         val manager=freshManager()
-        val config=manager.addConfig(Config().withName("Doomed"))
+        val config=manager.addConfig(Config(name="Doomed"))
 
         manager.deleteConfig(config)
 
@@ -98,9 +103,9 @@ class ConfigManagerTest {
     @Test
     fun loadRestoresEditedBuiltInConfigs() {
         val manager=freshManager()
-        manager.updateConfig(manager.getBaseConfig().withUserPrompt("Tampered"))
+        manager.updateConfig(manager.getBaseConfig().withLlm { it.copy(userPrompt="Tampered") })
 
-        assertEquals(Config().userPrompt, freshManager().getConfig("base")?.userPrompt)
+        assertEquals(Config().llm.userPrompt, freshManager().getConfig("base")?.llm?.userPrompt)
         }
 
     @Test
@@ -109,8 +114,8 @@ class ConfigManagerTest {
         preferences.edit().putString("configurations", legacy).commit()
 
         val manager=freshManager()
-        assertEquals("vscan-gpt-4o", manager.getConfig("a")?.model)
-        assertEquals("vscan-gpt-4o-mini", manager.getConfig("b")?.model)
+        assertEquals("vscan-gpt-4o", manager.getConfig("a")?.llm?.model)
+        assertEquals("vscan-gpt-4o-mini", manager.getConfig("b")?.llm?.model)
         }
 
     @Test
@@ -121,7 +126,99 @@ class ConfigManagerTest {
         val config=freshManager().getConfig("a")
 
         assertEquals("A", config?.name)
-        assertEquals("vscan-x", config?.model)
+        assertEquals("vscan-x", config?.llm?.model)
         }
 
-    }
+        @Test
+    fun migratesV1Configs() {
+        val legacy="""[{"id":"a","name":"A","systemPrompt":"Be brief","userPrompt":"Read {{ it }}","flashlightMode":"ON","maxCompletionTokens":500,"reasoningEffort":"LOW"},{"id":"b","name":"B"}]"""
+        preferences.edit().putString("configurations", legacy).commit()
+
+        val a=freshManager().getConfig("a")!!
+        assertEquals("Be brief", a.llm.systemPrompt)
+        assertEquals(Template.escape("Read {{ it }}"), a.llm.userPrompt)
+        assertEquals(500, a.llm.maxCompletionTokens)
+        assertEquals(ReasoningEffort.LOW, a.llm.reasoningEffort)
+        assertEquals(FlashlightMode.ON, a.lifetime.flashlight)
+        assertEquals(LlmChangeDetectionMode.APP_DRIVEN, a.llm.changeDetection.mode)
+        assertEquals(listOf(ToastOperation()), a.operations)
+        assertFalse(a.lifetime.isLooping)
+
+        // The old defaults, which the old versions didn't store
+        val b=freshManager().getConfig("b")!!
+        assertEquals("What's in the image?", b.llm.userPrompt)
+        assertEquals("vscan-gpt-4o", b.llm.model)
+        assertEquals(300, b.llm.maxCompletionTokens)
+        assertNull(b.llm.reasoningEffort)
+        assertEquals(FlashlightMode.DEFAULT, b.lifetime.flashlight)
+        }
+
+    @Test
+    fun migrationKeepsV1ConfigsAndRunsOnce() {
+        val legacy="""[{"id":"a","name":"A"}]"""
+        preferences.edit().putString("configurations", legacy).commit()
+        freshManager()
+
+        assertEquals(legacy, preferences.getString("configurations", null))
+
+        // Later changes to the backup don't matter anymore
+        preferences.edit().putString("configurations", """[{"id":"c","name":"C"}]""").commit()
+        val manager=freshManager()
+        assertNotNull(manager.getConfig("a"))
+        assertNull(manager.getConfig("c"))
+        }
+
+    @Test
+    fun persistsAllConfigParts() {
+        val config=Config(
+            name="Bus line reader",
+            command="blr",
+            description="Reports the line numbers of buses",
+            parameters=listOf(
+                Parameter(Parameter.IMAGE_PARAMETER_NAME, ParameterType.IMAGE_SOURCE, short="i", default="\$glasses"),
+                Parameter("object", ParameterType.STRING, positional=true, rest=true, default="keys"),
+                ),
+            lens=ConfigLens(listOf(Zoom(2f, centerY=0.4f)), LensTarget.ALL),
+            analyzer=LlmAnalyzer(
+                userPrompt="Read the line of the bus. {% if lastOutput %}Last time: {{ lastOutput }}{% endif %}",
+                appendImage=false,
+                changeDetection=LlmChangeDetection(LlmChangeDetectionMode.LLM_DRIVEN, "CHANGE: *", ChangeMarkerMeaning.CHANGE, MarkerMatch.WILDCARD),
+                ),
+            operations=listOf(
+                SayOperation("changed", "Bus {{ lastOutput }}", SpeechPriority.HIGH),
+                PlayOperation(sound="beep.ogg", repeat=0, volume=NumberValue(value=0.8), pan=NumberValue(extract=Extraction.JSON, path="x"), instance=SoundInstance.NEW, stopOthers=true),
+                VibrateOperation(pattern=listOf(0, 100, 50, 100), repeat=2),
+                ToastOperation(text="{{ rawOutput }}"),
+                ),
+            lifetime=Lifetime(interval=2.0, capture=CaptureMode.PHOTO, iterationCondition="iteration<10", maxIterations=5, maxDuration=60.0, maxTokens=1000),
+            )
+
+        val added=freshManager().addConfig(config)
+
+        assertEquals(added, freshManager().getConfig(added.id))
+        }
+
+    @Test
+    fun storesDefaultValues() {
+        freshManager().addConfig(Config(name="Derived"))
+
+        // So changing the base config's definition doesn't change configs derived from it
+        val stored=preferences.getString("configs", null)!!
+        assertTrue(stored.contains("\"userPrompt\":\"What's in the image?\""))
+        assertTrue(stored.contains("\"type\":\"toast\""))
+        }
+
+    @Test
+    fun fileDescriptionConfigReportsNothing() {
+        assertEquals(listOf<Operation>(), freshManager().getFileDescriptionConfig().operations)
+        }
+
+    @Test
+    fun imageParameterIsImplicit() {
+        assertEquals(listOf(Parameter.defaultImageParameter), Config().allParameters)
+
+        val custom=Parameter(Parameter.IMAGE_PARAMETER_NAME, ParameterType.IMAGE_SOURCE, default="\$glasses")
+        assertEquals(listOf(custom), Config(parameters=listOf(custom)).allParameters)
+        }
+
+}

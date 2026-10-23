@@ -33,7 +33,6 @@ class Settings(
     var describeSavedImages=false
     var markdownRendering=false
 
-    var speakResults=false
     var speechUsesAccessibilityVolume=true
     var stopSpeechOnProximityWave=true
 
@@ -52,7 +51,6 @@ class Settings(
         describeSavedImages=preferences.getBoolean("describeSavedImages", false)
         markdownRendering=preferences.getBoolean("markdownRendering", false)
 
-        speakResults=preferences.getBoolean("speakResults", false)
         speechUsesAccessibilityVolume=preferences.getBoolean("speechUsesAccessibilityVolume", true)
         stopSpeechOnProximityWave=preferences.getBoolean("stopSpeechOnProximityWave", true)
 
@@ -71,7 +69,6 @@ class Settings(
         .putBoolean("useSounds", useSounds)
         .putBoolean("describeSavedImages", describeSavedImages)
         .putBoolean("markdownRendering", markdownRendering)
-        .putBoolean("speakResults", speakResults)
         .putBoolean("speechUsesAccessibilityVolume", speechUsesAccessibilityVolume)
         .putBoolean("stopSpeechOnProximityWave", stopSpeechOnProximityWave)
         .putString("defaultConfig", defaultConfigId)

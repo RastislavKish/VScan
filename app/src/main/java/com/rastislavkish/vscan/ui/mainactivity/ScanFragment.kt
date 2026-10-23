@@ -78,7 +78,6 @@ import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.camera.CaptureException
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
-import com.rastislavkish.vscan.core.speech.SpeechPriority
 import com.rastislavkish.vscan.core.speech.SpeechSystem
 import com.rastislavkish.vscan.core.openai.*
 
@@ -276,14 +275,14 @@ class ScanFragment: Fragment(), CoroutineScope {
                 val fileDescriptionConfig=settings.getFileDescriptionConfig(configManager)
                 val conversation=Conversation(
                     providersManager,
-                    fileDescriptionConfig.model,
-                    fileDescriptionConfig.maxCompletionTokens,
-                    fileDescriptionConfig.reasoningEffort,
+                    fileDescriptionConfig.llm.model,
+                    fileDescriptionConfig.llm.maxCompletionTokens,
+                    fileDescriptionConfig.llm.reasoningEffort,
                     fileDescriptionConfig.systemPromptOrNull,
                     )
 
                 conversation.addMessage(ImageMessage(
-                    fileDescriptionConfig.userPrompt,
+                    fileDescriptionConfig.llm.userPrompt,
                     LocalImage(image),
                     ))
 
@@ -516,7 +515,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             }
         }
     fun setSystemPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
-        adapter.activeConfig=adapter.activeConfig.withSystemPrompt(message)
+        adapter.activeConfig=adapter.activeConfig.withLlm { it.copy(systemPrompt=message) }
 
         if (!includePromptInConfirmation)
         toast("System prompt set")
@@ -524,7 +523,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         toast("${message} set as system prompt")
         }
     fun setUserPrompt(adapter: TabAdapter, message: String, includePromptInConfirmation: Boolean=false) {
-        adapter.activeConfig=adapter.activeConfig.withUserPrompt(message)
+        adapter.activeConfig=adapter.activeConfig.withLlm { it.copy(userPrompt=message) }
 
         if (!includePromptInConfirmation)
         toast("User prompt set")
@@ -545,7 +544,7 @@ class ScanFragment: Fragment(), CoroutineScope {
             }}
         }
     fun shouldUseFlashlight(adapter: TabAdapter): Boolean {
-        return when (adapter.activeConfig.flashlightMode) {
+        return when (adapter.activeConfig.lifetime.flashlight) {
             FlashlightMode.DEFAULT -> settings.useFlashlight
             FlashlightMode.ON -> true
             FlashlightMode.OFF -> false
@@ -554,15 +553,9 @@ class ScanFragment: Fragment(), CoroutineScope {
     fun toast(text: String) {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
-    fun announceResult(text: String) {
-        if (settings.speakResults)
-        speechSystem.say(text, SpeechPriority.NORMAL)
-        else
-        toast(text)
-        }
     fun toastResponse(response: AssistantMessage) {
         if (!response.text.isEmpty())
-        announceResult(response.text)
+        toast(response.text)
         else if (response.finishReason=="length")
         toast("Error: Reasoning exceeded the token limit")
         else

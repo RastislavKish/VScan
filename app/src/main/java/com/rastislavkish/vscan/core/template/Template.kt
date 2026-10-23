@@ -149,5 +149,24 @@ class Template private constructor(
     companion object {
 
         fun parse(source: String): Template = Template(TemplateParser(source).parse())
+
+        // Turns text into a template rendering to that very text, by replacing every opening of a tag with an expression producing it
+        fun escape(text: String): String {
+            val result=StringBuilder()
+            var i=0
+
+            while (i<text.length) {
+                if (text[i]=='{' && i+1<text.length && text[i+1] in "{%#") {
+                    result.append("{{ \"{${text[i+1]}\" }}")
+                    i+=2
+                    }
+                else {
+                    result.append(text[i])
+                    i++
+                    }
+                }
+
+            return result.toString()
+            }
         }
     }

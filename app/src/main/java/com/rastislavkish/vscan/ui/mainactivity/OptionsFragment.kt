@@ -175,11 +175,11 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     fun onSystemPromptLinkClick(v: View) {
         launch { adapter.mutex.withLock {
-            startTextInputActivity("System prompt", adapter.activeConfig.systemPrompt, "system-prompt")
+            startTextInputActivity("System prompt", adapter.activeConfig.llm.systemPrompt, "system-prompt")
             }}
         }
     fun updateSystemPromptLink(adapter: TabAdapter) {
-        val systemPrompt=adapter.activeConfig.systemPrompt
+        val systemPrompt=adapter.activeConfig.llm.systemPrompt
 
         val message=if (!systemPrompt.isEmpty())
         summarizeText(systemPrompt)
@@ -191,11 +191,11 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     fun onUserPromptLinkClick(v: View) {
         launch { adapter.mutex.withLock {
-            startTextInputActivity("User prompt", adapter.activeConfig.userPrompt, "user-prompt")
+            startTextInputActivity("User prompt", adapter.activeConfig.llm.userPrompt, "user-prompt")
             }}
         }
     fun updateUserPromptLink(adapter: TabAdapter) {
-        val userPrompt=adapter.activeConfig.userPrompt
+        val userPrompt=adapter.activeConfig.llm.userPrompt
 
         val message=if (!userPrompt.isEmpty())
         summarizeText(userPrompt)
@@ -209,8 +209,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
         launch { adapter.mutex.withLock {
             val activeConfig=adapter.activeConfig
             val flashlightMode=getSelectedFlashlightMode()
-            if (flashlightMode!=activeConfig.flashlightMode)
-            adapter.activeConfig=activeConfig.withFlashlightMode(flashlightMode)
+            if (flashlightMode!=activeConfig.lifetime.flashlight)
+            adapter.activeConfig=activeConfig.copy(lifetime=activeConfig.lifetime.copy(flashlight=flashlightMode))
             }}
         }
 
@@ -220,8 +220,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val conversation=adapter.conversation
             val model=modelInput.text.toString()
 
-            if (model!=activeConfig.model)
-            adapter.activeConfig=activeConfig.withModel(model)
+            if (model!=activeConfig.llm.model)
+            adapter.activeConfig=activeConfig.withLlm { it.copy(model=model) }
 
             if (model!=conversation.model)
             conversation.model=model
@@ -236,8 +236,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val conversation=adapter.conversation
             val maxCompletionTokens=maxCompletionTokensInput.text.toString().toInt()
 
-            if (maxCompletionTokens!=activeConfig.maxCompletionTokens)
-            adapter.activeConfig=activeConfig.withMaxCompletionTokens(maxCompletionTokens)
+            if (maxCompletionTokens!=activeConfig.llm.maxCompletionTokens)
+            adapter.activeConfig=activeConfig.withLlm { it.copy(maxCompletionTokens=maxCompletionTokens) }
 
             if (maxCompletionTokens!=conversation.maxCompletionTokens)
             conversation.maxCompletionTokens=maxCompletionTokens
@@ -249,8 +249,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val conversation=adapter.conversation
             val reasoningEffort=getSelectedReasoningEffort()
 
-            if (reasoningEffort!=activeConfig.reasoningEffort)
-            adapter.activeConfig=activeConfig.withReasoningEffort(reasoningEffort)
+            if (reasoningEffort!=activeConfig.llm.reasoningEffort)
+            adapter.activeConfig=activeConfig.withLlm { it.copy(reasoningEffort=reasoningEffort) }
 
             if (reasoningEffort!=conversation.reasoningEffort)
             adapter.conversation.reasoningEffort=reasoningEffort
@@ -262,7 +262,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             val activeConfig=adapter.activeConfig
             val name=nameInput.text.toString()
             if (name!=activeConfig.name)
-            adapter.activeConfig=activeConfig.withName(name)
+            adapter.activeConfig=activeConfig.copy(name=name)
             }}
         }
 
@@ -304,16 +304,16 @@ class OptionsFragment: Fragment(), CoroutineScope {
         else
         0
 
-        return Config(
-            adapter.activeConfig.id,
-            nameInput.toString(),
-            adapter.activeConfig.systemPrompt,
-            adapter.activeConfig.userPrompt,
-            getSelectedFlashlightMode(),
-            modelInput.text.toString(),
-            maxCompletionTokens,
-            getSelectedReasoningEffort(),
-            )
+        val activeConfig=adapter.activeConfig
+
+        return activeConfig.copy(
+            name=nameInput.text.toString(),
+            lifetime=activeConfig.lifetime.copy(flashlight=getSelectedFlashlightMode()),
+            ).withLlm { it.copy(
+                model=modelInput.text.toString(),
+                maxCompletionTokens=maxCompletionTokens,
+                reasoningEffort=getSelectedReasoningEffort(),
+                )}
         }
 
     val flashlightModeSpinnerOptions=arrayOf("Default", "On", "Off")
@@ -384,17 +384,17 @@ class OptionsFragment: Fragment(), CoroutineScope {
         updateSystemPromptLink(adapter)
         updateUserPromptLink(adapter)
 
-        if (uiConfig.flashlightMode!=activeConfig.flashlightMode)
-        setSelectedFlashlightMode(activeConfig.flashlightMode)
+        if (uiConfig.lifetime.flashlight!=activeConfig.lifetime.flashlight)
+        setSelectedFlashlightMode(activeConfig.lifetime.flashlight)
 
-        if (uiConfig.model!=activeConfig.model)
-        modelInput.setText(activeConfig.model)
+        if (uiConfig.llm.model!=activeConfig.llm.model)
+        modelInput.setText(activeConfig.llm.model)
 
-        if (uiConfig.maxCompletionTokens!=activeConfig.maxCompletionTokens)
-        maxCompletionTokensInput.setText(activeConfig.maxCompletionTokens.toString())
+        if (uiConfig.llm.maxCompletionTokens!=activeConfig.llm.maxCompletionTokens)
+        maxCompletionTokensInput.setText(activeConfig.llm.maxCompletionTokens.toString())
 
-        if (uiConfig.reasoningEffort!=activeConfig.reasoningEffort)
-        setSelectedReasoningEffort(activeConfig.reasoningEffort)
+        if (uiConfig.llm.reasoningEffort!=activeConfig.llm.reasoningEffort)
+        setSelectedReasoningEffort(activeConfig.llm.reasoningEffort)
 
         if (uiConfig.name!=activeConfig.name)
         nameInput.setText(activeConfig.name)
@@ -416,14 +416,14 @@ class OptionsFragment: Fragment(), CoroutineScope {
                 val activeConfig=adapter.activeConfig
                 when (output.context) {
                     "system-prompt" -> {
-                        if (activeConfig.systemPrompt!=output.text) {
-                            adapter.activeConfig=activeConfig.withSystemPrompt(output.text)
+                        if (activeConfig.llm.systemPrompt!=output.text) {
+                            adapter.activeConfig=activeConfig.withLlm { it.copy(systemPrompt=output.text) }
                             updateSystemPromptLink(adapter)
                             }
                         }
                     "user-prompt" -> {
-                        if (activeConfig.userPrompt!=output.text) {
-                            adapter.activeConfig=activeConfig.withUserPrompt(output.text)
+                        if (activeConfig.llm.userPrompt!=output.text) {
+                            adapter.activeConfig=activeConfig.withLlm { it.copy(userPrompt=output.text) }
                             updateUserPromptLink(adapter)
                             }
                         }

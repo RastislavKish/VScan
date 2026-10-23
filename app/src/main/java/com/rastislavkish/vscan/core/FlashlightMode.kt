@@ -20,7 +20,7 @@ import kotlinx.serialization.*
 
 @Serializable
 enum class FlashlightMode {
-    DEFAULT,
-    ON,
-    OFF,
+    @SerialName("default") DEFAULT,
+    @SerialName("on") ON,
+    @SerialName("off") OFF,
     }
