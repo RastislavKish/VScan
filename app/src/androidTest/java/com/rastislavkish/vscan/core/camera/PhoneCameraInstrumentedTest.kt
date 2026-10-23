@@ -16,21 +16,25 @@
 package com.rastislavkish.vscan.core.camera
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.SystemClock
 
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 
-import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 
 import kotlinx.coroutines.runBlocking
 
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.Timeout
 import org.junit.runner.RunWith
 
 import com.rastislavkish.vscan.ui.mainactivity.MainActivity
@@ -39,7 +43,10 @@ import com.rastislavkish.vscan.ui.mainactivity.MainActivity
 @RunWith(AndroidJUnit4::class)
 class PhoneCameraInstrumentedTest {
 
-    private lateinit var scenario: ActivityScenario<MainActivity>
+    // Unlike @Test(timeout), covers @Before too, and reports the stack of a stuck test
+    @get:Rule
+    val timeout: Timeout=Timeout.seconds(60)
+
     private lateinit var camera: PhoneCamera
 
     @Before
@@ -52,24 +59,38 @@ class PhoneCameraInstrumentedTest {
         assumeTrue("Grant the camera permission first: adb shell pm grant $packageName android.permission.CAMERA", granted)
 
         // The camera is bound to the process lifecycle, which needs a started activity
-        scenario=ActivityScenario.launch(MainActivity::class.java)
-        camera=PhoneCamera.getInstance(instrumentation.targetContext)
+        // Started directly rather than by ActivityScenario, whose helper activities would live in the test APK's process
+        val intent=Intent(instrumentation.targetContext, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        instrumentation.targetContext.startActivity(intent)
+        waitForForeground()
+
+        // Created on the main thread, as it observes the process lifecycle
+        instrumentation.runOnMainSync {
+            camera=PhoneCamera.getInstance(instrumentation.targetContext)
+            }
         }
 
-    @After
-    fun tearDown() {
-        if (::scenario.isInitialized)
-        scenario.close()
+    private fun waitForForeground() {
+        val deadline=SystemClock.elapsedRealtime()+20000
+        val lifecycle=ProcessLifecycleOwner.get().lifecycle
+
+        while (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            if (SystemClock.elapsedRealtime()>deadline)
+            fail("VScan didn't come to the foreground, is the phone unlocked?")
+
+            Thread.sleep(100)
+            }
         }
 
-    @Test(timeout=60000)
+    @Test
     fun capturesFullResolutionPhoto() = runBlocking {
         val image=camera.capture(false)
 
         assertTrue(maxOf(image.width, image.height)>=2000)
         }
 
-    @Test(timeout=60000)
+    @Test
     fun deliversVideoFramesWithAndWithoutOpenStream() = runBlocking {
         val single=camera.getVideoFrame()
         assertTrue(single.width>0 && single.height>0)
@@ -83,7 +104,7 @@ class PhoneCameraInstrumentedTest {
             }
         }
 
-    @Test(timeout=60000)
+    @Test
     fun capturesWhileStreamingAndWithTorch() = runBlocking {
         camera.openStream().use {
             camera.requestTorch().use {
