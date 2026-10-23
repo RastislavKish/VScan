@@ -2,7 +2,7 @@
 
 A config is a program. Calling it, from the command prompt or the UI, spawns a process. The process runs one or more iterations. In each iteration it analyzes its input and runs operations on the result.
 
-This document describes the schema in its future TOML form. Until configs move to files, the same structure is stored as JSON in `VScanConfigurations` under the key `configs`. There the field names are camelCase (`maxCompletionTokens`), and the TOML files will use snake_case (`max_completion_tokens`). Enum values and type discriminators are spelled the same in both. The Kotlin classes live in `core/Config.kt` and `core/config/`.
+Each config is a file, `configs/<id>/config.toml` in the VScan folder, described in [files.md](files.md). Field names are snake_case in TOML (`max_completion_tokens`) and camelCase in Kotlin (`maxCompletionTokens`). The Kotlin classes live in `core/Config.kt` and `core/config/`. The id is the folder's name, so the file has no `id` field.
 
 ```toml
 name = "Bus line reader"
@@ -94,7 +94,7 @@ Default values may be omitted. The defaults make up the built-in Base config.
 
 ## Sounds and vibrations
 
-Sounds are files in the app's `assets/sounds` folder, for now `beep`, `low-beep`, `high-beep` and `tick`. Configs will be able to bring their own sounds once they are stored as files. Names may omit the extension. Sounds play at the accessibility volume or the media volume, following the speech setting.
+A sound is looked up in the config's `assets` folder, then in the global `assets` folder, then among the sounds built into the app: `beep`, `low-beep`, `high-beep` and `tick`. Names may omit the extension and may lead through subfolders. Sounds play at the accessibility volume or the media volume, following the speech setting.
 
 When a process finishes, its last sounds and vibrations play out; only looping ones are stopped. A killed process stops all of them.
 
@@ -138,7 +138,7 @@ Scans of the foreground process count as changes even when the output stays the 
 
 ## Migration from v1
 
-The flat configs of versions up to 0.2.x, stored under the key `configurations`, are converted on the first load. The old key is kept as a backup.
+The flat configs of versions up to 0.2.x, stored under the key `configurations`, are converted on the first load, and written as files. The old key is kept as a backup, as is the JSON of the configs stored under `configs` before the files.
 
 | v1 field | v2 |
 |---|---|

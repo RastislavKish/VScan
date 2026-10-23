@@ -23,6 +23,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.files.VScanFiles
+import com.rastislavkish.vscan.core.toml.Toml
 import com.rastislavkish.vscan.core.toml.TomlException
 
 
@@ -95,7 +96,10 @@ class Settings(
             return
             }
 
-        files.writeToml(VScanFiles.SETTINGS, SettingsFile.serializer(), toFile(), FILE_HEADER)
+        // Leaving the settings screen saves, but rewriting the file without changes would bring nothing
+        val text=Toml.encode(SettingsFile.serializer(), toFile(), FILE_HEADER)
+        if (files.readText(VScanFiles.SETTINGS)!=text)
+        files.write(VScanFiles.SETTINGS, text.toByteArray())
         }
 
     private fun apply(file: SettingsFile) {

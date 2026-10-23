@@ -42,12 +42,17 @@ import java.io.InputStream
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import androidx.lifecycle.lifecycleScope
+
+import kotlinx.coroutines.*
+
 import org.greenrobot.eventbus.EventBus
 
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.PermissionRequester
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.files.FileSync
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.process.AppExit
 import com.rastislavkish.vscan.core.process.VScanService
@@ -107,6 +112,16 @@ class MainActivity : AppCompatActivity() {
                 toast("Press back again to exit")
                 }
             })
+        }
+
+    // Brings in what changed in the linked folder meanwhile, e.g. configs edited on a computer
+    override fun onResume() {
+        super.onResume()
+
+        lifecycleScope.launch {
+            val changed=withContext(Dispatchers.IO) { FileSync.pull(this@MainActivity) }
+            FileSync.apply(this@MainActivity, changed)
+            }
         }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

@@ -170,6 +170,13 @@ class ConfigManager(
             }
 
         configurations=(builtInConfigs()+loaded).toMutableList()
+
+        // Each problem once
+        val known=brokenConfigs.toSet()
+        for (config in broken) {
+            if (config !in known)
+            files.report("The config ${config.id} can't be read. ${config.error}")
+            }
         brokenConfigs=broken
         }
 

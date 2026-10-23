@@ -77,6 +77,7 @@ import com.rastislavkish.vscan.core.Resources
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.Timing
 import com.rastislavkish.vscan.core.camera.CaptureException
+import com.rastislavkish.vscan.core.files.FileSync
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
 import com.rastislavkish.vscan.core.process.CommandInterpreter
@@ -147,7 +148,7 @@ class ScanFragment: Fragment(), CoroutineScope {
         imageSources=ImageSources.getInstance(context!!)
         speechSystem=SpeechSystem.getInstance(context!!)
         processManager=ProcessManager.getInstance(context!!)
-        commandInterpreter=CommandInterpreter(configManager::getList, processManager)
+        commandInterpreter=CommandInterpreter(configManager::getList, processManager) { FileSync.reload(context!!) }
         touchWrapper=TouchWrapper()
         touchWrapper.addSwipeLeftListener(this::onSwipeLeft)
         touchWrapper.addSwipeRightListener(this::onSwipeRight)

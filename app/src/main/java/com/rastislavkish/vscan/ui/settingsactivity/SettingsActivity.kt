@@ -22,7 +22,14 @@ import android.content.Intent
 
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.lifecycleScope
+
+import android.net.Uri
+
+import kotlinx.coroutines.*
 
 import android.widget.Button
 import android.widget.Switch
@@ -34,6 +41,9 @@ import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.files.DocumentFileTree
+import com.rastislavkish.vscan.core.files.FileSync
+import com.rastislavkish.vscan.core.files.VScanFiles
 
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivity
 import com.rastislavkish.vscan.ui.configselectionactivity.ConfigSelectionActivityOutput
@@ -41,6 +51,8 @@ import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivit
 import com.rastislavkish.vscan.ui.actionselectionactivity.ActionSelectionActivityOutput
 import com.rastislavkish.vscan.ui.providersactivity.ProvidersActivity
 import com.rastislavkish.vscan.ui.modelprovidermappingsactivity.ModelProviderMappingsActivity
+import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityInput
+import com.rastislavkish.vscan.ui.confirmationactivity.ConfirmationActivityOutput
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -68,6 +80,12 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var configSelectionActivityLauncher: ActivityResultLauncher<Intent>
     private lateinit var actionSelectionActivityLauncher: ActivityResultLauncher<Intent>
 
+    private lateinit var linkedFolderLabel: TextView
+    private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
+    private lateinit var linkConfirmationLauncher: ActivityResultLauncher<Intent>
+    // The picked folder waiting for the confirmation to use its files
+    private var pickedFolder: Uri?=null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
@@ -93,9 +111,26 @@ class SettingsActivity : AppCompatActivity() {
 
         configSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::configSelectionActivityResult)
         actionSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::actionSelectionActivityResult)
+
+        linkedFolderLabel=findViewById(R.id.linkedFolderLabel)
+        folderPickerLauncher=registerForActivityResult(OpenDocumentTree(), this::onFolderPicked)
+        linkConfirmationLauncher=registerForActivityResult(StartActivityForResult(), this::linkConfirmationResult)
         }
 
     override fun onResume() {
+        refreshSwitches()
+        refreshSelectors()
+        refreshLinkedFolder()
+
+        super.onResume()
+        }
+    override fun onPause() {
+        saveSwitches()
+
+        super.onPause()
+        }
+
+    private fun refreshSwitches() {
         flashlightSwitch.setChecked(settings.useFlashlight)
         frontCameraSwitch.setChecked(settings.useFrontCamera)
         soundsSwitch.setChecked(settings.useSounds)
@@ -103,12 +138,8 @@ class SettingsActivity : AppCompatActivity() {
         reportEveryScanSwitch.setChecked(settings.reportEveryScan)
         speechUsesAccessibilityVolumeSwitch.setChecked(settings.speechUsesAccessibilityVolume)
         stopSpeechOnProximityWaveSwitch.setChecked(settings.stopSpeechOnProximityWave)
-
-        refreshSelectors()
-
-        super.onResume()
         }
-    override fun onPause() {
+    private fun saveSwitches() {
         settings.useFlashlight=flashlightSwitch.isChecked()
         settings.useFrontCamera=frontCameraSwitch.isChecked()
         settings.useSounds=soundsSwitch.isChecked()
@@ -118,8 +149,6 @@ class SettingsActivity : AppCompatActivity() {
         settings.stopSpeechOnProximityWave=stopSpeechOnProximityWaveSwitch.isChecked()
 
         settings.save()
-
-        super.onPause()
         }
 
     fun onDefaultConfigSelectorClick(v: View) {
@@ -153,6 +182,79 @@ class SettingsActivity : AppCompatActivity() {
         }
     fun onModelProviderMappingsLabelClick(v: View) {
         startModelProviderMappingsActivity()
+        }
+
+    fun onLinkFolderClick(v: View) {
+        folderPickerLauncher.launch(null)
+        }
+    fun onUnlinkFolderClick(v: View) {
+        if (VScanFiles.linkedFolderUri(this)==null) {
+            toast("No folder is linked")
+            return
+            }
+
+        VScanFiles.unlinkFolder(this)
+        refreshLinkedFolder()
+        toast("Unlinked, the files stay on this device")
+        }
+
+    private fun onFolderPicked(uri: Uri?) {
+        if (uri==null)
+        return
+
+        lifecycleScope.launch {
+            val hasFiles=try {
+                withContext(Dispatchers.IO) {
+                    VScanFiles.getInstance(this@SettingsActivity).hasVScanFiles(DocumentFileTree(this@SettingsActivity, uri))
+                    }
+                }
+            catch (e: Exception) {
+                toast("Can't use the folder. ${e.message}")
+                return@launch
+                }
+
+            if (hasFiles) {
+                pickedFolder=uri
+                linkConfirmationLauncher.launch(ConfirmationActivityInput("The folder has VScan files already. Use them, replacing the configs, providers and settings on this device?").toIntent(this@SettingsActivity))
+                }
+            else
+            link(uri, false)
+            }
+        }
+    private fun linkConfirmationResult(result: ActivityResult) {
+        val uri=pickedFolder ?: return
+        pickedFolder=null
+
+        if (result.resultCode==RESULT_OK && ConfirmationActivityOutput.fromIntent(result.data, "SettingsActivity").confirmed)
+        link(uri, true)
+        }
+    // useItsFiles: the folder's files replace this device's, otherwise this device's files are copied there
+    private fun link(uri: Uri, useItsFiles: Boolean) {
+        // What's shown here is saved first, so the device's settings are complete when copied, or the folder's replace them afterwards
+        saveSwitches()
+
+        lifecycleScope.launch {
+            val changed=try {
+                withContext(Dispatchers.IO) { VScanFiles.linkFolder(this@SettingsActivity, uri, useItsFiles) }
+                }
+            catch (e: Exception) {
+                toast("Can't use the folder. ${e.message}")
+                return@launch
+                }
+
+            FileSync.apply(this@SettingsActivity, changed)
+            refreshSwitches()
+            refreshSelectors()
+            refreshLinkedFolder()
+            toast(if (useItsFiles) "Linked, using the folder's files" else "Linked, the files were copied to the folder")
+            }
+        }
+    private fun refreshLinkedFolder() {
+        val uri=VScanFiles.linkedFolderUri(this)
+        linkedFolderLabel.text=if (uri==null)
+        "No linked folder, the configs and settings are only on this device"
+        else
+        "Linked folder: ${DocumentFile.fromTreeUri(this, uri)?.name ?: uri.lastPathSegment}"
         }
 
     fun toast(text: String) {

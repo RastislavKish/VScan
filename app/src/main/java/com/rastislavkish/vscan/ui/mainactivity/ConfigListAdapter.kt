@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 import com.rastislavkish.vscan.R
+import com.rastislavkish.vscan.core.BrokenConfig
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
 
@@ -33,9 +34,12 @@ class ConfigListAdapter(context: Context, configSorter: ConfigSorter): RecyclerV
     private val configManager=ConfigManager.getInstance(context)
     private val configSorter=configSorter
     private var configList=configManager.getList()
+    // Listed after the configs
+    private var brokenList=listOf<BrokenConfig>()
     private var filter=""
     private var itemClickListener: ((Config) -> Unit)?=null
     private var itemLongClickListener: ((Config) -> Unit)?=null
+    private var brokenItemClickListener: ((BrokenConfig) -> Unit)?=null
 
     class ConfigViewHolder(view: View): RecyclerView.ViewHolder(view) {
 
@@ -47,18 +51,28 @@ class ConfigListAdapter(context: Context, configSorter: ConfigSorter): RecyclerV
             }
 
         private var config: Config?=null
+        private var broken: BrokenConfig?=null
 
         fun bind(config: Config) {
             this.config=config
+            broken=null
 
             itemTextView.text=config.name
             }
+        fun bind(broken: BrokenConfig) {
+            this.broken=broken
+            config=null
+
+            itemTextView.text="${broken.id}, can't be read"
+            }
 
         fun itemTextView_click(view: View) {
-            (bindingAdapter as ConfigListAdapter?)?.onItemClick(config!!)
+            val adapter=bindingAdapter as ConfigListAdapter? ?: return
+            config?.let { adapter.onItemClick(it) }
+            broken?.let { adapter.onBrokenItemClick(it) }
             }
         fun itemTextView_longClick(view: View): Boolean {
-            (bindingAdapter as ConfigListAdapter?)?.onItemLongClick(config!!)
+            config?.let { (bindingAdapter as ConfigListAdapter?)?.onItemLongClick(it) }
             return true
             }
         }
@@ -70,18 +84,24 @@ class ConfigListAdapter(context: Context, configSorter: ConfigSorter): RecyclerV
         return ConfigViewHolder(view)
         }
     override fun onBindViewHolder(viewHolder: ConfigViewHolder, position: Int) {
+        if (position<configList.size)
         viewHolder.bind(configList[position])
+        else
+        viewHolder.bind(brokenList[position-configList.size])
         }
-    override fun getItemCount() = configList.size
+    override fun getItemCount() = configList.size+brokenList.size
 
     fun refresh() {
         configList=configSorter.sortConfigList(configManager.getList())
+        brokenList=configManager.getBrokenConfigs()
 
         if (!filter.isEmpty()) {
             val filterProcessed=filter.lowercase()
 
             configList=configList
             .filter({ item -> item.name.lowercase().contains(filterProcessed) })
+            brokenList=brokenList
+            .filter { it.id.lowercase().contains(filterProcessed) }
             }
 
         notifyDataSetChanged()
@@ -95,6 +115,13 @@ class ConfigListAdapter(context: Context, configSorter: ConfigSorter): RecyclerV
         }
     fun onItemClick(item: Config) {
         itemClickListener?.invoke(item)
+        }
+
+    fun setBrokenItemClickListener(listener: ((BrokenConfig) -> Unit)?) {
+        brokenItemClickListener=listener
+        }
+    fun onBrokenItemClick(item: BrokenConfig) {
+        brokenItemClickListener?.invoke(item)
         }
 
     fun setItemLongClickListener(listener: ((Config) -> Unit)?) {

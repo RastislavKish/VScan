@@ -71,6 +71,7 @@ class ConfigListFragment: Fragment(), CoroutineScope {
         configListAdapter=ConfigListAdapter(context!!, configSorter)
         configListAdapter.setItemClickListener(this::configClick)
         configListAdapter.setItemLongClickListener(this::configLongClick)
+        configListAdapter.setBrokenItemClickListener { toast(it.error) }
         val configList: RecyclerView=view.findViewById(R.id.configList)
         configList.adapter=configListAdapter
 

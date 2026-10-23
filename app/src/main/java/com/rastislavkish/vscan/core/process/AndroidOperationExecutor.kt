@@ -67,7 +67,7 @@ class AndroidOperationExecutor(
                 val pan=operation.pan?.let { OperationValues.evaluate(it, "pan", lastOutput, scope) } ?: 0.0
                 val (left, right)=OperationValues.stereoVolumes(volume, pan)
 
-                soundPlayer.play(process.pid, operation.sound, operation.repeat, left, right, operation.instance==SoundInstance.NEW, operation.stopOthers)
+                soundPlayer.play(process.pid, process.config.id, operation.sound, operation.repeat, left, right, operation.instance==SoundInstance.NEW, operation.stopOthers)
                 }
             is VibrateOperation -> {
                 val (timings, repeatIndex)=OperationValues.waveform(operation.pattern, operation.repeat)

@@ -22,10 +22,13 @@ import android.media.SoundPool
 import kotlinx.coroutines.CompletableDeferred
 
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.files.FileTree
+import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.process.ProcessException
 
 // Plays the sounds of processes, each stream belonging to the process that started it
-// Sounds are files in assets/sounds, loaded on first use and kept loaded
+// A sound is looked up in the config's assets folder, then in the global assets folder of the VScan folder, then among the app's built-in sounds
+// It's loaded on first use and kept loaded, until its file changes
 // Thread-safe
 class SoundPlayer private constructor(context: Context) {
 
@@ -39,6 +42,7 @@ class SoundPlayer private constructor(context: Context) {
         )
 
     private val context=context.applicationContext
+    private val files=VScanFiles.getInstance(context)
     private val lock=Any()
 
     // The volume is chosen once, as the pool's attributes can't change
@@ -50,7 +54,7 @@ class SoundPlayer private constructor(context: Context) {
         .build())
     .build()
 
-    // Sample ids by asset path, and the pending loads
+    // Sample ids by sound key, and the pending loads
     private val samples=mutableMapOf<String, Int>()
     private val loads=mutableMapOf<Int, CompletableDeferred<Boolean>>()
     private val streams=mutableListOf<Stream>()
@@ -68,11 +72,12 @@ class SoundPlayer private constructor(context: Context) {
 
     // repeat 0 loops until stopped
     // Without a sound, it only stops the others if asked to
-    suspend fun play(owner: Int, sound: String?, repeat: Int, left: Float, right: Float, newInstance: Boolean, stopOthers: Boolean) {
+    // The config's id is where its own assets are
+    suspend fun play(owner: Int, configId: String, sound: String?, repeat: Int, left: Float, right: Float, newInstance: Boolean, stopOthers: Boolean) {
         if (repeat<0)
         throw ProcessException("The repeat count can't be negative")
 
-        val path=sound?.let(::resolve)
+        val path=sound?.let { resolve(configId, it) }
         val looping=repeat==0
 
         synchronized(lock) {
@@ -125,28 +130,45 @@ class SoundPlayer private constructor(context: Context) {
         streams.removeAll(stopped)
         }
 
-    private fun resolve(sound: String): String {
+    // A key identifying the sound's file and its version: file:<path>:<modification time> or asset:<path>
+    // Names may omit the extension, and may lead through subfolders, e.g. sounds/beep
+    private fun resolve(configId: String, sound: String): String {
+        for (folder in listOf("${VScanFiles.CONFIGS}/$configId/${VScanFiles.ASSETS}", VScanFiles.ASSETS)) {
+            val path=FileTree.join(folder, sound)
+            val directory=path.substringBeforeLast('/', "")
+            val name=path.substringAfterLast('/')
+            val entry=files.list(directory)?.filter { !it.isDirectory }?.let { entries ->
+                entries.firstOrNull { it.name==name } ?: entries.firstOrNull { it.name.substringBeforeLast('.')==name }
+                }
+
+            if (entry!=null)
+            return "$FILE_PREFIX${files.file(FileTree.join(directory, entry.name)).absolutePath}:${entry.lastModified}"
+            }
+
         val file=soundFiles.firstOrNull { it==sound }
         ?: soundFiles.firstOrNull { it.substringBeforeLast('.')==sound }
         ?: throw ProcessException("Unknown sound $sound")
 
-        return "$SOUNDS_FOLDER/$file"
+        return "$ASSET_PREFIX$SOUNDS_FOLDER/$file"
         }
 
-    private suspend fun load(path: String): Int {
+    private suspend fun load(key: String): Int {
         val (sampleId, load)=synchronized(lock) {
-            val sampleId=samples.getOrPut(path) {
-                context.assets.openFd(path).use { pool.load(it, 1) }
+            val sampleId=samples.getOrPut(key) {
+                if (key.startsWith(FILE_PREFIX))
+                pool.load(key.removePrefix(FILE_PREFIX).substringBeforeLast(':'), 1)
+                else
+                context.assets.openFd(key.removePrefix(ASSET_PREFIX)).use { pool.load(it, 1) }
                 }
             Pair(sampleId, loads.getOrPut(sampleId) { CompletableDeferred() })
             }
 
         if (!load.await()) {
             synchronized(lock) {
-                samples.remove(path)
+                samples.remove(key)
                 loads.remove(sampleId)
                 }
-            throw ProcessException("Couldn't load the sound $path")
+            throw ProcessException("Couldn't load the sound ${key.substringAfterLast('/').substringBeforeLast(':')}")
             }
 
         return sampleId
@@ -154,7 +176,11 @@ class SoundPlayer private constructor(context: Context) {
 
     companion object {
 
+        // The built-in sounds in the app's assets
         const val SOUNDS_FOLDER="sounds"
+
+        private const val FILE_PREFIX="file:"
+        private const val ASSET_PREFIX="asset:"
 
         private const val MAX_STREAMS=16
         private const val MAX_TRACKED_STREAMS=64

@@ -18,10 +18,12 @@ package com.rastislavkish.vscan.core.process
 import com.rastislavkish.vscan.core.Config
 
 // Carries out command prompt lines, returning the message for the user
-// The built-in commands are ps, kill, killall, fg and bg, any other name starts the config it's the command or the id of
+// The built-in commands are ps, kill, killall, fg, bg and reload, any other name starts the config it's the command or the id of
 class CommandInterpreter(
     private val configs: () -> List<Config>,
     private val processManager: ProcessManager,
+    // Brings in the changes of the linked folder, returning the message
+    private val reload: () -> String = { "Nothing to reload" },
     ) {
 
     fun execute(line: String): String {
@@ -36,6 +38,7 @@ class CommandInterpreter(
                 "killall" -> killAll()
                 "fg" -> foreground(commandLine.shifted())
                 "bg" -> background()
+                "reload" -> reload()
                 else -> spawn(commandLine)
                 }
             }
