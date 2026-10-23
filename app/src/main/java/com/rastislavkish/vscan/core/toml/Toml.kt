@@ -32,6 +32,8 @@ class TomlException(message: String): Exception(message)
 // TOML has no null, so null values are left out
 object Toml {
 
+    // Newer versions may add fields an older build doesn't know
+    // Defaults are written too, since e.g. the base config's definition consists of them, and changing it mustn't change the user's configs
     private val json=Json {
         ignoreUnknownKeys=true
         encodeDefaults=true
@@ -55,10 +57,11 @@ object Toml {
             }
         }
 
-    // The header is written as comment lines at the top
-    fun <T> encode(serializer: KSerializer<T>, value: T, header: String?=null): String {
+    // The header is written as comment lines at the top, omitted names are fields left out, e.g. ones the file's location implies
+    fun <T> encode(serializer: KSerializer<T>, value: T, header: String?=null, omit: Set<String> = setOf()): String {
         val element=json.encodeToJsonElement(serializer, value)
-        val root=element as? JsonObject ?: throw IllegalArgumentException("Only objects can be written as TOML")
+        val root=(element as? JsonObject ?: throw IllegalArgumentException("Only objects can be written as TOML"))
+        .let { JsonObject(it.filterKeys { name -> name !in omit }) }
 
         val writer=TomlWriter()
         if (header!=null) {

@@ -22,10 +22,34 @@ import android.content.SharedPreferences
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.files.VScanFiles
+import com.rastislavkish.vscan.core.toml.TomlException
 
+
+// The global settings, in settings.toml
+// The preferences hold the settings of the versions before the files, moved to the file once
 class Settings(
-    val preferences: SharedPreferences
+    val preferences: SharedPreferences,
+    private val files: VScanFiles,
     ) {
+
+    @Serializable
+    private data class SettingsFile(
+        val useFlashlight: Boolean=false,
+        val useFrontCamera: Boolean=false,
+        val useSounds: Boolean=true,
+        val describeSavedImages: Boolean=false,
+        val markdownRendering: Boolean=false,
+        val reportEveryScan: Boolean=true,
+        val speechUsesAccessibilityVolume: Boolean=true,
+        val stopSpeechOnProximityWave: Boolean=true,
+        val defaultConfig: String=ConfigManager.BASE_CONFIG_ID,
+        val shareConfig: String=ConfigManager.BASE_CONFIG_ID,
+        val fileDescriptionConfig: String=ConfigManager.FILE_DESCRIPTION_CONFIG_ID,
+        val shakeAction: Action?=null,
+        val volumeUpPressAction: Action?=null,
+        val volumeDownPressAction: Action?=null,
+        )
 
     var useFlashlight=false
     var useFrontCamera=false
@@ -46,41 +70,93 @@ class Settings(
     var volumeUpPressAction: Action? = null
     var volumeDownPressAction: Action? = null
 
+    // The error of a file that can't be read, which the app then doesn't overwrite
+    private var fileError: String?=null
+
     fun load() {
-        useFlashlight=preferences.getBoolean("useFlashlight", false)
-        useFrontCamera=preferences.getBoolean("useFrontCamera", false)
-        useSounds=preferences.getBoolean("useSounds", true)
-        describeSavedImages=preferences.getBoolean("describeSavedImages", false)
-        markdownRendering=preferences.getBoolean("markdownRendering", false)
-        reportEveryScan=preferences.getBoolean("reportEveryScan", true)
+        if (!preferences.getBoolean(MOVED_TO_FILES_KEY, false))
+        moveToFiles()
 
-        speechUsesAccessibilityVolume=preferences.getBoolean("speechUsesAccessibilityVolume", true)
-        stopSpeechOnProximityWave=preferences.getBoolean("stopSpeechOnProximityWave", true)
-
-        defaultConfigId=preferences.getString("defaultConfig", null) ?: ConfigManager.BASE_CONFIG_ID
-        shareConfigId=preferences.getString("shareConfig", null) ?: ConfigManager.BASE_CONFIG_ID
-        fileDescriptionConfigId=preferences.getString("fileDescriptionConfig", null) ?: ConfigManager.FILE_DESCRIPTION_CONFIG_ID
-
-        shakeAction=getAction("shakeAction")
-        volumeUpPressAction=getAction("volumeUpPressAction")
-        volumeDownPressAction=getAction("volumeDownPressAction")
+        fileError=null
+        val file=try {
+            files.readToml(VScanFiles.SETTINGS, SettingsFile.serializer()) ?: SettingsFile()
+            }
+        catch (e: TomlException) {
+            fileError="${VScanFiles.SETTINGS}: ${e.message}"
+            files.report(fileError!!)
+            SettingsFile()
+            }
+        apply(file)
         }
     fun save() {
+        val error=fileError
+        if (error!=null) {
+            files.report("The changes of the settings can't be saved until the file is fixed. $error")
+            return
+            }
+
+        files.writeToml(VScanFiles.SETTINGS, SettingsFile.serializer(), toFile(), FILE_HEADER)
+        }
+
+    private fun apply(file: SettingsFile) {
+        useFlashlight=file.useFlashlight
+        useFrontCamera=file.useFrontCamera
+        useSounds=file.useSounds
+        describeSavedImages=file.describeSavedImages
+        markdownRendering=file.markdownRendering
+        reportEveryScan=file.reportEveryScan
+        speechUsesAccessibilityVolume=file.speechUsesAccessibilityVolume
+        stopSpeechOnProximityWave=file.stopSpeechOnProximityWave
+        defaultConfigId=file.defaultConfig
+        shareConfigId=file.shareConfig
+        fileDescriptionConfigId=file.fileDescriptionConfig
+        shakeAction=file.shakeAction
+        volumeUpPressAction=file.volumeUpPressAction
+        volumeDownPressAction=file.volumeDownPressAction
+        }
+    private fun toFile() = SettingsFile(
+        useFlashlight,
+        useFrontCamera,
+        useSounds,
+        describeSavedImages,
+        markdownRendering,
+        reportEveryScan,
+        speechUsesAccessibilityVolume,
+        stopSpeechOnProximityWave,
+        defaultConfigId,
+        shareConfigId,
+        fileDescriptionConfigId,
+        shakeAction,
+        volumeUpPressAction,
+        volumeDownPressAction,
+        )
+
+    // The settings stored in the preferences become the file, the preferences staying as a backup
+    private fun moveToFiles() {
+        if (preferences.all.keys.any { it!=MOVED_TO_FILES_KEY }) {
+            useFlashlight=preferences.getBoolean("useFlashlight", false)
+            useFrontCamera=preferences.getBoolean("useFrontCamera", false)
+            useSounds=preferences.getBoolean("useSounds", true)
+            describeSavedImages=preferences.getBoolean("describeSavedImages", false)
+            markdownRendering=preferences.getBoolean("markdownRendering", false)
+            reportEveryScan=preferences.getBoolean("reportEveryScan", true)
+
+            speechUsesAccessibilityVolume=preferences.getBoolean("speechUsesAccessibilityVolume", true)
+            stopSpeechOnProximityWave=preferences.getBoolean("stopSpeechOnProximityWave", true)
+
+            defaultConfigId=preferences.getString("defaultConfig", null) ?: ConfigManager.BASE_CONFIG_ID
+            shareConfigId=preferences.getString("shareConfig", null) ?: ConfigManager.BASE_CONFIG_ID
+            fileDescriptionConfigId=preferences.getString("fileDescriptionConfig", null) ?: ConfigManager.FILE_DESCRIPTION_CONFIG_ID
+
+            shakeAction=getLegacyAction("shakeAction")
+            volumeUpPressAction=getLegacyAction("volumeUpPressAction")
+            volumeDownPressAction=getLegacyAction("volumeDownPressAction")
+
+            save()
+            }
+
         preferences.edit()
-        .putBoolean("useFlashlight", useFlashlight)
-        .putBoolean("useFrontCamera", useFrontCamera)
-        .putBoolean("useSounds", useSounds)
-        .putBoolean("describeSavedImages", describeSavedImages)
-        .putBoolean("markdownRendering", markdownRendering)
-        .putBoolean("reportEveryScan", reportEveryScan)
-        .putBoolean("speechUsesAccessibilityVolume", speechUsesAccessibilityVolume)
-        .putBoolean("stopSpeechOnProximityWave", stopSpeechOnProximityWave)
-        .putString("defaultConfig", defaultConfigId)
-        .putString("shareConfig", shareConfigId)
-        .putString("fileDescriptionConfig", fileDescriptionConfigId)
-        .putString("shakeAction", Json.encodeToString(shakeAction))
-        .putString("volumeUpPressAction", Json.encodeToString(volumeUpPressAction))
-        .putString("volumeDownPressAction", Json.encodeToString(volumeDownPressAction))
+        .putBoolean(MOVED_TO_FILES_KEY, true)
         .commit()
         }
 
@@ -112,14 +188,36 @@ class Settings(
         return configManager.getFileDescriptionConfig()
         }
 
-    private fun getAction(key: String): Action? {
+    // The actions were stored with their class names as types
+    private fun getLegacyAction(key: String): Action? {
         val serialized=preferences.getString(key, null) ?: return null
-        val action: Action = Json.decodeFromString(serialized) ?: return null
+        val renamed=legacyActionTypes.entries.fold(serialized) { text, (className, type) ->
+            text.replace("\"com.rastislavkish.vscan.core.$className\"", "\"$type\"")
+            }
 
-        return action
+        return try {
+            Json { ignoreUnknownKeys=true }.decodeFromString<Action?>(renamed)
+            }
+        catch (e: Exception) {
+            null
+            }
         }
 
     companion object {
+
+        private const val MOVED_TO_FILES_KEY="movedToFiles"
+        private const val FILE_HEADER="The VScan settings\nSaving the settings in VScan rewrites this file, leaving out comments"
+
+        private val legacyActionTypes=mapOf(
+            "ScanWithActiveConfigAction" to "scan_with_active_config",
+            "ScanWithConfigAction" to "scan_with_config",
+            "ConsultConfigAction" to "consult_config",
+            "AskAction" to "ask",
+            "SetSystemPromptAction" to "set_system_prompt",
+            "SetUserPromptAction" to "set_user_prompt",
+            "StopSpeechAction" to "stop_speech",
+            "RunCommandAction" to "run_command",
+            )
 
         private var instance: Settings?=null
 
@@ -127,7 +225,7 @@ class Settings(
             if (instance==null) {
                 StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanSettings", Context.MODE_PRIVATE)
-                instance=Settings(preferences)
+                instance=Settings(preferences, VScanFiles.getInstance(context))
                 instance?.load()
                 }
 

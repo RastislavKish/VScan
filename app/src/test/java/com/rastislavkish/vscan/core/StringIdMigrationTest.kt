@@ -22,14 +22,23 @@ import androidx.test.core.app.ApplicationProvider
 
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+import com.rastislavkish.vscan.core.files.LocalFileTree
+import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.ui.mainactivity.ConfigSorter
 
 @RunWith(RobolectricTestRunner::class)
 class StringIdMigrationTest {
+
+    @get:Rule
+    val temporary=TemporaryFolder()
+
+    private fun files() = VScanFiles(LocalFileTree(temporary.root.resolve("VScan")), temporary.root.resolve("manifest.json"))
 
     private lateinit var configPreferences: SharedPreferences
     private lateinit var settingsPreferences: SharedPreferences
@@ -93,17 +102,17 @@ class StringIdMigrationTest {
         }
 
     private fun loadConfigManager(): ConfigManager {
-        val manager=ConfigManager(configPreferences)
+        val manager=ConfigManager(configPreferences, files())
         manager.load()
         return manager
         }
     private fun loadSettings(): Settings {
-        val settings=Settings(settingsPreferences)
+        val settings=Settings(settingsPreferences, files())
         settings.load()
         return settings
         }
     private fun loadProvidersManager(): ProvidersManager {
-        val manager=ProvidersManager(providersPreferences)
+        val manager=ProvidersManager(providersPreferences, files())
         manager.load()
         return manager
         }
@@ -115,7 +124,7 @@ class StringIdMigrationTest {
 
         val manager=loadConfigManager()
 
-        assertEquals(listOf("base", "file-description", "bus-lines", "bus-lines-2", "citanie", "find"), manager.getList().map { it.id })
+        assertEquals(listOf("base", "file-description", "find", "bus-lines", "bus-lines-2", "citanie"), manager.getList().map { it.id })
         assertEquals("Line?", manager.getConfig("bus-lines")?.llm?.userPrompt)
         assertEquals("Čítanie", manager.getConfig("citanie")?.name)
         }

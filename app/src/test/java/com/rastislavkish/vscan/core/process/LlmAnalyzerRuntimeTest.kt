@@ -17,6 +17,9 @@ package com.rastislavkish.vscan.core.process
 
 import android.content.Context
 
+import java.io.File
+import java.nio.file.Files
+
 import androidx.test.core.app.ApplicationProvider
 
 import kotlinx.coroutines.test.runTest
@@ -27,6 +30,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 import com.rastislavkish.vscan.core.ProvidersManager
+import com.rastislavkish.vscan.core.files.LocalFileTree
+import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
 import com.rastislavkish.vscan.core.config.LlmChangeDetection
 import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
@@ -48,7 +53,8 @@ class LlmAnalyzerRuntimeTest {
         ): LlmBackend {
 
         private val providersManager=ProvidersManager(
-            ApplicationProvider.getApplicationContext<Context>().getSharedPreferences("LlmAnalyzerRuntimeTest", Context.MODE_PRIVATE)
+            ApplicationProvider.getApplicationContext<Context>().getSharedPreferences("LlmAnalyzerRuntimeTest", Context.MODE_PRIVATE),
+            VScanFiles(LocalFileTree(Files.createTempDirectory("VScan").toFile()), File.createTempFile("manifest", ".json")),
             )
 
         var conversation: Conversation?=null

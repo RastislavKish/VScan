@@ -18,6 +18,7 @@ package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
 
+// The serial names are the types in settings.toml
 @Serializable
 sealed class Action {
 
@@ -25,6 +26,7 @@ sealed class Action {
     }
 
 @Serializable
+@SerialName("scan_with_active_config")
 class ScanWithActiveConfigAction: Action() {
 
     override fun toString(configManager: ConfigManager): String
@@ -32,6 +34,7 @@ class ScanWithActiveConfigAction: Action() {
     }
 
 @Serializable
+@SerialName("scan_with_config")
 class ScanWithConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Action() {
 
     override fun toString(configManager: ConfigManager): String {
@@ -43,6 +46,7 @@ class ScanWithConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Act
     }
 
 @Serializable
+@SerialName("consult_config")
 class ConsultConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Action() {
 
     override fun toString(configManager: ConfigManager): String {
@@ -54,6 +58,7 @@ class ConsultConfigAction(val config: String=ConfigManager.BASE_CONFIG_ID): Acti
     }
 
 @Serializable
+@SerialName("ask")
 class AskAction: Action() {
 
     override fun toString(configManager: ConfigManager): String
@@ -61,6 +66,7 @@ class AskAction: Action() {
     }
 
 @Serializable
+@SerialName("set_system_prompt")
 class SetSystemPromptAction: Action() {
 
     override fun toString(configManager: ConfigManager): String
@@ -68,6 +74,7 @@ class SetSystemPromptAction: Action() {
     }
 
 @Serializable
+@SerialName("set_user_prompt")
 class SetUserPromptAction: Action() {
 
     override fun toString(configManager: ConfigManager): String
@@ -75,6 +82,7 @@ class SetUserPromptAction: Action() {
     }
 
 @Serializable
+@SerialName("stop_speech")
 class StopSpeechAction: Action() {
 
     override fun toString(configManager: ConfigManager): String
@@ -83,6 +91,7 @@ class StopSpeechAction: Action() {
 
 // Runs a command prompt line, e.g. starting a config in the background
 @Serializable
+@SerialName("run_command")
 class RunCommandAction(val command: String=""): Action() {
 
     override fun toString(configManager: ConfigManager): String

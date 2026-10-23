@@ -22,9 +22,40 @@ import android.content.SharedPreferences
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.files.VScanFiles
+import com.rastislavkish.vscan.core.toml.TomlException
+
+// The providers live in providers.toml, their API keys in secrets.toml, so the providers can be shared without them
+// The preferences hold the providers of the versions before the files, moved to the files once
 class ProvidersManager(
-    val preferences: SharedPreferences
+    val preferences: SharedPreferences,
+    private val files: VScanFiles,
     ) {
+
+    @Serializable
+    private data class ProvidersFile(
+        val defaultProvider: String?=null,
+        val providers: Map<String, ProviderEntry> = mapOf(),
+        // A model mapped to "" has no provider
+        val modelProviders: Map<String, String> = mapOf(),
+        )
+    @Serializable
+    private data class ProviderEntry(
+        val name: String="",
+        val baseUrl: String="",
+        val models: Map<String, String> = mapOf(),
+        )
+    @Serializable
+    private data class SecretsFile(
+        val providers: Map<String, ProviderSecrets> = mapOf(),
+        )
+    @Serializable
+    private data class ProviderSecrets(
+        val apiKey: String="",
+        )
+
+    // The error of a file that can't be read, which the app then doesn't overwrite
+    private var fileError: String?=null
 
     private var defaultProvider: String?=null
     private var providers=mutableMapOf<String, Provider>()
@@ -117,6 +148,52 @@ class ProvidersManager(
         }
 
     fun load() {
+        if (!preferences.getBoolean(MOVED_TO_FILES_KEY, false))
+        moveToFiles()
+
+        fileError=null
+        val providersFile=try {
+            files.readToml(VScanFiles.PROVIDERS, ProvidersFile.serializer()) ?: ProvidersFile()
+            }
+        catch (e: TomlException) {
+            fileError="${VScanFiles.PROVIDERS}: ${e.message}"
+            ProvidersFile()
+            }
+        val secretsFile=try {
+            files.readToml(VScanFiles.SECRETS, SecretsFile.serializer()) ?: SecretsFile()
+            }
+        catch (e: TomlException) {
+            fileError="${VScanFiles.SECRETS}: ${e.message}"
+            SecretsFile()
+            }
+        fileError?.let { files.report(it) }
+
+        providers=providersFile.providers.mapValues { (id, entry) ->
+            Provider(id, entry.name, entry.baseUrl, secretsFile.providers[id]?.apiKey ?: "", entry.models)
+            }.toMutableMap()
+        defaultProvider=providersFile.defaultProvider
+        modelProviderMappings=providersFile.modelProviders.mapValues { it.value.ifEmpty { null } }.toMutableMap()
+        }
+    fun save() {
+        val error=fileError
+        if (error!=null) {
+            files.report("The changes of the providers can't be saved until the file is fixed. $error")
+            return
+            }
+
+        val providersFile=ProvidersFile(
+            defaultProvider,
+            providers.mapValues { (_, provider) -> ProviderEntry(provider.name, provider.baseUrl, provider.models) },
+            modelProviderMappings.mapValues { it.value ?: "" },
+            )
+        val secretsFile=SecretsFile(providers.mapValues { ProviderSecrets(it.value.apiKey) })
+
+        files.writeToml(VScanFiles.PROVIDERS, ProvidersFile.serializer(), providersFile, PROVIDERS_HEADER)
+        files.writeToml(VScanFiles.SECRETS, SecretsFile.serializer(), secretsFile, SECRETS_HEADER)
+        }
+
+    // The providers stored in the preferences become files, the preferences staying as a backup
+    private fun moveToFiles() {
         val serializedProviders=preferences.getString("providers", "") ?: ""
 
         if (!serializedProviders.isEmpty())
@@ -130,12 +207,12 @@ class ProvidersManager(
         modelProviderMappings=Json.decodeFromString(serializedModelProviderMappings)
 
         cleanRedundantProviderModels()
-        }
-    fun save() {
+
+        if (providers.isNotEmpty() || defaultProvider!=null || modelProviderMappings.isNotEmpty())
+        save()
+
         preferences.edit()
-        .putString("providers", Json.encodeToString(providers))
-        .putString("defaultProviderId", defaultProvider)
-        .putString("modelProviderMappings", Json.encodeToString(modelProviderMappings))
+        .putBoolean(MOVED_TO_FILES_KEY, true)
         .commit()
         }
 
@@ -191,13 +268,17 @@ class ProvidersManager(
 
     companion object {
 
+        private const val MOVED_TO_FILES_KEY="movedToFiles"
+        private const val PROVIDERS_HEADER="The VScan providers, their API keys are in secrets.toml\nSaving the providers in VScan rewrites this file, leaving out comments"
+        private const val SECRETS_HEADER="The API keys of the VScan providers, keep this file private, e.g. out of git repositories\nSaving the providers in VScan rewrites this file, leaving out comments"
+
         private var instance: ProvidersManager?=null
 
         fun getInstance(context: Context): ProvidersManager {
             if (instance==null) {
                 StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanProviders", Context.MODE_PRIVATE)
-                instance=ProvidersManager(preferences)
+                instance=ProvidersManager(preferences, VScanFiles.getInstance(context))
                 instance?.load()
                 }
 

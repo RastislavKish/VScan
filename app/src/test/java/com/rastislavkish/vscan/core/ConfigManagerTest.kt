@@ -22,11 +22,15 @@ import androidx.test.core.app.ApplicationProvider
 
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 import com.rastislavkish.vscan.core.config.*
+import com.rastislavkish.vscan.core.files.LocalFileTree
+import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.imagesource.Zoom
 import com.rastislavkish.vscan.core.process.CommandLine
 import com.rastislavkish.vscan.core.speech.SpeechPriority
@@ -35,17 +39,24 @@ import com.rastislavkish.vscan.core.template.Template
 @RunWith(RobolectricTestRunner::class)
 class ConfigManagerTest {
 
+    @get:Rule
+    val temporary=TemporaryFolder()
+
     private lateinit var preferences: SharedPreferences
+    private lateinit var files: VScanFiles
 
     @Before
     fun setUp() {
         val context=ApplicationProvider.getApplicationContext<Context>()
         preferences=context.getSharedPreferences("ConfigManagerTest", Context.MODE_PRIVATE)
         preferences.edit().clear().commit()
+        files=newFiles()
         }
 
+    private fun newFiles() = VScanFiles(LocalFileTree(temporary.root.resolve("VScan")), temporary.root.resolve("manifest.json"))
+
     private fun freshManager(): ConfigManager {
-        val manager=ConfigManager(preferences)
+        val manager=ConfigManager(preferences, newFiles())
         manager.load()
         return manager
         }
@@ -162,7 +173,8 @@ class ConfigManagerTest {
 
         val ids=freshManager().getList().map { it.id }
 
-        assertEquals(listOf("base", "a", "file-description", "find"), ids)
+        // The built-in configs come from the code
+        assertEquals(listOf("base", "file-description", "find", "a"), ids)
         }
 
     @Test
@@ -215,9 +227,80 @@ class ConfigManagerTest {
         freshManager().addConfig(Config(name="Derived"))
 
         // So changing the base config's definition doesn't change configs derived from it
-        val stored=preferences.getString("configs", null)!!
-        assertTrue(stored.contains("\"userPrompt\":\"What's in the image?\""))
-        assertTrue(stored.contains("\"type\":\"toast\""))
+        val stored=files.readText("configs/derived/config.toml")!!
+        assertTrue(stored, stored.contains("user_prompt = \"What's in the image?\""))
+        assertTrue(stored, stored.contains("type = \"toast\""))
+        // The folder is the id
+        assertFalse(stored, stored.contains("id ="))
+        }
+
+    @Test
+    fun movesStoredConfigsToFiles() {
+        val stored="""[{"id":"base","name":"Base"},{"id":"bus-lines","name":"Bus lines","command":"blr"}]"""
+        preferences.edit().putString("configs", stored).commit()
+
+        val manager=freshManager()
+
+        assertEquals("blr", manager.getConfig("bus-lines")?.command)
+        assertNotNull(files.readText("configs/bus-lines/config.toml"))
+        assertNull(files.list("configs/base"))
+        assertEquals(stored, preferences.getString("configs", null))
+        }
+
+    @Test
+    fun readsHandWrittenConfigs() {
+        files.write("configs/my-find/config.toml", """
+            name = "My find"
+            command = "mf"
+            [lifetime]
+            interval = 2
+            """.trimIndent().toByteArray())
+        // Not a config
+        files.write("configs/notes.txt", "x".toByteArray())
+
+        val config=freshManager().getConfig("my-find")!!
+        assertEquals("mf", config.command)
+        assertEquals(2.0, config.lifetime.interval, 0.0)
+        }
+
+    @Test
+    fun brokenConfigsAreKeptAside() {
+        files.write("configs/broken/config.toml", "name = ".toByteArray())
+        files.write("configs/base/config.toml", "name = \"Mine\"".toByteArray())
+
+        val manager=freshManager()
+
+        assertNull(manager.getConfig("broken"))
+        assertEquals("Base", manager.getConfig("base")?.name)
+        assertEquals(listOf("base", "broken"), manager.getBrokenConfigs().map { it.id })
+        assertTrue(manager.getBrokenConfigs()[1].error.startsWith("Line 1: "))
+
+        // Their ids stay taken, and their files untouched
+        assertEquals("broken-2", manager.addConfig(Config(name="Broken")).id)
+        assertEquals("name = ", files.readText("configs/broken/config.toml"))
+        }
+
+    @Test
+    fun deletingRemovesTheFolder() {
+        val manager=freshManager()
+        val config=manager.addConfig(Config(name="Temporary"))
+        files.write("configs/${config.id}/assets/beep.wav", byteArrayOf(1))
+
+        manager.deleteConfig(config)
+
+        assertNull(files.list("configs/${config.id}"))
+        assertNull(freshManager().getConfig(config.id))
+        }
+
+    @Test
+    fun loadPicksUpChangedFiles() {
+        val manager=freshManager()
+        val config=manager.addConfig(Config(name="Changing"))
+
+        files.write("configs/${config.id}/config.toml", "name = \"Changed\"".toByteArray())
+        manager.load()
+
+        assertEquals("Changed", manager.getConfig(config.id)?.name)
         }
 
     @Test

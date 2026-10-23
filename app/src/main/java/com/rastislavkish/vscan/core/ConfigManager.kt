@@ -27,14 +27,25 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.config.ConfigV1Migration
+import com.rastislavkish.vscan.core.files.VScanFiles
+import com.rastislavkish.vscan.core.toml.TomlException
 import com.rastislavkish.vscan.core.config.Lifetime
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
 import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.config.ParameterType
 import com.rastislavkish.vscan.core.config.ToastOperation
 
+// A config file that can't be read
+data class BrokenConfig(
+    val id: String,
+    val error: String,
+    )
+
+// The built-in configs, defined in code, and the user's ones, each in its folder configs/<id>/config.toml
+// The preferences hold the configs of the versions before the files, moved to the files once
 class ConfigManager(
-    val preferences: SharedPreferences
+    val preferences: SharedPreferences,
+    private val files: VScanFiles,
     ): CoroutineScope {
 
     override val coroutineContext: CoroutineContext
@@ -42,7 +53,9 @@ class ConfigManager(
 
     private var job=Job()
 
-    private var configurations=mutableListOf(baseConfig(), fileDescriptionConfig(), findConfig())
+    private var configurations=builtInConfigs().toMutableList()
+    // Never overwritten by the app, and their ids stay taken
+    private var brokenConfigs=listOf<BrokenConfig>()
     private val configurationsMutex=Mutex()
 
     fun addConfig(config: Config): Config {
@@ -83,6 +96,14 @@ class ConfigManager(
         return result
         }
 
+    fun getBrokenConfigs(): List<BrokenConfig> {
+        val result: List<BrokenConfig>
+        runBlocking { configurationsMutex.withLock {
+            result=brokenConfigs
+            }}
+        return result
+        }
+
     fun getBaseConfig(): Config = baseConfig()
     fun getFileDescriptionConfig(): Config = fileDescriptionConfig()
 
@@ -91,70 +112,100 @@ class ConfigManager(
             loadImplementation()
             }}
         }
-    fun save() {
-        runBlocking{ configurationsMutex.withLock {
-            saveImplementation()
-            }}
-        }
 
     // The implementations of the public methods without locks
 
     private fun addConfigImplementation(config: Config): Config {
         val newConfig=config.copy(id=getFreeId(config.name))
         configurations.add(newConfig)
-        saveImplementation()
+        write(newConfig)
         return newConfig
         }
     private fun updateConfigImplementation(config: Config) {
-        for (i in 0 until configurations.size) {
-            val existingConfig=configurations[i]
+        // The built-in configs come from the code
+        if (isBuiltInConfigId(config.id))
+        return
 
-            if (existingConfig.id==config.id) {
-                configurations[i]=config
-                saveImplementation()
-                return
-                }
-            }
-
+        val index=configurations.indexOfFirst { it.id==config.id }
+        if (index>=0)
+        configurations[index]=config
+        else
         configurations.add(config)
-        saveImplementation()
+        write(config)
         }
     private fun deleteConfigImplementation(config: Config) {
-        for (i in 0 until configurations.size) {
-            if (configurations[i].id==config.id) {
-                configurations.removeAt(i)
-                saveImplementation()
-                return
-                }
-            }
+        if (isBuiltInConfigId(config.id))
+        return
+
+        configurations.removeAll { it.id==config.id }
+        // With its assets
+        files.delete("${VScanFiles.CONFIGS}/${config.id}")
         }
 
     private fun loadImplementation() {
-        val serializedList=preferences.getString(CONFIGS_KEY, null)
+        if (!preferences.getBoolean(MOVED_TO_FILES_KEY, false))
+        moveToFiles()
 
-        if (serializedList!=null)
-        configurations=json.decodeFromString(serializedList)
-        else {
-            // The old configs stay under their key, as a backup
-            val legacyList=preferences.getString(LEGACY_CONFIGS_KEY, null) ?: return
-            configurations=ConfigV1Migration.migrate(legacyList).toMutableList()
+        val loaded=mutableListOf<Config>()
+        val broken=mutableListOf<BrokenConfig>()
+
+        val folders=(files.list(VScanFiles.CONFIGS) ?: listOf())
+        .filter { it.isDirectory }
+        .map { it.name }
+        .sorted()
+
+        for (id in folders) {
+            val path=configPath(id)
+            try {
+                val config=files.readToml(path, Config.serializer()) ?: continue
+
+                if (isBuiltInConfigId(id))
+                broken.add(BrokenConfig(id, "$id is the id of a built-in config"))
+                else
+                loaded.add(config.copy(id=id))
+                }
+            catch (e: TomlException) {
+                broken.add(BrokenConfig(id, e.message ?: "Invalid file"))
+                }
             }
 
-        //In case the base config was out of date or missing
-        updateConfigImplementation(baseConfig())
-        updateConfigImplementation(fileDescriptionConfig())
-        updateConfigImplementation(findConfig())
+        configurations=(builtInConfigs()+loaded).toMutableList()
+        brokenConfigs=broken
         }
-    private fun saveImplementation() {
+
+    // The configs stored in the preferences become files, the preferences staying as a backup
+    private fun moveToFiles() {
+        val serializedList=preferences.getString(CONFIGS_KEY, null)
+        val legacyList=preferences.getString(LEGACY_CONFIGS_KEY, null)
+
+        val stored: List<Config> = when {
+            serializedList!=null -> json.decodeFromString(serializedList)
+            legacyList!=null -> ConfigV1Migration.migrate(legacyList)
+            else -> listOf()
+            }
+
+        for (config in stored) {
+            if (!isBuiltInConfigId(config.id))
+            write(config)
+            }
+
         preferences.edit()
-        .putString(CONFIGS_KEY, json.encodeToString(configurations))
+        .putBoolean(MOVED_TO_FILES_KEY, true)
         .commit()
         }
 
+    private fun write(config: Config) {
+        files.writeToml(configPath(config.id), Config.serializer(), config, FILE_HEADER, setOf("id"))
+        }
+
+    private fun configPath(id: String): String = "${VScanFiles.CONFIGS}/$id/$CONFIG_FILE"
+
     private fun getFreeId(name: String): String {
-        val taken=configurations.map { it.id }.toSet()+builtInConfigIds
+        val taken=configurations.map { it.id }.toSet()+brokenConfigs.map { it.id }+builtInConfigIds
         return Ids.generate(name, "config", taken)
         }
+
+    private fun builtInConfigs(): List<Config> = listOf(baseConfig(), fileDescriptionConfig(), findConfig())
 
     private fun baseConfig(): Config = Config()
     private fun fileDescriptionConfig(): Config {
@@ -195,17 +246,20 @@ class ConfigManager(
         const val FILE_DESCRIPTION_CONFIG_ID="file-description"
         const val FIND_CONFIG_ID="find"
 
+        private const val CONFIG_FILE="config.toml"
+        private const val FILE_HEADER="A VScan config, its id is the name of its folder\nSaving the config in VScan rewrites this file, leaving out comments"
+
+        // The configs before the files
         private const val CONFIGS_KEY="configs"
         // The flat configs of versions up to 0.2.x
         private const val LEGACY_CONFIGS_KEY="configurations"
+        private const val MOVED_TO_FILES_KEY="movedToFiles"
 
         private val builtInConfigIds=setOf(BASE_CONFIG_ID, FILE_DESCRIPTION_CONFIG_ID, FIND_CONFIG_ID)
 
-        // Newer versions may add fields an older build doesn't know
-        // Defaults are stored too, since the base config's definition consists of them, and changing it mustn't change the user's configs
+        // For the configs stored in the preferences
         private val json=Json {
             ignoreUnknownKeys=true
-            encodeDefaults=true
             }
 
         fun isBuiltInConfigId(id: String): Boolean = id in builtInConfigIds
@@ -216,7 +270,7 @@ class ConfigManager(
             if (instance==null) {
                 StringIdMigration.ensure(context)
                 val preferences=context.getSharedPreferences("VScanConfigurations", Context.MODE_PRIVATE)
-                instance=ConfigManager(preferences)
+                instance=ConfigManager(preferences, VScanFiles.getInstance(context))
                 instance?.load()
                 }
 
