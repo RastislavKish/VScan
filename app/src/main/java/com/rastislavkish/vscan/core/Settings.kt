@@ -22,6 +22,7 @@ import android.content.SharedPreferences
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.toml.Toml
 import com.rastislavkish.vscan.core.toml.TomlException
@@ -83,8 +84,9 @@ class Settings(
             files.readToml(VScanFiles.SETTINGS, SettingsFile.serializer()) ?: SettingsFile()
             }
         catch (e: TomlException) {
-            fileError="${VScanFiles.SETTINGS}: ${e.message}"
-            files.report(fileError!!)
+            val error=e.message ?: "Invalid file"
+            fileError="${VScanFiles.SETTINGS}: $error"
+            files.reportBrokenFile(BrokenFile(VScanFiles.SETTINGS, error, "VScan uses the default settings, and doesn't save changes to the settings until the file is fixed, so the file isn't overwritten."))
             SettingsFile()
             }
         apply(file)

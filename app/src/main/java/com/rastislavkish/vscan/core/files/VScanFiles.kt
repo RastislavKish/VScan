@@ -18,6 +18,7 @@ package com.rastislavkish.vscan.core.files
 import java.io.File
 import java.io.IOException
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -29,6 +30,8 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.toml.Toml
+
+import com.rastislavkish.vscan.ui.BrokenFileDialogs
 
 // The VScan folder: the configs with their assets, the global assets, and the providers, secrets and settings files
 // The app reads a private mirror of it. When the user links a folder, the folder is the source of truth: pull() brings its changes into the mirror, and writes go to both
@@ -44,6 +47,8 @@ class VScanFiles(
 
     // Problems the user should know about, e.g. the linked folder being unavailable
     @Volatile var onProblem: ((String) -> Unit)?=null
+    // Files that can't be read, which the user has to fix
+    @Volatile var onBrokenFile: ((BrokenFile) -> Unit)?=null
 
     // The modification time and size of the linked folder's files as they were copied to the mirror, by path
     // Changes made while the folder was unavailable are marked PENDING, and copied to it once it's back
@@ -214,6 +219,9 @@ class VScanFiles(
     fun report(problem: String) {
         onProblem?.invoke(problem)
         }
+    fun reportBrokenFile(file: BrokenFile) {
+        onBrokenFile?.invoke(file)
+        }
 
     private fun loadManifest(): MutableMap<String, String> {
         try {
@@ -263,6 +271,8 @@ class VScanFiles(
                 files.onProblem={ problem ->
                     handler.post { Toast.makeText(appContext, problem, Toast.LENGTH_LONG).show() }
                     }
+                BrokenFileDialogs.install(appContext as Application)
+                files.onBrokenFile={ file -> BrokenFileDialogs.add(file) }
 
                 val uri=linkedFolderUri(appContext)
                 if (uri!=null) {

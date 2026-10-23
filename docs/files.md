@@ -39,7 +39,7 @@ Files and folders starting with a dot, such as `.git`, are ignored.
 - A config's id is the name of its folder, so a new folder with a `config.toml` is a new config. Renaming a config in the app keeps its folder.
 - Deleting a config in the app deletes its folder, assets included.
 - The built-in configs Base, File description and Find are defined in the app. A folder with one of their ids is reported as broken.
-- A file that can't be read is reported with the line of the error, and the app doesn't overwrite it. A broken config stays in the config list until it's fixed.
+- A file that can't be read is reported in a dialog naming the file and the line of the error, which stays until you confirm it with OK, and the app doesn't overwrite the file. A broken config stays in the config list until it's fixed.
 
 ## Assets
 

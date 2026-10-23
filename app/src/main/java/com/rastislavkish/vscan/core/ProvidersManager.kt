@@ -22,6 +22,7 @@ import android.content.SharedPreferences
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
+import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.toml.TomlException
 
@@ -152,21 +153,8 @@ class ProvidersManager(
         moveToFiles()
 
         fileError=null
-        val providersFile=try {
-            files.readToml(VScanFiles.PROVIDERS, ProvidersFile.serializer()) ?: ProvidersFile()
-            }
-        catch (e: TomlException) {
-            fileError="${VScanFiles.PROVIDERS}: ${e.message}"
-            ProvidersFile()
-            }
-        val secretsFile=try {
-            files.readToml(VScanFiles.SECRETS, SecretsFile.serializer()) ?: SecretsFile()
-            }
-        catch (e: TomlException) {
-            fileError="${VScanFiles.SECRETS}: ${e.message}"
-            SecretsFile()
-            }
-        fileError?.let { files.report(it) }
+        val providersFile=readFile(VScanFiles.PROVIDERS, ProvidersFile.serializer()) ?: ProvidersFile()
+        val secretsFile=readFile(VScanFiles.SECRETS, SecretsFile.serializer()) ?: SecretsFile()
 
         providers=providersFile.providers.mapValues { (id, entry) ->
             Provider(id, entry.name, entry.baseUrl, secretsFile.providers[id]?.apiKey ?: "", entry.models)
@@ -174,6 +162,19 @@ class ProvidersManager(
         defaultProvider=providersFile.defaultProvider
         modelProviderMappings=providersFile.modelProviders.mapValues { it.value.ifEmpty { null } }.toMutableMap()
         }
+    // Null when the file doesn't exist or is broken
+    private fun <T> readFile(path: String, serializer: KSerializer<T>): T? {
+        try {
+            return files.readToml(path, serializer)
+            }
+        catch (e: TomlException) {
+            val error=e.message ?: "Invalid file"
+            fileError="$path: $error"
+            files.reportBrokenFile(BrokenFile(path, error, "VScan uses no providers or API keys from it, and doesn't save changes to the providers until the file is fixed, so the file isn't overwritten."))
+            return null
+            }
+        }
+
     fun save() {
         val error=fileError
         if (error!=null) {

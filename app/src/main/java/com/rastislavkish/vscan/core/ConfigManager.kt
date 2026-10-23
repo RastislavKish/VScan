@@ -27,6 +27,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
 
 import com.rastislavkish.vscan.core.config.ConfigV1Migration
+import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.toml.TomlException
 import com.rastislavkish.vscan.core.config.Lifetime
@@ -175,7 +176,7 @@ class ConfigManager(
         val known=brokenConfigs.toSet()
         for (config in broken) {
             if (config !in known)
-            files.report("The config ${config.id} can't be read. ${config.error}")
+            files.reportBrokenFile(BrokenFile(configPath(config.id), config.error, "The config is left out until the file is fixed. VScan doesn't overwrite the file."))
             }
         brokenConfigs=broken
         }

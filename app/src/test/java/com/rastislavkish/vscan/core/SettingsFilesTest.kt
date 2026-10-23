@@ -28,6 +28,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.LocalFileTree
 import com.rastislavkish.vscan.core.files.VScanFiles
 
@@ -41,6 +42,7 @@ class SettingsFilesTest {
     private lateinit var preferences: SharedPreferences
     private lateinit var files: VScanFiles
     private val problems=mutableListOf<String>()
+    private val brokenFiles=mutableListOf<BrokenFile>()
 
     @Before
     fun setUp() {
@@ -52,6 +54,7 @@ class SettingsFilesTest {
 
     private fun newFiles() = VScanFiles(LocalFileTree(temporary.root.resolve("VScan")), temporary.root.resolve("manifest.json")).also {
         it.onProblem={ problem -> problems.add(problem) }
+        it.onBrokenFile={ file -> brokenFiles.add(file) }
         }
 
     private fun providersManager() = ProvidersManager(preferences, newFiles()).also { it.load() }
@@ -82,11 +85,12 @@ class SettingsFilesTest {
         files.write("providers.toml", "default_provider = ".toByteArray())
 
         val manager=providersManager()
-        assertEquals(1, problems.size)
+        assertEquals(listOf("providers.toml"), brokenFiles.map { it.path })
+        assertTrue(brokenFiles[0].error, brokenFiles[0].error.startsWith("Line 1"))
         manager.addProvider(Provider(name="A", baseUrl="https://a", apiKey="", models=mapOf()))
 
         assertEquals("default_provider = ", files.readText("providers.toml"))
-        assertEquals(2, problems.size)
+        assertEquals(1, problems.size)
         }
 
     @Test

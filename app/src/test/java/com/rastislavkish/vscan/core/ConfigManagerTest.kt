@@ -29,6 +29,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 import com.rastislavkish.vscan.core.config.*
+import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.LocalFileTree
 import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.imagesource.Zoom
@@ -53,7 +54,10 @@ class ConfigManagerTest {
         files=newFiles()
         }
 
-    private fun newFiles() = VScanFiles(LocalFileTree(temporary.root.resolve("VScan")), temporary.root.resolve("manifest.json"))
+    private val brokenFiles=mutableListOf<BrokenFile>()
+    private fun newFiles() = VScanFiles(LocalFileTree(temporary.root.resolve("VScan")), temporary.root.resolve("manifest.json")).also {
+        it.onBrokenFile={ file -> brokenFiles.add(file) }
+        }
 
     private fun freshManager(): ConfigManager {
         val manager=ConfigManager(preferences, newFiles())
@@ -274,6 +278,11 @@ class ConfigManagerTest {
         assertEquals("Base", manager.getConfig("base")?.name)
         assertEquals(listOf("base", "broken"), manager.getBrokenConfigs().map { it.id })
         assertTrue(manager.getBrokenConfigs()[1].error.startsWith("Line 1: "))
+        assertEquals(listOf("configs/base/config.toml", "configs/broken/config.toml"), brokenFiles.map { it.path })
+
+        // Each reported once
+        manager.load()
+        assertEquals(2, brokenFiles.size)
 
         // Their ids stay taken, and their files untouched
         assertEquals("broken-2", manager.addConfig(Config(name="Broken")).id)
