@@ -8,6 +8,8 @@ kotlinxCoroutines="1.7.3"
 kotlinxSerialization="1.6.2"
 eventBus="3.3.1"
 rhino="1.8.1"
+tomlj="1.1.1"
+documentFile="1.0.1"
 robolectric="4.16"
 androidxTestCore="1.6.1"
 
@@ -41,6 +43,8 @@ kotlinx-serialization-json={group="org.jetbrains.kotlinx", name="kotlinx-seriali
 eventbus={group="org.greenrobot", name="eventbus", version.ref="eventBus"}
 kotlinx-coroutines-test={group="org.jetbrains.kotlinx", name="kotlinx-coroutines-test", version.ref="kotlinxCoroutines"}
 rhino={group="org.mozilla", name="rhino", version.ref="rhino"}
+tomlj={group="org.tomlj", name="tomlj", version.ref="tomlj"}
+documentfile={group="androidx.documentfile", name="documentfile", version.ref="documentFile"}
 robolectric={group="org.robolectric", name="robolectric", version.ref="robolectric"}
 androidx-test-core={group="androidx.test", name="core", version.ref="androidxTestCore"}
 navigation-fragment = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref="navigation" }

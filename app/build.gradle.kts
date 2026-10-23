@@ -67,6 +67,8 @@ implementation(libs.navigation.fragment)
 implementation(libs.navigation.ui)
 implementation(libs.recyclerview)
 implementation(libs.rhino)
+implementation(libs.tomlj)
+implementation(libs.documentfile)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
