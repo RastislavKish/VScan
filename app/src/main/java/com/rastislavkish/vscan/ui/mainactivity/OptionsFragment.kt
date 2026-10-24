@@ -261,7 +261,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         form.heading("Lifetime")
         form.double("Interval in seconds, 0 runs once", { lifetime().interval }) { value -> editLifetime { it.copy(interval=value) } }
-        form.choice("Iteration mode", listOf("Sync" to IterationMode.SYNC, "Async" to IterationMode.ASYNC), { lifetime().mode }) { value -> editLifetime { it.copy(mode=value) } }
+        form.choice("Iteration mode", listOf("Sync (video frames are processed in sequence)" to IterationMode.SYNC, "Async (multiple video frames are processed simultaneously)" to IterationMode.ASYNC), { lifetime().mode }) { value -> editLifetime { it.copy(mode=value) } }
         val maxInFlight=form.int("Max analyses at once", { lifetime().maxInFlight }) { value -> editLifetime { it.copy(maxInFlight=value) } }
         form.visibleWhen({ lifetime().mode==IterationMode.ASYNC }, maxInFlight)
         form.optionalText("Iteration condition", { lifetime().iterationCondition }, { value -> editLifetime { it.copy(iterationCondition=value) } })
@@ -269,7 +269,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.double("Error interval in seconds, 0 for the interval", { lifetime().errorInterval }) { value -> editLifetime { it.copy(errorInterval=value) } }
         form.double("Error backoff", { lifetime().errorBackoff }) { value -> editLifetime { it.copy(errorBackoff=value) } }
         form.double("Max error interval in seconds, 0 for none", { lifetime().maxErrorInterval }) { value -> editLifetime { it.copy(maxErrorInterval=value) } }
-        form.choice("Capture", listOf("Auto" to CaptureMode.AUTO, "Photo" to CaptureMode.PHOTO, "Stream frame" to CaptureMode.FRAME), { lifetime().capture }) { value -> editLifetime { it.copy(capture=value) } }
+        form.choice("Capture mode", listOf("Auto" to CaptureMode.AUTO, "Photo" to CaptureMode.PHOTO, "Stream frame" to CaptureMode.FRAME), { lifetime().capture }) { value -> editLifetime { it.copy(capture=value) } }
         form.choice("Flashlight mode", listOf("Default" to FlashlightMode.DEFAULT, "On" to FlashlightMode.ON, "Off" to FlashlightMode.OFF), { lifetime().flashlight }) { value -> editLifetime { it.copy(flashlight=value) } }
         form.int("Max iterations, 0 for no limit", { lifetime().maxIterations }) { value -> editLifetime { it.copy(maxIterations=value) } }
         form.double("Max duration in seconds, 0 for no limit", { lifetime().maxDuration }) { value -> editLifetime { it.copy(maxDuration=value) } }
