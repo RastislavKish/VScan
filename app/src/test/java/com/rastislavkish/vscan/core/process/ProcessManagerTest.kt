@@ -53,7 +53,7 @@ class ProcessManagerTest {
     private val lastImage=LastImage()
 
     private fun TestScope.manager(createAnalyzer: (Config) -> AnalyzerRuntime = { ConstantAnalyzer }) = ProcessManager(
-        Arguments(StaticImageSource(image), lastImage),
+        Arguments(GlobalMemory(StaticImageSource(image), lastImage)),
         createAnalyzer,
         IgnoringExecutor,
         object: ProcessListener {

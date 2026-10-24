@@ -18,15 +18,15 @@ package com.rastislavkish.vscan.core.process
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.config.ParameterType
+import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.imagesource.LensSource
 import com.rastislavkish.vscan.core.imagesource.StaticImageSource
 
 // Turns the texts a config is called with into the values of its parameters
-// Until the command language and the memory arrive, $default and $lastImage are the only globals
+// A text like $door takes the value of the global variable
 class Arguments(
-    private val defaultImageSource: ImageSource,
-    private val lastImage: LastImage=LastImage(),
+    val memory: GlobalMemory,
     ) {
 
     // Missing arguments take their parameter's default, and the config's lens is applied to the image sources it's meant for
@@ -65,25 +65,45 @@ class Arguments(
         }
 
     private fun convert(parameter: Parameter, text: String): Any? {
-        fun invalid(): Nothing = throw ProcessException("${parameter.name}: \"$text\" is not ${typeDescription(parameter.type)}")
+        val name=GlobalMemory.reference(text)
+        if (name!=null) {
+            val variable=memory.get(name) ?: throw ProcessException("${parameter.name}: Unknown variable \$$name")
+            return convert(parameter, variable)
+            }
+
+        // \$ starts a text with a dollar
+        val literal=if (text.trimStart().startsWith("\\$")) text.trimStart().substring(1) else text
+        return convertText(parameter, literal)
+        }
+
+    private fun convertText(parameter: Parameter, literal: String): Any? {
+        fun invalid(): Nothing = throw ProcessException("${parameter.name}: \"$literal\" is not ${typeDescription(parameter.type)}")
 
         return when (parameter.type) {
-            ParameterType.STRING -> text
+            ParameterType.STRING -> literal
             // Numbers are doubles in JavaScript
-            ParameterType.INT -> (text.trim().toIntOrNull() ?: invalid()).toDouble()
-            ParameterType.DOUBLE -> text.trim().toDoubleOrNull() ?: invalid()
-            ParameterType.BOOL -> when (text.trim().lowercase()) {
+            ParameterType.INT -> (literal.trim().toIntOrNull() ?: invalid()).toDouble()
+            ParameterType.DOUBLE -> literal.trim().toDoubleOrNull() ?: invalid()
+            ParameterType.BOOL -> when (literal.trim().lowercase()) {
                 "true" -> true
                 "false" -> false
                 else -> invalid()
                 }
-            ParameterType.IMAGE_SOURCE -> when (text.trim()) {
-                "\$default" -> defaultImageSource
-                // The image at the time of the call
-                "\$lastImage" -> StaticImageSource(lastImage.taken?.image ?: throw ProcessException("No image taken yet"))
-                else -> throw ProcessException("${parameter.name}: Unknown image source $text")
-                }
-            ParameterType.IMAGE -> throw ProcessException("${parameter.name}: Image parameters aren't supported yet")
+            ParameterType.IMAGE, ParameterType.IMAGE_SOURCE -> throw ProcessException("${parameter.name}: Pass ${typeDescription(parameter.type)} as a variable, e.g. \$lastImage")
+            }
+        }
+
+    // Strings, numbers and bools convert as their texts, an image serves as an image source always giving it
+    private fun convert(parameter: Parameter, variable: Variable): Any? {
+        val text=variable.text
+        val takesImages=parameter.type==ParameterType.IMAGE || parameter.type==ParameterType.IMAGE_SOURCE
+        if (text!=null && !takesImages)
+        return convertText(parameter, text)
+
+        return when {
+            variable.type==parameter.type -> variable.value
+            variable.type==ParameterType.IMAGE && parameter.type==ParameterType.IMAGE_SOURCE -> StaticImageSource(variable.value as ImageData)
+            else -> throw ProcessException("${parameter.name}: Expected ${typeDescription(parameter.type)}, got ${typeDescription(variable.type)}")
             }
         }
 

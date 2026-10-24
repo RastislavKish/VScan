@@ -16,9 +16,11 @@
 package com.rastislavkish.vscan.core.process
 
 import com.rastislavkish.vscan.core.Config
+import com.rastislavkish.vscan.core.config.ParameterType
 
 // Carries out command prompt lines, returning the message for the user
-// The built-in commands are ps, kill, killall, fg, bg and reload, any other name starts the config it's the command or the id of
+// The built-in commands are ps, kill, killall, fg, bg, reload, vars and unset, any other name starts the config it's the command or the id of
+// name = value assigns a global variable
 class CommandInterpreter(
     private val configs: () -> List<Config>,
     private val processManager: ProcessManager,
@@ -28,6 +30,10 @@ class CommandInterpreter(
 
     fun execute(line: String): String {
         try {
+            val assignment=assignmentPattern.matchEntire(line)
+            if (assignment!=null)
+            return assign(assignment.groupValues[1], assignment.groupValues[2])
+
             val commandLine=CommandLine.parse(line)
             val command=commandLine.command ?: return ""
             val arguments=commandLine.arguments.map { it.text }
@@ -39,6 +45,8 @@ class CommandInterpreter(
                 "fg" -> foreground(commandLine.shifted())
                 "bg" -> background()
                 "reload" -> reload()
+                "vars" -> vars()
+                "unset" -> unset(arguments)
                 else -> spawn(commandLine)
                 }
             }
@@ -110,6 +118,73 @@ class CommandInterpreter(
         return "${process.config.name} runs in the background as ${process.pid}"
         }
 
+    // The value is a variable like $door, a single word or quoted text, or the rest of the line as a string
+    // Unquoted words true and false are bools and numbers are numbers, \$ starting a text with a dollar
+    private fun assign(name: String, valueText: String): String {
+        val memory=processManager.memory
+        val tokens=CommandLine.parseArguments(valueText).arguments
+        if (tokens.isEmpty())
+        return "Usage: name = value"
+
+        val token=tokens.singleOrNull()
+        val reference=if (token!=null && !token.quoted) GlobalMemory.reference(token.text) else null
+
+        val variable=when {
+            reference!=null -> memory.get(reference) ?: return "Unknown variable \$$reference"
+            token==null -> Variable(ParameterType.STRING, valueText.trim())
+            token.quoted -> Variable(ParameterType.STRING, token.text)
+            else -> literal(token.text)
+            }
+
+        memory.set(name, variable)
+        return "$name = ${describe(variable)}"
+        }
+
+    private fun literal(text: String): Variable {
+        if (text.startsWith("\\$"))
+        return Variable(ParameterType.STRING, text.substring(1))
+        if (text=="true" || text=="false")
+        return Variable(ParameterType.BOOL, text=="true")
+        if (integerPattern.matches(text))
+        text.toLongOrNull()?.let { return Variable(ParameterType.INT, it.toDouble()) }
+        if (numberPattern.matches(text))
+        return Variable(ParameterType.DOUBLE, text.toDouble())
+        return Variable(ParameterType.STRING, text)
+        }
+
+    private fun vars(): String {
+        val variables=processManager.memory.list()
+        if (variables.isEmpty())
+        return "No variables"
+
+        return variables.joinToString(". ") { (name, variable) ->
+            "$name = ${variable?.let { describe(it) } ?: "an image"}"
+            }
+        }
+
+    private fun unset(arguments: List<String>): String {
+        if (arguments.isEmpty())
+        return "Usage: unset name..."
+
+        return arguments.joinToString(". ") { argument ->
+            val name=argument.removePrefix("$")
+            if (processManager.memory.unset(name)) "Removed $name" else "No variable $name"
+            }
+        }
+
+    // Short enough to be read out
+    private fun describe(variable: Variable): String {
+        return when (variable.type) {
+            ParameterType.STRING -> {
+                val text=variable.value as String
+                "\""+(if (text.length>MAX_DESCRIBED_LENGTH) text.take(MAX_DESCRIBED_LENGTH)+"..." else text)+"\""
+                }
+            ParameterType.IMAGE -> "an image"
+            ParameterType.IMAGE_SOURCE -> "an image source"
+            else -> variable.text ?: ""
+            }
+        }
+
     private fun findConfig(commandLine: CommandLine): Config {
         val command=commandLine.command ?: throw ProcessException("No command")
         val list=configs()
@@ -117,5 +192,15 @@ class CommandInterpreter(
         return list.firstOrNull { it.command==command }
         ?: list.firstOrNull { it.id==command }
         ?: throw ProcessException("Unknown command $command")
+        }
+
+    companion object {
+
+        private const val MAX_DESCRIBED_LENGTH=100
+
+        // A name and =, e.g. door = $lastImage or count=3
+        private val assignmentPattern=Regex("\\s*([A-Za-z][A-Za-z0-9_]*)\\s*=(.*)", RegexOption.DOT_MATCHES_ALL)
+        private val integerPattern=Regex("-?[0-9]+")
+        private val numberPattern=Regex("-?[0-9]+\\.[0-9]+([eE][-+]?[0-9]+)?|-?[0-9]+[eE][-+]?[0-9]+")
         }
     }

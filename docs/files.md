@@ -1,6 +1,6 @@
 # The VScan folder
 
-VScan keeps its configs, providers and settings as TOML files in one folder:
+VScan keeps its configs, providers, settings and global variables in one folder:
 
 ```
 VScan/
@@ -14,6 +14,9 @@ VScan/
   providers.toml          the API providers, without their keys
   secrets.toml            the API keys
   settings.toml           the global settings and button bindings
+  memory/                 the global variables
+    variables.toml        strings, numbers and bools
+    images/door.jpg       images, by variable name
 ```
 
 The schema of `config.toml` is in [config-v2.md](config-v2.md). Field names are snake_case. Fields left out take their default values, and unknown fields are ignored.
@@ -44,6 +47,10 @@ Files and folders starting with a dot, such as `.git`, are ignored.
 ## Assets
 
 A config's sounds are looked up in its own `assets` folder, then in the global `assets` folder, then among the sounds built into the app (`beep`, `low-beep`, `high-beep` and `tick`). Names may omit the extension and may lead through subfolders, for example `sound = "alerts/door"`. Changed files are reloaded the next time they're played.
+
+## Memory
+
+The global variables assigned on the command prompt (see [commands.md](commands.md)) are kept in `memory/`: strings, numbers and bools in `variables.toml`, images as their original files in `images/`, named after their variables. Assigning or removing a variable writes the files right away, and images are read only when used. To keep a device's variables to itself, leave `memory/` out of its synchronization.
 
 ## Secrets
 

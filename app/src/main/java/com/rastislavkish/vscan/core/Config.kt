@@ -17,6 +17,7 @@
 package com.rastislavkish.vscan.core
 
 import kotlinx.serialization.*
+import kotlinx.serialization.json.JsonPrimitive
 
 import com.rastislavkish.vscan.core.config.Analyzer
 import com.rastislavkish.vscan.core.config.ConfigLens
@@ -40,6 +41,8 @@ data class Config(
     // The image parameter is implicit, see allParameters
     val parameters: List<Parameter> = listOf(),
     val lens: ConfigLens=ConfigLens(),
+    // The process memory, its variables with their initial values, kept across the iterations and changed by set operations
+    val memory: Map<String, JsonPrimitive> = mapOf(),
     val analyzer: Analyzer=LlmAnalyzer(),
     val operations: List<Operation> = listOf(ToastOperation()),
     val lifetime: Lifetime=Lifetime(),

@@ -18,6 +18,7 @@ package com.rastislavkish.vscan.core.toml
 import java.io.File
 
 import kotlinx.serialization.*
+import kotlinx.serialization.json.JsonPrimitive
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -25,6 +26,7 @@ import org.junit.Test
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.config.*
 import com.rastislavkish.vscan.core.imagesource.Zoom
+import com.rastislavkish.vscan.core.process.Process
 import com.rastislavkish.vscan.core.speech.SpeechPriority
 
 class TomlTest {
@@ -154,9 +156,11 @@ class TomlTest {
         assertEquals(LensTarget.IMAGE, config.lens.appliesTo)
         assertEquals(com.rastislavkish.vscan.core.ReasoningEffort.LOW, config.llm.reasoningEffort)
         assertEquals(ChangeMarkerMeaning.NO_CHANGE, config.llm.changeDetection.changeMarkerMeaning)
-        assertEquals(listOf("say", "play", "vibrate", "toast"), config.operations.map { it::class.java.getAnnotation(SerialName::class.java)?.value ?: it::class.simpleName })
+        assertEquals(listOf("say", "play", "vibrate", "toast", "set"), config.operations.map { it::class.java.getAnnotation(SerialName::class.java)?.value ?: it::class.simpleName })
         assertEquals(NumberValue(extract=Extraction.JSON, path="x"), (config.operations[1] as PlayOperation).pan)
         assertEquals(2.0, config.lifetime.interval, 0.0)
+        assertEquals(mapOf("announced" to JsonPrimitive(false), "mode" to JsonPrimitive("near")), config.memory)
+        Process.validateMemory(config)
         }
 
     @Test

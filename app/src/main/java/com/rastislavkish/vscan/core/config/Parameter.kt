@@ -17,6 +17,8 @@ package com.rastislavkish.vscan.core.config
 
 import kotlinx.serialization.*
 
+import com.rastislavkish.vscan.core.process.GlobalMemory
+
 @Serializable
 enum class ParameterType {
     @SerialName("String") STRING,
@@ -29,7 +31,7 @@ enum class ParameterType {
 
 // A value a config is called with, visible to its templates and expressions under its name
 // Named parameters are passed as --name or -short, positional ones in their order, and a rest parameter takes the rest of the line
-// The default is command-language text, so it can refer to globals (e.g. $default), and a parameter without one is required
+// The default is command-language text, so it can refer to globals (e.g. $defaultImageSource), and a parameter without one is required
 @Serializable
 data class Parameter(
     val name: String,
@@ -50,7 +52,7 @@ data class Parameter(
             name=IMAGE_PARAMETER_NAME,
             type=ParameterType.IMAGE_SOURCE,
             short="i",
-            default="\$default",
+            default="\$${GlobalMemory.DEFAULT_IMAGE_SOURCE}",
             description="The source of the image to analyze",
             )
         }

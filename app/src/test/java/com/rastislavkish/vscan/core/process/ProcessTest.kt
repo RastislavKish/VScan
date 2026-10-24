@@ -20,6 +20,8 @@ import java.io.Closeable
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 
+import kotlinx.serialization.json.JsonPrimitive
+
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -28,6 +30,9 @@ import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
 import com.rastislavkish.vscan.core.config.Lifetime
 import com.rastislavkish.vscan.core.config.Operation
+import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.ParameterType
+import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.config.ToastOperation
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
@@ -379,5 +384,60 @@ class ProcessTest {
         process.join()
         assertEquals(ProcessStatus.RUNNING, process.status)
         assertEquals(3, process.iteration)
+        }
+    
+    @Test
+    fun setOperationsChangeTheMemory() = runTest {
+        val analyzer=analyzer("A")
+        val config=looping(maxIterations=3).copy(
+            memory=mapOf("count" to JsonPrimitive(0), "mode" to JsonPrimitive("near")),
+            operations=listOf(
+                SetOperation(name="count", value="count+1"),
+                ToastOperation(condition="count==2"),
+                SetOperation(condition="count==3", name="mode", value="'far'"),
+                ),
+            )
+        val process=process(config, analyzer)
+        process.join()
+
+        assertEquals(mapOf("count" to 3.0, "mode" to "far"), process.memory)
+        // The set operations are carried out by the process, and the following operations see the new value
+        assertEquals(1, executor.executed.size)
+        // The analyzer sees the memory as it was after the previous iteration
+        assertEquals(listOf(0.0, 1.0, 2.0), analyzer.inputs.map { it.variables["count"] })
+        }
+
+    @Test
+    fun updatesKeepTheMemory() = runTest {
+        val config=looping().copy(
+            memory=mapOf("count" to JsonPrimitive(0)),
+            operations=listOf(SetOperation(name="count", value="count+1")),
+            )
+        val process=process(config, analyzer("A"))
+        advanceTimeBy(100)
+
+        process.update(config.copy(memory=mapOf("count" to JsonPrimitive(10), "seen" to JsonPrimitive(false))), analyzer("B"))
+        process.kill()
+
+        assertEquals(mapOf("count" to 1.0, "seen" to false), process.memory)
+        }
+
+    @Test
+    fun invalidMemoryDeclarations() {
+        fun assertInvalid(messagePart: String, config: Config) {
+            try {
+                Process.validateMemory(config)
+                fail("Should have failed")
+                }
+            catch (e: ProcessException) {
+                assertTrue(e.message, e.message!!.contains(messagePart))
+                }
+            }
+
+        assertInvalid("process variable", Config(memory=mapOf("lastOutput" to JsonPrimitive(""))))
+        assertInvalid("both a parameter", Config(memory=mapOf("object" to JsonPrimitive("")), parameters=listOf(Parameter("object", ParameterType.STRING))))
+        assertInvalid("not a valid", Config(memory=mapOf("my mode" to JsonPrimitive(""))))
+        assertInvalid("not declared", Config(operations=listOf(SetOperation(name="mode", value="1"))))
+        Process.validateMemory(Config(memory=mapOf("mode" to JsonPrimitive("")), operations=listOf(SetOperation(name="mode", value="'x'"))))
         }
     }

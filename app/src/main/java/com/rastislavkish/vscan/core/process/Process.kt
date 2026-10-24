@@ -22,15 +22,19 @@ import java.util.IdentityHashMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 
+import kotlinx.serialization.json.*
+
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
 import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.openai.Conversation
 import com.rastislavkish.vscan.core.openai.Usage
 import com.rastislavkish.vscan.core.script.ScriptEngine
+import com.rastislavkish.vscan.core.script.ScriptScope
 
 enum class ProcessStatus {
     RUNNING,
@@ -88,6 +92,10 @@ class Process(
     @Volatile var history: List<String> = listOf()
     private set
 
+    // The process memory, by the config's declarations, changed by set operations
+    @Volatile var memory: Map<String, Any?> = initialMemory(config, mapOf())
+    private set
+
     // The number of started iterations
     @Volatile var iteration=0
     private set
@@ -139,8 +147,12 @@ class Process(
         }
 
     // Takes effect from the next iteration
+    // The variables kept in the memory keep their values, new ones start with theirs
     fun update(config: Config, analyzer: AnalyzerRuntime) {
-        program=Program(config, analyzer)
+        synchronized(this) {
+            memory=initialMemory(config, memory)
+            program=Program(config, analyzer)
+            }
         }
 
     // False from the moment it's killed, even before it has stopped
@@ -294,6 +306,9 @@ class Process(
             continue
 
             try {
+                if (operation is SetOperation)
+                set(operation, scope)
+                else
                 executor.execute(operation, scope, this)
                 }
             catch (e: CancellationException) {
@@ -307,6 +322,22 @@ class Process(
         return true
         }
 
+    private fun set(operation: SetOperation, scope: ScriptScope) {
+        val value=try {
+            scope.evaluate(operation.value)
+            }
+        catch (e: Exception) {
+            throw ProcessException("Error in the value of ${operation.name}: ${e.message}")
+            }
+
+        synchronized(this) {
+            // Unless the config was edited meanwhile
+            if (operation.name in memory)
+            memory=memory+(operation.name to value)
+            }
+        scope.set(operation.name, value)
+        }
+
     private suspend fun capture(source: ImageSource, captureMode: CaptureMode): ImageData {
         return when (captureMode) {
             CaptureMode.FRAME -> source.getVideoFrame()
@@ -315,7 +346,7 @@ class Process(
         }
 
     private fun variables(): Map<String, Any?> {
-        return arguments+mapOf(
+        return arguments+memory+mapOf(
             "lastOutput" to lastOutput,
             "history" to history,
             "iteration" to iteration.toDouble(),
@@ -351,7 +382,37 @@ class Process(
 
         const val MAX_HISTORY=20
 
-        // Names of the process variables, which parameters can't take
+        // Names of the process variables, which parameters and the memory can't take
         val reservedNames=setOf("lastOutput", "rawOutput", "changed", "history", "iteration", "elapsed")
+
+        // Throws ProcessException when the memory declarations or the set operations don't fit
+        fun validateMemory(config: Config) {
+            val parameterNames=config.allParameters.map { it.name }.toSet()
+            for (name in config.memory.keys) {
+                if (!GlobalMemory.isValidName(name))
+                throw ProcessException("$name is not a valid memory variable name, use letters, digits and underscores, starting with a letter")
+                if (name in reservedNames)
+                throw ProcessException("$name is a process variable, it can't be a memory variable name")
+                if (name in parameterNames)
+                throw ProcessException("$name is both a parameter and a memory variable")
+                }
+
+            for (operation in config.operations) {
+                if (operation is SetOperation && operation.name !in config.memory)
+                throw ProcessException("The set operation changes ${operation.name}, which is not declared in the memory")
+                }
+            }
+
+        // The values of the memory variables declared in the config, taken from the previous memory where it has them
+        private fun initialMemory(config: Config, previous: Map<String, Any?>): Map<String, Any?> {
+            return config.memory.mapValues { (name, value) ->
+                if (name in previous)
+                previous[name]
+                else if (value.isString)
+                value.content
+                else
+                value.booleanOrNull ?: value.double
+                }
+            }
         }
     }

@@ -25,6 +25,7 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
 
@@ -39,9 +40,12 @@ class ProcessManager(
     private val defaultFlashlight: () -> Boolean,
     private val scope: CoroutineScope=CoroutineScope(SupervisorJob()+Dispatchers.Default),
     private val clock: () -> Long=SystemClock::elapsedRealtime,
-    // Set by the foreground process' captures, the one Arguments resolves $lastImage to
+    // Set by the foreground process' captures, the one the global memory gives as $lastImage
     val lastImage: LastImage=LastImage(),
     ): ProcessListener {
+
+    val memory: GlobalMemory
+    get() = arguments.memory
 
     private val processes=linkedMapOf<Int, Process>()
     private var nextPid=1
@@ -145,6 +149,7 @@ class ProcessManager(
         }
 
     private fun analyzer(config: Config): AnalyzerRuntime {
+        Process.validateMemory(config)
         try {
             return createAnalyzer(config)
             }
@@ -205,7 +210,7 @@ class ProcessManager(
                 val lastImage=LastImage()
 
                 instance=ProcessManager(
-                    Arguments(ImageSources.getInstance(appContext).default, lastImage),
+                    Arguments(GlobalMemory(ImageSources.getInstance(appContext).default, lastImage, VScanFiles.getInstance(appContext))),
                     { config ->
                         when (val analyzer=config.analyzer) {
                             is LlmAnalyzer -> LlmAnalyzerRuntime(analyzer, ProviderLlmBackend(providersManager))

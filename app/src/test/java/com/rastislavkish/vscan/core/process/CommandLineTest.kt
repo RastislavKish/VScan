@@ -70,7 +70,7 @@ class CommandLineTest {
 
     @Test
     fun bindsNamedArguments() {
-        assertEquals(mapOf("ratio" to "0.5", "image" to "\$default"), bind("find --ratio 0.5 -i=\$default"))
+        assertEquals(mapOf("ratio" to "0.5", "image" to "\$defaultImageSource"), bind("find --ratio 0.5 -i=\$defaultImageSource"))
         assertEquals(mapOf("ratio" to "0.5"), bind("find --ratio=0.5"))
         assertEquals(mapOf("loud" to "true", "count" to "3"), bind("find --loud 3"))
         assertEquals(mapOf("loud" to "false", "count" to "3"), bind("find -l false 3"))

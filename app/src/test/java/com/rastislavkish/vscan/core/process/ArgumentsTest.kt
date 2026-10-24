@@ -31,7 +31,9 @@ import com.rastislavkish.vscan.core.imagesource.Zoom
 class ArgumentsTest {
 
     private val defaultSource=StaticImageSource(ImageData.fromEncoded(byteArrayOf(1)))
-    private val arguments=Arguments(defaultSource)
+    private val lastImage=LastImage()
+    private val memory=GlobalMemory(defaultSource, lastImage)
+    private val arguments=Arguments(memory)
 
     private fun assertFails(messagePart: String, block: () -> Unit) {
         try {
@@ -71,7 +73,7 @@ class ArgumentsTest {
         assertFails("Missing required") { arguments.resolve(config) }
         assertFails("not a whole number") { arguments.resolve(config, mapOf("required" to "x", "count" to "2.5")) }
         assertFails("no parameter other") { arguments.resolve(config, mapOf("required" to "x", "other" to "y")) }
-        assertFails("Unknown image source") { arguments.resolve(config, mapOf("required" to "x", "image" to "\$glasses")) }
+        assertFails("Unknown variable") { arguments.resolve(config, mapOf("required" to "x", "image" to "\$glasses")) }
         }
 
     @Test
@@ -82,7 +84,7 @@ class ArgumentsTest {
 
     @Test
     fun lensAppliesToTheChosenSources() {
-        val parameters=listOf(Parameter("other", ParameterType.IMAGE_SOURCE, default="\$default"))
+        val parameters=listOf(Parameter("other", ParameterType.IMAGE_SOURCE, default="\$defaultImageSource"))
         val lens=listOf(Zoom(2f))
 
         val imageOnly=arguments.resolve(Config(parameters=parameters, lens=ConfigLens(lens, LensTarget.IMAGE)))
@@ -94,5 +96,41 @@ class ArgumentsTest {
         assertTrue(all["other"] is LensSource)
 
         assertSame(defaultSource, arguments.resolve(Config())["image"])
+        }
+    
+    @Test
+    fun variables() {
+        val image=ImageData.fromEncoded(byteArrayOf(2))
+        memory.set("thing", Variable(ParameterType.STRING, "a wallet"))
+        memory.set("two", Variable(ParameterType.INT, 2.0))
+        memory.set("half", Variable(ParameterType.DOUBLE, 0.5))
+        memory.set("door", Variable(ParameterType.IMAGE, image))
+
+        val config=Config(parameters=listOf(
+            Parameter("object", ParameterType.STRING),
+            Parameter("count", ParameterType.INT),
+            Parameter("ratio", ParameterType.DOUBLE),
+            Parameter("picture", ParameterType.IMAGE, default="\$door"),
+            ))
+
+        val values=arguments.resolve(config, mapOf("object" to "\$thing", "count" to "\$two", "ratio" to " \$half ", "image" to "\$door"))
+        assertEquals("a wallet", values["object"])
+        assertEquals(2.0, values["count"])
+        assertEquals(0.5, values["ratio"])
+        assertSame(image, values["picture"])
+        // An image serves as an image source giving it
+        assertTrue(values["image"] is StaticImageSource)
+
+        // Numbers convert as their texts, \$ starts a text with a dollar
+        assertEquals("2", arguments.resolve(config, mapOf("object" to "\$two", "count" to "1", "ratio" to "1"))["object"])
+        assertEquals("\$thing", arguments.resolve(config, mapOf("object" to "\\\$thing", "count" to "1", "ratio" to "1"))["object"])
+
+        assertFails("not a whole number") { arguments.resolve(config, mapOf("object" to "x", "count" to "\$half", "ratio" to "1")) }
+        assertFails("Expected an image source, got a string") { arguments.resolve(config, mapOf("object" to "x", "count" to "1", "ratio" to "1", "image" to "\$thing")) }
+        assertFails("Pass an image as a variable") { arguments.resolve(config, mapOf("object" to "x", "count" to "1", "ratio" to "1", "picture" to "door.jpg")) }
+        assertFails("No image taken yet") { arguments.resolve(config, mapOf("object" to "x", "count" to "1", "ratio" to "1", "picture" to "\$lastImage")) }
+
+        lastImage.set(image)
+        assertSame(image, arguments.resolve(config, mapOf("object" to "x", "count" to "1", "ratio" to "1", "picture" to "\$lastImage"))["picture"])
         }
     }

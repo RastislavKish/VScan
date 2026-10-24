@@ -20,6 +20,8 @@ import android.content.SharedPreferences
 
 import androidx.test.core.app.ApplicationProvider
 
+import kotlinx.serialization.json.JsonPrimitive
+
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
@@ -29,6 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 import com.rastislavkish.vscan.core.config.*
+import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.files.BrokenFile
 import com.rastislavkish.vscan.core.files.LocalFileTree
 import com.rastislavkish.vscan.core.files.VScanFiles
@@ -236,6 +239,32 @@ class ConfigManagerTest {
         assertTrue(stored, stored.contains("type = \"toast\""))
         // The folder is the id
         assertFalse(stored, stored.contains("id ="))
+        }
+
+    @Test
+    fun memoryAndSetOperationsRoundTrip() {
+        files.write("configs/counter/config.toml", """
+            name = "Counter"
+            [memory]
+            count = 0
+            ratio = 0.5
+            mode = "near"
+            on = false
+            [[operations]]
+            type = "set"
+            name = "count"
+            value = "count+1"
+            """.trimIndent().toByteArray())
+
+        val manager=freshManager()
+        val config=manager.getConfig("counter")!!
+        assertEquals(mapOf("count" to JsonPrimitive(0), "ratio" to JsonPrimitive(0.5), "mode" to JsonPrimitive("near"), "on" to JsonPrimitive(false)), config.memory)
+        assertEquals(listOf(SetOperation(name="count", value="count+1")), config.operations)
+
+        manager.updateConfig(config.copy(name="Counter 2"))
+        val stored=files.readText("configs/counter/config.toml")!!
+        assertTrue(stored, stored.contains("[memory]\ncount = 0\nratio = 0.5\nmode = \"near\"\non = false\n"))
+        assertEquals(config.copy(name="Counter 2"), freshManager().getConfig("counter"))
         }
 
     @Test

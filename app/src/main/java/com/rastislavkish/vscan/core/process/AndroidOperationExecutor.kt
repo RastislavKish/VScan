@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import com.rastislavkish.vscan.core.config.Operation
 import com.rastislavkish.vscan.core.config.PlayOperation
 import com.rastislavkish.vscan.core.config.SayOperation
+import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.config.SoundInstance
 import com.rastislavkish.vscan.core.config.ToastOperation
 import com.rastislavkish.vscan.core.config.VibrateOperation
@@ -73,6 +74,8 @@ class AndroidOperationExecutor(
                 val (timings, repeatIndex)=OperationValues.waveform(operation.pattern, operation.repeat)
                 vibrationSystem.vibrate(process.pid, timings, repeatIndex)
                 }
+            // Carried out by the process itself
+            is SetOperation -> {}
             }
         }
 

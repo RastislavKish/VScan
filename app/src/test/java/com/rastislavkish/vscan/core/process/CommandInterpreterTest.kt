@@ -40,7 +40,7 @@ class CommandInterpreterTest {
 
     private fun TestScope.interpreter(): CommandInterpreter {
         val manager=ProcessManager(
-            Arguments(StaticImageSource(ImageData.fromEncoded(byteArrayOf(1)))),
+            Arguments(GlobalMemory(StaticImageSource(ImageData.fromEncoded(byteArrayOf(1))), LastImage())),
             { object: AnalyzerRuntime {
                 override suspend fun analyze(input: AnalysisInput): AnalysisResult = AnalysisResult("A", true)
                 }},
@@ -119,5 +119,45 @@ class CommandInterpreterTest {
 
         assertEquals("Killed 1 process", interpreter.execute("killall"))
         assertEquals("Bus lines", manager.foreground?.config?.name)
+        }
+    
+    @Test
+    fun assignsVariables() = runTest {
+        val interpreter=interpreter()
+
+        assertEquals("count = 3", interpreter.execute("count = 3"))
+        assertEquals("ratio = 0.5", interpreter.execute("ratio=0.5"))
+        assertEquals("loud = true", interpreter.execute("loud =true"))
+        assertEquals("thing = \"red keys\"", interpreter.execute("thing = red keys"))
+        assertEquals("quoted = \"3\"", interpreter.execute("quoted = '3'"))
+        assertEquals("price = \"\$5\"", interpreter.execute("price = \\\$5"))
+        assertEquals("copy = \"red keys\"", interpreter.execute("copy = \$thing"))
+        assertEquals("Unknown variable \$other", interpreter.execute("x = \$other"))
+        assertEquals("Image sources can't be stored yet", interpreter.execute("cam = \$defaultImageSource"))
+        assertEquals("Usage: name = value", interpreter.execute("x ="))
+
+        assertEquals(ParameterType.INT, manager.memory.get("count")?.type)
+        assertEquals(ParameterType.STRING, manager.memory.get("quoted")?.type)
+        assertEquals("copy = \"red keys\". count = 3. loud = true. price = \"\$5\". quoted = \"3\". ratio = 0.5. thing = \"red keys\"", interpreter.execute("vars"))
+        }
+
+    @Test
+    fun unsetsVariables() = runTest {
+        val interpreter=interpreter()
+        interpreter.execute("count = 3")
+
+        assertEquals("Removed count. No variable other", interpreter.execute("unset count \$other"))
+        assertEquals("No variables", interpreter.execute("vars"))
+        assertEquals("Usage: unset name...", interpreter.execute("unset"))
+        }
+
+    @Test
+    fun configsTakeVariables() = runTest {
+        val interpreter=interpreter()
+        interpreter.execute("thing = red keys")
+
+        interpreter.execute("find \$thing")
+        assertEquals("red keys", manager.list().last().arguments["object"])
+        interpreter.execute("killall")
         }
     }

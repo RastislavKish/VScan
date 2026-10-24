@@ -43,6 +43,16 @@ data class SayOperation(
     val priority: SpeechPriority=SpeechPriority.NORMAL,
     ): Operation()
 
+// Changes a variable of the process memory, which the following operations and iterations see
+// The value is a JavaScript expression
+@Serializable
+@SerialName("set")
+data class SetOperation(
+    override val condition: String?=null,
+    val name: String,
+    val value: String,
+    ): Operation()
+
 @Serializable
 enum class SoundInstance {
     // One instance per sound and process, so playing a sound again restarts it

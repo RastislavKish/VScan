@@ -20,6 +20,8 @@ import android.content.Context
 import com.rastislavkish.vscan.core.ConfigManager
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Settings
+import com.rastislavkish.vscan.core.process.GlobalMemory
+import com.rastislavkish.vscan.core.process.ProcessManager
 
 // Brings the changes of the linked folder into the app
 object FileSync {
@@ -36,6 +38,8 @@ object FileSync {
         ProvidersManager.getInstance(context).load()
         if (VScanFiles.SETTINGS in changed)
         Settings.getInstance(context).load()
+        if (changed.any { it.startsWith("${GlobalMemory.MEMORY}/") })
+        ProcessManager.getInstance(context).memory.load()
         // Sounds are reloaded when they're played next, by their modification times
         }
 

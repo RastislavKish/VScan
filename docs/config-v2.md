@@ -11,7 +11,7 @@ description = "Reports the line number of approaching buses"   # optional
 
 # --- Parameters -------------------------------------------------------------
 
-# Every config has the implicit parameter  image / -i  (ImageSource, default $default).
+# Every config has the implicit parameter  image / -i  (ImageSource, default $defaultImageSource).
 # Declare it only to change its default or description.
 [[parameters]]
 name = "object"
@@ -19,8 +19,16 @@ type = "String"                       # String | Int | Double | Bool | Image | I
 positional = true                     # false = named only (--object / -o)
 short = "o"                           # optional
 rest = true                           # positional only, the last one: takes the rest of the line
-default = "keys"                      # optional, command-language text; no default = required
+default = "keys"                      # optional, command-language text such as $door; no default = required
 description = "What to look for"
+
+# --- Memory -----------------------------------------------------------------
+
+# The process memory: variables kept across the process' iterations, with their initial values.
+# Templates and expressions see them by name; set operations change them.
+[memory]
+announced = false
+mode = "near"
 
 # --- Lens -------------------------------------------------------------------
 
@@ -78,6 +86,12 @@ repeat = 1                            # 0 = loop
 type = "toast"
 text = "{{ lastOutput }}"
 
+[[operations]]
+type = "set"                          # changes a variable of [memory]; the following operations see the new value
+condition = "changed"
+name = "announced"
+value = "true"                        # JavaScript expression
+
 # --- Lifetime ---------------------------------------------------------------
 
 [lifetime]
@@ -122,13 +136,14 @@ When an iteration is not a change, `lastOutput` keeps its previous value.
 
 ## Process variables
 
-These are visible to templates and expressions. Templates see only the process scope. Globals reach a process through parameter defaults, such as `--image=$glasses`. Until the command language arrives, the globals are the image sources `$default` (the current camera) and `$lastImage` (the image the foreground process took last, or the one shared into the app, as it was when the config was called).
+These are visible to templates and expressions. Templates see only the process scope. Global variables reach a process through its arguments and parameter defaults, such as `--image=$door` (see [commands.md](commands.md)).
 
 Scans of the foreground process count as changes even when the output stays the same, unless the setting "Report every scan" is off. `lastOutput` and `history` still change only with the output. Looping always uses the change detection.
 
 | Variable | Meaning |
 |---|---|
 | parameters | by name, e.g. `object`, `image` |
+| memory | by name, as declared in `[memory]` and changed by `set` operations |
 | `lastOutput` | the last *reported* output, `null` before the first report. In the prompt it's the previous one; in operations it includes this iteration's |
 | `rawOutput` | what the analyzer literally returned this iteration (operations only) |
 | `changed` | whether this iteration has something new (operations only) |
