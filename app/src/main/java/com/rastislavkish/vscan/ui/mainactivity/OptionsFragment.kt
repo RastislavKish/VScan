@@ -178,7 +178,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.list({ config.allParameters }, Descriptions::parameter, { index ->
             val parameter=config.allParameters[index]
             startItemEditorActivity(ItemKind.PARAMETER, "Parameter ${parameter.name}", ItemForm.encode(parameter), index)
-            }) { from, to -> edit { withParameters(it, moved(it.allParameters, from, to)) } }
+            },
+            move={ from, to -> edit { withParameters(it, moved(it.allParameters, from, to)) } },
+            delete={ index -> edit { withParameters(it, replaced(it.allParameters, index, null)) } },
+            )
         form.button("Add parameter") {
             startItemEditorActivity(ItemKind.PARAMETER, "New parameter", ItemForm.encode(Parameter("", ParameterType.STRING)))
             }
@@ -187,7 +190,9 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.list({ memoryVariables(config) }, { Descriptions.memoryVariable(it.name, it.value) }, { index ->
             val variable=memoryVariables(config)[index]
             startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "Memory variable ${variable.name}", ItemForm.encode(variable), index)
-            })
+            },
+            delete={ index -> edit { config -> config.copy(memory=replaced(memoryVariables(config), index, null).associate { it.name to it.value }) } },
+            )
         form.button("Add memory variable") {
             startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "New memory variable", ItemForm.encode(MemoryVariable("", JsonPrimitive(""))))
             }
@@ -200,7 +205,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.list({ config.lens.operations }, Descriptions::lensOperation, { index ->
             val operation=config.lens.operations[index]
             startItemEditorActivity(ItemKind.LENS_OPERATION, lensOperationName(operation), ItemForm.encode(operation), index)
-            }) { from, to -> edit { it.copy(lens=it.lens.copy(operations=moved(it.lens.operations, from, to))) } }
+            },
+            move={ from, to -> edit { it.copy(lens=it.lens.copy(operations=moved(it.lens.operations, from, to))) } },
+            delete={ index -> edit { it.copy(lens=it.lens.copy(operations=replaced(it.lens.operations, index, null))) } },
+            )
         form.button("Add lens operation") { addLensOperation() }
 
         form.heading("Analyzer")
@@ -245,7 +253,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.list({ config.operations }, Descriptions::operation, { index ->
             val operation=config.operations[index]
             startItemEditorActivity(ItemKind.OPERATION, operationName(operation), ItemForm.encode(operation), index)
-            }) { from, to -> edit { it.copy(operations=moved(it.operations, from, to)) } }
+            },
+            move={ from, to -> edit { it.copy(operations=moved(it.operations, from, to)) } },
+            delete={ index -> edit { it.copy(operations=replaced(it.operations, index, null)) } },
+            )
         form.button("Add operation") { addOperation() }
 
         form.heading("Lifetime")

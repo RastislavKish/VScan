@@ -216,8 +216,8 @@ class Form(
             }
         }
 
-    // An item per line, opened on click, with Move up / Move down accessibility actions when the order can change
-    fun <T> list(items: () -> List<T>, describe: (T) -> String, open: (Int) -> Unit, move: ((Int, Int) -> Unit)?=null): LinearLayout {
+    // An item per line, opened on click, with Move up / Move down accessibility actions when the order can change, and Delete when given
+    fun <T> list(items: () -> List<T>, describe: (T) -> String, open: (Int) -> Unit, move: ((Int, Int) -> Unit)?=null, delete: ((Int) -> Unit)?=null): LinearLayout {
         val list=LinearLayout(context)
         list.orientation=LinearLayout.VERTICAL
         add(list)
@@ -235,6 +235,22 @@ class Form(
             return true
             }
 
+        fun deleteItem(view: View): Boolean {
+            val index=list.indexOfChild(view)
+            if (delete==null || index<0)
+            return false
+
+            delete(index)
+            refresh()
+            // The focus goes to the item taking its place, or the previous one
+            val next=list.getChildAt(minOf(index, list.childCount-1))
+            if (next!=null)
+            next.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+            else
+            list.announceForAccessibility("Deleted")
+            return true
+            }
+
         refreshers.add {
             val current=items()
             while (list.childCount>current.size)
@@ -246,6 +262,8 @@ class Form(
                     ViewCompat.addAccessibilityAction(view, "Move up") { v, _ -> moveItem(v, -1) }
                     ViewCompat.addAccessibilityAction(view, "Move down") { v, _ -> moveItem(v, 1) }
                     }
+                if (delete!=null)
+                ViewCompat.addAccessibilityAction(view, "Delete") { v, _ -> deleteItem(v) }
                 list.addView(view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
             for ((index, item) in current.withIndex())
