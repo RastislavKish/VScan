@@ -191,6 +191,19 @@ class ProcessManagerTest {
         }
 
     @Test
+    fun reportsConfigProblems() = runTest {
+        val manager=manager { config ->
+            if (config.name=="Broken")
+            throw IllegalStateException("Syntax error")
+            ConstantAnalyzer
+            }
+
+        assertNull(manager.problem(Config()))
+        assertEquals("Syntax error", manager.problem(Config(name="Broken")))
+        assertEquals("max_in_flight must be at least 1", manager.problem(Config(lifetime=Lifetime(maxInFlight=0))))
+        }
+
+    @Test
     fun movesProcessesBetweenForegroundAndBackground() = runTest {
         val manager=manager()
         val looping=Config(lifetime=Lifetime(interval=1.0))

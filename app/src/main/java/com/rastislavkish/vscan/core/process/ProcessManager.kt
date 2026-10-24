@@ -152,6 +152,17 @@ class ProcessManager(
             }
         }
 
+    // What keeps the config from running, e.g. a template syntax error, or null when nothing does
+    fun problem(config: Config): String? {
+        try {
+            analyzer(config)
+            return null
+            }
+        catch (e: ProcessException) {
+            return e.message ?: "Invalid config"
+            }
+        }
+
     private fun analyzer(config: Config): AnalyzerRuntime {
         Process.validate(config)
         try {

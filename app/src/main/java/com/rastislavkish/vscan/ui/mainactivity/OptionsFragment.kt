@@ -27,27 +27,54 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.Spinner
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.textfield.TextInputLayout
-import com.google.android.material.textfield.TextInputEditText
+import androidx.appcompat.app.AlertDialog
 
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
+import kotlinx.serialization.json.JsonPrimitive
 
 import com.rastislavkish.vscan.R
 
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ConfigManager
-import com.rastislavkish.vscan.core.TextController
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.ReasoningEffort
+import com.rastislavkish.vscan.core.config.CaptureMode
+import com.rastislavkish.vscan.core.config.ChangeMarkerMeaning
+import com.rastislavkish.vscan.core.config.IterationMode
+import com.rastislavkish.vscan.core.config.LensTarget
+import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.config.LlmChangeDetection
+import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
+import com.rastislavkish.vscan.core.config.MarkerMatch
+import com.rastislavkish.vscan.core.config.Operation
+import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.ParameterType
+import com.rastislavkish.vscan.core.config.PlayOperation
+import com.rastislavkish.vscan.core.config.SayOperation
+import com.rastislavkish.vscan.core.config.SetOperation
+import com.rastislavkish.vscan.core.config.ToastOperation
+import com.rastislavkish.vscan.core.config.VibrateOperation
+import com.rastislavkish.vscan.core.config.Lifetime
+import com.rastislavkish.vscan.core.imagesource.Crop
+import com.rastislavkish.vscan.core.imagesource.Downscale
+import com.rastislavkish.vscan.core.imagesource.LensOperation
+import com.rastislavkish.vscan.core.imagesource.RelativeRect
+import com.rastislavkish.vscan.core.imagesource.Zoom
+import com.rastislavkish.vscan.core.process.ProcessManager
 
+import com.rastislavkish.vscan.ui.form.Descriptions
+import com.rastislavkish.vscan.ui.form.Form
+import com.rastislavkish.vscan.ui.itemeditoractivity.ItemEditorActivityInput
+import com.rastislavkish.vscan.ui.itemeditoractivity.ItemEditorActivityOutput
+import com.rastislavkish.vscan.ui.itemeditoractivity.ItemForm
+import com.rastislavkish.vscan.ui.itemeditoractivity.ItemKind
+import com.rastislavkish.vscan.ui.itemeditoractivity.MemoryVariable
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivity
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityInput
 import com.rastislavkish.vscan.ui.textinputactivity.TextInputActivityOutput
@@ -57,6 +84,8 @@ import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityI
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
 
+// The editor of the foreground process' config, a heading per section
+// The form works with its own copy of the config, every edit applied to the copy at once and to the process' config under the adapter's mutex
 class OptionsFragment: Fragment(), CoroutineScope {
 
     override val coroutineContext: CoroutineContext
@@ -65,18 +94,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
     private lateinit var job: Job
 
     private lateinit var adapter: TabAdapter
+    private lateinit var processManager: ProcessManager
 
-    private lateinit var systemPromptLink: TextView
-    private lateinit var userPromptLink: TextView
-
-    private lateinit var flashlightModeSpinner: Spinner
-
-    private lateinit var modelInput: TextInputEditText
-    private lateinit var selectModelButton: Button
-    private lateinit var maxCompletionTokensInput: TextInputEditText
-    private lateinit var reasoningEffortSpinner: Spinner
-
-    private lateinit var nameInput: TextInputEditText
+    private lateinit var form: Form
+    private var config=Config()
 
     private lateinit var updateButton: Button
     private lateinit var createButton: Button
@@ -84,6 +105,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
     private lateinit var textInputActivityLauncher: ActivityResultLauncher<Intent>
     private lateinit var modelSelectionActivityLauncher: ActivityResultLauncher<Intent>
+    private lateinit var itemEditorActivityLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -97,44 +119,10 @@ class OptionsFragment: Fragment(), CoroutineScope {
         job=Job()
 
         adapter=TabAdapter.getInstance(context!!)
+        processManager=ProcessManager.getInstance(context!!)
 
-        systemPromptLink=view.findViewById(R.id.systemPromptLink)
-        systemPromptLink.setOnClickListener(this::onSystemPromptLinkClick)
-        userPromptLink=view.findViewById(R.id.userPromptLink)
-        userPromptLink.setOnClickListener(this::onUserPromptLinkClick)
-
-
-        flashlightModeSpinner=view.findViewById(R.id.flashlightModeSpinner)
-        val flashlightModeSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, flashlightModeSpinnerOptions)
-        flashlightModeSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        flashlightModeSpinner.setAdapter(flashlightModeSpinnerAdapter)
-        flashlightModeSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
-                onFlashlightModeSpinnerItemSelected(v ?: return, position)
-                }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-            })
-
-        modelInput=view.findViewById(R.id.modelInput)
-        TextController(modelInput).setTextChangeListener(this::onModelInputTextChange)
-        selectModelButton=view.findViewById(R.id.selectModelButton)
-        selectModelButton.setOnClickListener(this::onSelectModelButtonClick)
-        maxCompletionTokensInput=view.findViewById(R.id.maxCompletionTokensInput)
-        TextController(maxCompletionTokensInput).setTextChangeListener(this::onMaxCompletionTokensInputTextChange)
-
-        reasoningEffortSpinner=view.findViewById(R.id.reasoningEffortSpinner)
-        val reasoningEffortSpinnerAdapter=ArrayAdapter<String>(context!!, android.R.layout.simple_spinner_item, reasoningEffortSpinnerOptions)
-        reasoningEffortSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        reasoningEffortSpinner.setAdapter(reasoningEffortSpinnerAdapter)
-        reasoningEffortSpinner.setOnItemSelectedListener(object: AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, v: View?, position: Int, id: Long) {
-                onReasoningEffortSpinnerItemSelected(v ?: return, position)
-                }
-            override fun onNothingSelected(parent: AdapterView<*>) { }
-            })
-
-        nameInput=view.findViewById(R.id.nameInput)
-        TextController(nameInput).setTextChangeListener(this::onNameInputTextChange)
+        form=Form(context!!, view.findViewById<LinearLayout>(R.id.formContainer))
+        buildForm()
 
         updateButton=view.findViewById(R.id.updateButton)
         updateButton.setOnClickListener(this::onUpdateButtonClick)
@@ -146,124 +134,173 @@ class OptionsFragment: Fragment(), CoroutineScope {
         val settingsButton: Button=view.findViewById(R.id.settingsButton)
         settingsButton.setOnClickListener(this::onSettingsButtonClick)
 
-        val modelInputLayout: TextInputLayout=view.findViewById(R.id.modelInputLayout)
-        val maxCompletionTokensInputLayout: TextInputLayout=view.findViewById(R.id.maxCompletionTokensInputLayout)
-        val nameInputLayout: TextInputLayout=view.findViewById(R.id.nameInputLayout)
-
-        modelInputLayout.setPrefixText("Model")
-        modelInputLayout.setPlaceholderText("Model")
-        maxCompletionTokensInputLayout.setPrefixText("Max completion tokens")
-        maxCompletionTokensInputLayout.setPlaceholderText("Max completion tokens")
-        nameInputLayout.setPrefixText("Config name")
-        nameInputLayout.setPlaceholderText("Config name")
-
         textInputActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onTextInputActivityResult)
         modelSelectionActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onModelSelectionActivityResult)
+        itemEditorActivityLauncher=registerForActivityResult(StartActivityForResult(), this::onItemEditorActivityResult)
 
         runBlocking { adapter.mutex.withLock {
-            updateUI(adapter)
+            config=adapter.activeConfig
             }}
+        updateUI()
         }
 
     override fun onResume() {
-        launch { adapter.mutex.withLock {
-            updateUI(adapter)
-            }}
+        launch {
+            adapter.mutex.withLock {
+                config=adapter.activeConfig
+                }
+            updateUI()
+            }
 
         super.onResume()
         }
 
-    fun onSystemPromptLinkClick(v: View) {
+    override fun onDestroy() {
+        job.cancel()
+        super.onDestroy()
+        }
+
+    private fun buildForm() {
+        val llm={ config.llm }
+        val detection={ config.llm.changeDetection }
+        val lifetime={ config.lifetime }
+
+        // Shown only when there's a problem, e.g. a template syntax error
+        val problem=form.label { processManager.problem(config)?.let { "Problem: $it" } }
+        problem.accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+
+        form.heading("Instructions")
+        form.link({ "System prompt: ${summarizeOrNone(config.llm.systemPrompt)}" }) {
+            startTextInputActivity("System prompt", config.llm.systemPrompt, "system-prompt")
+            }
+        form.link({ "User prompt: ${summarizeOrNone(config.llm.userPrompt)}" }) {
+            startTextInputActivity("User prompt", config.llm.userPrompt, "user-prompt")
+            }
+        form.switch("Append the image to the user prompt, unless it places an image itself", { llm().appendImage }) { value -> editLlm { it.copy(appendImage=value) } }
+
+        form.heading("Camera")
+        form.choice("Flashlight mode", listOf("Default" to FlashlightMode.DEFAULT, "On" to FlashlightMode.ON, "Off" to FlashlightMode.OFF), { lifetime().flashlight }) { value -> editLifetime { it.copy(flashlight=value) } }
+        form.choice("Capture", listOf("Auto" to CaptureMode.AUTO, "Photo" to CaptureMode.PHOTO, "Stream frame" to CaptureMode.FRAME), { lifetime().capture }) { value -> editLifetime { it.copy(capture=value) } }
+
+        form.heading("Model")
+        form.text("Model", { llm().model }, { value -> editLlm { it.copy(model=value) } })
+        form.button("Select model") { startModelSelectionActivity() }
+        form.int("Max completion tokens", { llm().maxCompletionTokens }) { value -> editLlm { it.copy(maxCompletionTokens=value) } }
+        form.choice("Reasoning effort", listOf(
+            "Unspecified" to null,
+            "None" to ReasoningEffort.NONE,
+            "Minimal" to ReasoningEffort.MINIMAL,
+            "Low" to ReasoningEffort.LOW,
+            "Medium" to ReasoningEffort.MEDIUM,
+            "High" to ReasoningEffort.HIGH,
+            "Xhigh" to ReasoningEffort.XHIGH,
+            ), { llm().reasoningEffort }) { value -> editLlm { it.copy(reasoningEffort=value) } }
+
+        form.heading("Change detection")
+        form.choice("Mode", listOf(
+            "The app compares the output with the last one" to LlmChangeDetectionMode.APP_DRIVEN,
+            "The model marks changes" to LlmChangeDetectionMode.LLM_DRIVEN,
+            ), { detection().mode }) { value -> editDetection { it.copy(mode=value) } }
+        val marker=form.text("Change marker", { detection().changeMarker }, { value -> editDetection { it.copy(changeMarker=value) } })
+        val markerMeaning=form.choice("The marker means", listOf(
+            "No change" to ChangeMarkerMeaning.NO_CHANGE,
+            "A change" to ChangeMarkerMeaning.CHANGE,
+            ), { detection().changeMarkerMeaning }) { value -> editDetection { it.copy(changeMarkerMeaning=value) } }
+        val markerMatch=form.choice("Marker match", listOf(
+            "Exact" to MarkerMatch.EXACT,
+            "Wildcard" to MarkerMatch.WILDCARD,
+            "Regex" to MarkerMatch.REGEX,
+            ), { detection().changeMarkerMatch }) { value -> editDetection { it.copy(changeMarkerMatch=value) } }
+        form.visibleWhen({ detection().mode==LlmChangeDetectionMode.LLM_DRIVEN }, marker, markerMeaning, markerMatch)
+
+        form.heading("Operations")
+        form.list({ config.operations }, Descriptions::operation, { index ->
+            val operation=config.operations[index]
+            startItemEditorActivity(ItemKind.OPERATION, operationName(operation), ItemForm.encode(operation), index)
+            }) { from, to -> edit { it.copy(operations=moved(it.operations, from, to)) } }
+        form.button("Add operation") { addOperation() }
+
+        form.heading("Lifetime")
+        form.double("Interval in seconds, 0 runs once", { lifetime().interval }) { value -> editLifetime { it.copy(interval=value) } }
+        form.choice("Iteration mode", listOf("Sync" to IterationMode.SYNC, "Async" to IterationMode.ASYNC), { lifetime().mode }) { value -> editLifetime { it.copy(mode=value) } }
+        val maxInFlight=form.int("Max analyses at once", { lifetime().maxInFlight }) { value -> editLifetime { it.copy(maxInFlight=value) } }
+        form.visibleWhen({ lifetime().mode==IterationMode.ASYNC }, maxInFlight)
+        form.optionalText("Iteration condition", { lifetime().iterationCondition }, { value -> editLifetime { it.copy(iterationCondition=value) } })
+        form.double("Analysis timeout in seconds, 0 for none", { lifetime().analysisTimeout }) { value -> editLifetime { it.copy(analysisTimeout=value) } }
+        form.double("Error interval in seconds, 0 for the interval", { lifetime().errorInterval }) { value -> editLifetime { it.copy(errorInterval=value) } }
+        form.double("Error backoff", { lifetime().errorBackoff }) { value -> editLifetime { it.copy(errorBackoff=value) } }
+        form.double("Max error interval in seconds, 0 for none", { lifetime().maxErrorInterval }) { value -> editLifetime { it.copy(maxErrorInterval=value) } }
+        form.int("Max iterations, 0 for no limit", { lifetime().maxIterations }) { value -> editLifetime { it.copy(maxIterations=value) } }
+        form.double("Max duration in seconds, 0 for no limit", { lifetime().maxDuration }) { value -> editLifetime { it.copy(maxDuration=value) } }
+        form.int("Max tokens, 0 for no limit", { lifetime().maxTokens }) { value -> editLifetime { it.copy(maxTokens=value) } }
+
+        form.heading("Parameters")
+        form.list({ config.allParameters }, Descriptions::parameter, { index ->
+            val parameter=config.allParameters[index]
+            startItemEditorActivity(ItemKind.PARAMETER, "Parameter ${parameter.name}", ItemForm.encode(parameter), index)
+            }) { from, to -> edit { withParameters(it, moved(it.allParameters, from, to)) } }
+        form.button("Add parameter") {
+            startItemEditorActivity(ItemKind.PARAMETER, "New parameter", ItemForm.encode(Parameter("", ParameterType.STRING)))
+            }
+
+        form.heading("Lens")
+        form.choice("Applies to", listOf(
+            "The image parameter" to LensTarget.IMAGE,
+            "All image source parameters" to LensTarget.ALL,
+            ), { config.lens.appliesTo }) { value -> edit { it.copy(lens=it.lens.copy(appliesTo=value)) } }
+        form.list({ config.lens.operations }, Descriptions::lensOperation, { index ->
+            val operation=config.lens.operations[index]
+            startItemEditorActivity(ItemKind.LENS_OPERATION, lensOperationName(operation), ItemForm.encode(operation), index)
+            }) { from, to -> edit { it.copy(lens=it.lens.copy(operations=moved(it.lens.operations, from, to))) } }
+        form.button("Add lens operation") { addLensOperation() }
+
+        form.heading("Memory")
+        form.list({ memoryVariables(config) }, { Descriptions.memoryVariable(it.name, it.value) }, { index ->
+            val variable=memoryVariables(config)[index]
+            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "Memory variable ${variable.name}", ItemForm.encode(variable), index)
+            })
+        form.button("Add memory variable") {
+            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "New memory variable", ItemForm.encode(MemoryVariable("", JsonPrimitive(""))))
+            }
+
+        form.heading("Debug")
+        form.optionalText("Iteration start sound", { config.debug.iterationStartSound }, { value -> edit { it.copy(debug=it.debug.copy(iterationStartSound=value)) } })
+        form.optionalText("Iteration end sound", { config.debug.iterationEndSound }, { value -> edit { it.copy(debug=it.debug.copy(iterationEndSound=value)) } })
+
+        form.heading("Config")
+        form.text("Config name", { config.name }, { value -> edit { it.copy(name=value) } })
+        form.optionalText("Command", { config.command }, { value -> edit { it.copy(command=value) } })
+        form.text("Description", { config.description }, { value -> edit { it.copy(description=value) } }, multiLine=true)
+        }
+
+    // Applies the change to the form's copy at once, and to the process' config as soon as the adapter is free
+    // The form refreshes itself after the edits of its fields, the other callers update the UI
+    private fun edit(transform: (Config) -> Config) {
+        config=transform(config)
+
         launch { adapter.mutex.withLock {
-            startTextInputActivity("System prompt", adapter.activeConfig.llm.systemPrompt, "system-prompt")
-            }}
-        }
-    fun updateSystemPromptLink(adapter: TabAdapter) {
-        val systemPrompt=adapter.activeConfig.llm.systemPrompt
+            val old=adapter.activeConfig
+            val new=transform(old)
+            adapter.activeConfig=new
 
-        val message=if (!systemPrompt.isEmpty())
-        summarizeText(systemPrompt)
-        else
-        "None"
-
-        systemPromptLink.setText("System prompt: $message")
-        }
-
-    fun onUserPromptLinkClick(v: View) {
-        launch { adapter.mutex.withLock {
-            startTextInputActivity("User prompt", adapter.activeConfig.llm.userPrompt, "user-prompt")
-            }}
-        }
-    fun updateUserPromptLink(adapter: TabAdapter) {
-        val userPrompt=adapter.activeConfig.llm.userPrompt
-
-        val message=if (!userPrompt.isEmpty())
-        summarizeText(userPrompt)
-        else
-        "None"
-
-        userPromptLink.setText("User prompt: $message")
-        }
-
-    fun onFlashlightModeSpinnerItemSelected(v: View, position: Int) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val flashlightMode=getSelectedFlashlightMode()
-            if (flashlightMode!=activeConfig.lifetime.flashlight)
-            adapter.activeConfig=activeConfig.copy(lifetime=activeConfig.lifetime.copy(flashlight=flashlightMode))
-            }}
-        }
-
-    fun onModelInputTextChange(text: String) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
+            // The conversation continued by Ask follows the model settings
             val conversation=adapter.conversation
-            val model=modelInput.text.toString()
-
-            if (model!=activeConfig.llm.model)
-            adapter.activeConfig=activeConfig.withLlm { it.copy(model=model) }
-
-            if (model!=conversation.model)
-            conversation.model=model
+            if (new.llm.model!=old.llm.model)
+            conversation.model=new.llm.model
+            if (new.llm.maxCompletionTokens!=old.llm.maxCompletionTokens)
+            conversation.maxCompletionTokens=new.llm.maxCompletionTokens
+            if (new.llm.reasoningEffort!=old.llm.reasoningEffort)
+            conversation.reasoningEffort=new.llm.reasoningEffort
             }}
         }
-    fun onSelectModelButtonClick(v: View) {
-        startModelSelectionActivity()
+    private fun editLlm(transform: (LlmAnalyzer) -> LlmAnalyzer) {
+        edit { it.withLlm(transform) }
         }
-    fun onMaxCompletionTokensInputTextChange(text: String) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val conversation=adapter.conversation
-            val maxCompletionTokens=maxCompletionTokensInput.text.toString().toInt()
-
-            if (maxCompletionTokens!=activeConfig.llm.maxCompletionTokens)
-            adapter.activeConfig=activeConfig.withLlm { it.copy(maxCompletionTokens=maxCompletionTokens) }
-
-            if (maxCompletionTokens!=conversation.maxCompletionTokens)
-            conversation.maxCompletionTokens=maxCompletionTokens
-            }}
+    private fun editDetection(transform: (LlmChangeDetection) -> LlmChangeDetection) {
+        editLlm { it.copy(changeDetection=transform(it.changeDetection)) }
         }
-    fun onReasoningEffortSpinnerItemSelected(v: View?, position: Int?) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val conversation=adapter.conversation
-            val reasoningEffort=getSelectedReasoningEffort()
-
-            if (reasoningEffort!=activeConfig.llm.reasoningEffort)
-            adapter.activeConfig=activeConfig.withLlm { it.copy(reasoningEffort=reasoningEffort) }
-
-            if (reasoningEffort!=conversation.reasoningEffort)
-            adapter.conversation.reasoningEffort=reasoningEffort
-            }}
-        }
-
-    fun onNameInputTextChange(text: String) {
-        launch { adapter.mutex.withLock {
-            val activeConfig=adapter.activeConfig
-            val name=nameInput.text.toString()
-            if (name!=activeConfig.name)
-            adapter.activeConfig=activeConfig.copy(name=name)
-            }}
+    private fun editLifetime(transform: (Lifetime) -> Lifetime) {
+        edit { it.copy(lifetime=transform(it.lifetime)) }
         }
 
     fun onUpdateButtonClick(v: View) {
@@ -274,11 +311,15 @@ class OptionsFragment: Fragment(), CoroutineScope {
             }}
         }
     fun onCreateButtonClick(v: View) {
-        launch { adapter.mutex.withLock {
-            val newConfig=ConfigManager.getInstance(context!!).addConfig(adapter.activeConfig)
-            adapter.activeConfig=newConfig
-            toast("created a new config called ${newConfig.name}")
-            }}
+        launch {
+            adapter.mutex.withLock {
+                val newConfig=ConfigManager.getInstance(context!!).addConfig(adapter.activeConfig)
+                adapter.activeConfig=newConfig
+                config=newConfig
+                toast("created a new config called ${newConfig.name}")
+                }
+            updateUI()
+            }
         }
     fun onDeleteButtonClick(v: View) {
         launch { adapter.mutex.withLock {
@@ -297,110 +338,62 @@ class OptionsFragment: Fragment(), CoroutineScope {
         Toast.makeText(activity!!, text, Toast.LENGTH_LONG).show()
         }
 
-    fun getUIConfig(adapter: TabAdapter): Config {
-        val maxCompletionTokensInputText=maxCompletionTokensInput.text.toString()
-        val maxCompletionTokens=if (!maxCompletionTokensInputText.isBlank())
-        maxCompletionTokensInputText.toInt()
-        else
-        0
+    private fun updateUI() {
+        form.refresh()
 
-        val activeConfig=adapter.activeConfig
-
-        return activeConfig.copy(
-            name=nameInput.text.toString(),
-            lifetime=activeConfig.lifetime.copy(flashlight=getSelectedFlashlightMode()),
-            ).withLlm { it.copy(
-                model=modelInput.text.toString(),
-                maxCompletionTokens=maxCompletionTokens,
-                reasoningEffort=getSelectedReasoningEffort(),
-                )}
+        updateButton.setClickable(!ConfigManager.isBuiltInConfigId(config.id))
+        deleteButton.setClickable(!ConfigManager.isBuiltInConfigId(config.id))
         }
 
-    val flashlightModeSpinnerOptions=arrayOf("Default", "On", "Off")
-    fun getSelectedFlashlightMode(): FlashlightMode {
-        return when (flashlightModeSpinner.selectedItemPosition) {
-            0 -> FlashlightMode.DEFAULT
-            1 -> FlashlightMode.ON
-            2 -> FlashlightMode.OFF
-            else -> throw Exception("Unknown flashlight mode ${flashlightModeSpinner.selectedItem}")
+    private fun summarizeOrNone(text: String): String = if (!text.isEmpty()) Descriptions.summarize(text, 300) else "None"
+
+    private fun addOperation() {
+        val operations=listOf<Operation>(
+            ToastOperation(),
+            SayOperation(),
+            PlayOperation(sound="beep"),
+            VibrateOperation(),
+            SetOperation(name=memoryVariables(config).firstOrNull()?.name ?: "", value=""),
+            )
+        chooseNew("Add operation", operations.map(::operationName)) { index ->
+            val operation=operations[index]
+            startItemEditorActivity(ItemKind.OPERATION, "New ${operationName(operation).lowercase()}", ItemForm.encode(operation))
             }
         }
-    fun setSelectedFlashlightMode(flashlightMode: FlashlightMode) {
-        flashlightModeSpinner.setSelection(when (flashlightMode) {
-            FlashlightMode.DEFAULT -> 0
-            FlashlightMode.ON -> 1
-            FlashlightMode.OFF -> 2
-            })
-        }
-
-
-    val reasoningEffortSpinnerOptions=arrayOf(
-        "Unspecified",
-        "None",
-        "Minimal",
-        "Low",
-        "Medium",
-        "High",
-        "Xhigh",
-        )
-    fun getSelectedReasoningEffort(): ReasoningEffort? {
-        return when (reasoningEffortSpinner.selectedItemPosition) {
-            0 -> null
-            1 -> ReasoningEffort.NONE
-            2 -> ReasoningEffort.MINIMAL
-            3 -> ReasoningEffort.LOW
-            4 -> ReasoningEffort.MEDIUM
-            5 -> ReasoningEffort.HIGH
-            6 -> ReasoningEffort.XHIGH
-            else -> throw Exception("Unknown reasoning effort ${reasoningEffortSpinner.selectedItem}")
+    private fun addLensOperation() {
+        val operations=listOf<LensOperation>(
+            Crop(RelativeRect.FULL),
+            Zoom(2f),
+            Downscale(1024),
+            )
+        chooseNew("Add lens operation", operations.map(::lensOperationName)) { index ->
+            val operation=operations[index]
+            startItemEditorActivity(ItemKind.LENS_OPERATION, "New ${lensOperationName(operation).lowercase()}", ItemForm.encode(operation))
             }
         }
-    fun setSelectedReasoningEffort(reasoningEffort: ReasoningEffort?) {
-        reasoningEffortSpinner.setSelection(when (reasoningEffort) {
-            null -> 0
-            ReasoningEffort.NONE -> 1
-            ReasoningEffort.MINIMAL -> 2
-            ReasoningEffort.LOW -> 3
-            ReasoningEffort.MEDIUM -> 4
-            ReasoningEffort.HIGH -> 5
-            ReasoningEffort.XHIGH -> 6
-            })
+    private fun chooseNew(title: String, names: List<String>, onChoice: (Int) -> Unit) {
+        AlertDialog.Builder(context!!)
+        .setTitle(title)
+        .setItems(names.toTypedArray()) { _, index -> onChoice(index) }
+        .setNegativeButton("Cancel", null)
+        .show()
         }
 
-    fun summarizeText(text: String): String {
-        val processedText=text.replace("\n", " ")
-
-        return if (processedText.length<=300)
-        processedText
-        else
-        "${processedText.substring(0..300)}..."
+    private fun operationName(operation: Operation): String {
+        return when (operation) {
+            is ToastOperation -> "Toast operation"
+            is SayOperation -> "Say operation"
+            is PlayOperation -> "Play operation"
+            is VibrateOperation -> "Vibrate operation"
+            is SetOperation -> "Set operation"
+            }
         }
-
-    private fun updateUI(adapter: TabAdapter) {
-        val uiConfig=getUIConfig(adapter)
-
-        val activeConfig=adapter.activeConfig
-
-        updateSystemPromptLink(adapter)
-        updateUserPromptLink(adapter)
-
-        if (uiConfig.lifetime.flashlight!=activeConfig.lifetime.flashlight)
-        setSelectedFlashlightMode(activeConfig.lifetime.flashlight)
-
-        if (uiConfig.llm.model!=activeConfig.llm.model)
-        modelInput.setText(activeConfig.llm.model)
-
-        if (uiConfig.llm.maxCompletionTokens!=activeConfig.llm.maxCompletionTokens)
-        maxCompletionTokensInput.setText(activeConfig.llm.maxCompletionTokens.toString())
-
-        if (uiConfig.llm.reasoningEffort!=activeConfig.llm.reasoningEffort)
-        setSelectedReasoningEffort(activeConfig.llm.reasoningEffort)
-
-        if (uiConfig.name!=activeConfig.name)
-        nameInput.setText(activeConfig.name)
-
-        updateButton.setClickable(!ConfigManager.isBuiltInConfigId(activeConfig.id))
-        deleteButton.setClickable(!ConfigManager.isBuiltInConfigId(activeConfig.id))
+    private fun lensOperationName(operation: LensOperation): String {
+        return when (operation) {
+            is Crop -> "Crop"
+            is Zoom -> "Zoom"
+            is Downscale -> "Downscale"
+            }
         }
 
     private fun startTextInputActivity(title: String, text: String, context: String) {
@@ -412,24 +405,12 @@ class OptionsFragment: Fragment(), CoroutineScope {
         if (result.resultCode==androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
             val output=TextInputActivityOutput.fromIntent(result.data, "OptionsFragment")
 
-            launch { adapter.mutex.withLock {
-                val activeConfig=adapter.activeConfig
-                when (output.context) {
-                    "system-prompt" -> {
-                        if (activeConfig.llm.systemPrompt!=output.text) {
-                            adapter.activeConfig=activeConfig.withLlm { it.copy(systemPrompt=output.text) }
-                            updateSystemPromptLink(adapter)
-                            }
-                        }
-                    "user-prompt" -> {
-                        if (activeConfig.llm.userPrompt!=output.text) {
-                            adapter.activeConfig=activeConfig.withLlm { it.copy(userPrompt=output.text) }
-                            updateUserPromptLink(adapter)
-                            }
-                        }
-                    else -> toast("Error: Received text input for unknown field ${output.context}")
-                    }
-                }}
+            when (output.context) {
+                "system-prompt" -> editLlm { it.copy(systemPrompt=output.text) }
+                "user-prompt" -> editLlm { it.copy(userPrompt=output.text) }
+                else -> toast("Error: Received text input for unknown field ${output.context}")
+                }
+            updateUI()
             }
         }
     private fun startModelSelectionActivity() {
@@ -443,9 +424,64 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
             if (!output.model.isEmpty()) {
                 val model=output.model
-
-                modelInput.setText(model)
+                editLlm { it.copy(model=model) }
+                updateUI()
                 }
             }
+        }
+    private fun startItemEditorActivity(kind: ItemKind, title: String, item: String, index: Int=-1) {
+        val intent=ItemEditorActivityInput(kind, title, item, index)
+        .toIntent(activity!!)
+        itemEditorActivityLauncher.launch(intent)
+        }
+    private fun onItemEditorActivityResult(result: ActivityResult) {
+        if (result.resultCode==androidx.appcompat.app.AppCompatActivity.RESULT_OK) {
+            val output=ItemEditorActivityOutput.fromIntent(result.data, "OptionsFragment")
+            val json=output.item
+            val index=output.index
+
+            when (output.kind) {
+                ItemKind.PARAMETER -> edit { withParameters(it, replaced(it.allParameters, index, json?.let { ItemForm.decodeParameter(it) })) }
+                ItemKind.MEMORY_VARIABLE -> edit { config ->
+                    val variables=replaced(memoryVariables(config), index, json?.let { ItemForm.decodeMemoryVariable(it) })
+                    config.copy(memory=variables.associate { it.name to it.value })
+                    }
+                ItemKind.OPERATION -> edit { it.copy(operations=replaced(it.operations, index, json?.let { ItemForm.decodeOperation(it) })) }
+                ItemKind.LENS_OPERATION -> edit { it.copy(lens=it.lens.copy(operations=replaced(it.lens.operations, index, json?.let { ItemForm.decodeLensOperation(it) }))) }
+                }
+            updateUI()
+            }
+        }
+
+    companion object {
+
+        // The list with the item at the index replaced, removed when null, or added for index -1
+        fun <T> replaced(list: List<T>, index: Int, item: T?): List<T> {
+            val result=list.toMutableList()
+            if (index<0) {
+                if (item!=null)
+                result.add(item)
+                }
+            else if (index<result.size) {
+                if (item!=null)
+                result[index]=item
+                else
+                result.removeAt(index)
+                }
+            return result
+            }
+
+        fun <T> moved(list: List<T>, from: Int, to: Int): List<T> {
+            val result=list.toMutableList()
+            result.add(to, result.removeAt(from))
+            return result
+            }
+
+        // The list shows all parameters, the implicit image one included, which is declared only when it differs from the default
+        fun withParameters(config: Config, parameters: List<Parameter>): Config {
+            return config.copy(parameters=parameters.filter { it!=Parameter.defaultImageParameter })
+            }
+
+        fun memoryVariables(config: Config): List<MemoryVariable> = config.memory.map { (name, value) -> MemoryVariable(name, value) }
         }
     }
