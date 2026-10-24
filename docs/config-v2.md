@@ -99,15 +99,32 @@ value = "true"                        # JavaScript expression
 
 [lifetime]
 interval = 2.0                        # seconds, 0 = single-shot
+mode = "sync"                         # sync | async, see Iterations below
+max_in_flight = 3                     # async: the most analyses running at once
+analysis_timeout = 60                 # seconds an analysis may take before its iteration fails, 0 = no limit
+error_interval = 0                    # seconds until the next iteration after a failed one, 0 = the interval
+error_backoff = 1.0                   # multiplies the error interval for each further failure in a row
+max_error_interval = 0                # seconds the error interval grows up to, 0 = no limit
 capture = "auto"                      # auto: photo when single-shot, stream frame when looping | photo | frame
 flashlight = "default"                # default | on | off (the torch while looping, the flash for photos)
-iteration_condition = "..."           # optional JavaScript expression
-max_iterations = 0                    # 0 = unlimited
+iteration_condition = "device.pitch > -30"   # optional JavaScript expression, holds the iterations while false
+max_iterations = 0                    # limits end the process; 0 = unlimited
 max_duration = 0                      # seconds
 max_tokens = 0
 ```
 
 Default values may be omitted. The defaults make up the built-in Base config.
+
+## Iterations
+
+Every iteration analyzes its input, then commits the result: the change detection, `lastOutput` and `history`, and the operations. Iterations are committed one at a time, in the order they started.
+
+- **`sync`**: an iteration starts once the previous one has been committed, and no sooner than `interval` after the previous start. The interval is the shortest time between two images.
+- **`async`**: an iteration starts every `interval`, while earlier analyses may still be running, up to `max_in_flight` of them; further iterations wait for one to be committed, so the frames meanwhile aren't taken. A result waits for the iterations started before it. This catches things visible for less time than an analysis takes. An iteration's prompt is rendered when it starts, so it doesn't see the results of the iterations still running; `llm_driven` change detection, which relies on the model seeing the last output, can't be used with `async`.
+
+A failed iteration, for example one whose analysis timed out, is skipped, and its error is reported once until a different error or a success comes. The next iteration starts after `error_interval` instead of the interval, multiplied by `error_backoff` for every further failure in a row, up to `max_error_interval`. A short interval for a real-time task can keep the default, the interval; a long one can retry sooner with a short error interval.
+
+While the `iteration_condition` is false, the iterations are held: it's checked continually, and an iteration starts as soon as it holds and the interval has passed. A single-shot process waits for it too, on-demand scans of the foreground process don't. A looping process ends only when killed or when it reaches one of the `max_` limits.
 
 ## Sounds and vibrations
 
@@ -139,7 +156,7 @@ When an iteration is not a change, `lastOutput` keeps its previous value.
 
 ## Process variables
 
-These are visible to templates and expressions. Templates see only the process scope. Global variables reach a process through its arguments and parameter defaults, such as `--image=$door` (see [commands.md](commands.md)).
+These are visible to templates and expressions, as they are when the iteration starts for the prompts and when it's committed for the operations. Templates see only the process scope. Global variables reach a process through its arguments and parameter defaults, such as `--image=$door` (see [commands.md](commands.md)).
 
 Scans of the foreground process count as changes even when the output stays the same, unless the setting "Report every scan" is off. `lastOutput` and `history` still change only with the output. Looping always uses the change detection.
 
@@ -153,6 +170,7 @@ Scans of the foreground process count as changes even when the output stays the 
 | `history` | past reported outputs, oldest first, capped at 20 |
 | `iteration` | 1, 2, … |
 | `elapsed` | seconds since the process started |
+| `device` | the phone: `pitch` (degrees the back camera looks above the horizon: -90 at the ground, 0 held upright, 90 at the sky), `roll` (degrees turned around the camera's axis: 0 upright, 90 with the top turned right, -90 left, 180 upside down; unreliable when lying flat), `screenLocked` (also true while the screen is off), `battery` (0 to 100), `charging`. The orientation sensor is used only while a running config refers to `device.`; `pitch` and `roll` are `null` without the sensor. |
 
 ## Migration from v1
 

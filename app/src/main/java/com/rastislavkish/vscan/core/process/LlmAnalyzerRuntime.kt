@@ -99,7 +99,7 @@ class LlmAnalyzerRuntime(
         val output=response.text.trim()
         return AnalysisResult(
             output,
-            changeDetector.isChange(output, input.lastOutput),
+            { changeDetector.isChange(output, it) },
             response.usage,
             conversation,
             )

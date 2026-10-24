@@ -25,9 +25,9 @@ class ProcessException(message: String): Exception(message)
 
 // What an analyzer gets for one iteration
 class AnalysisInput(
-    // The process variables, for templates and expressions
+    // The process variables as the iteration starts, for templates and expressions
+    // In the async mode, the results of the iterations still running aren't in them
     val variables: Map<String, Any?>,
-    val lastOutput: String?,
     // Takes an image from a source the way the process captures, the same source giving the same image within an iteration
     val capture: suspend (ImageSource) -> ImageData,
     )
@@ -35,8 +35,9 @@ class AnalysisInput(
 class AnalysisResult(
     // The processable output
     val output: String,
-    // Whether there's anything new to report
-    val changed: Boolean,
+    // Whether there's anything new to report since the given last output
+    // Decided when the result is committed, the iterations before it having been committed already
+    val isChange: (lastOutput: String?) -> Boolean,
     val usage: Usage=Usage(),
     // The conversation of an LLM analysis, which the foreground process lets the user continue
     val conversation: Conversation?=null,

@@ -25,6 +25,9 @@ import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.ProvidersManager
 import com.rastislavkish.vscan.core.Settings
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.device.AndroidDeviceMonitor
+import com.rastislavkish.vscan.core.device.DeviceMonitor
+import com.rastislavkish.vscan.core.device.NoDeviceMonitor
 import com.rastislavkish.vscan.core.files.VScanFiles
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSources
@@ -38,6 +41,7 @@ class ProcessManager(
     // Notified of errors and ends of all processes
     private val listener: ProcessListener,
     private val defaultFlashlight: () -> Boolean,
+    private val device: DeviceMonitor=NoDeviceMonitor,
     private val scope: CoroutineScope=CoroutineScope(SupervisorJob()+Dispatchers.Default),
     private val clock: () -> Long=SystemClock::elapsedRealtime,
     // Set by the foreground process' captures, the one the global memory gives as $lastImage
@@ -141,7 +145,7 @@ class ProcessManager(
         val analyzer=analyzer(config)
 
         return synchronized(processes) {
-            val process=Process(nextPid++, config, values, analyzer, executor, this, defaultFlashlight(), given, clock)
+            val process=Process(nextPid++, config, values, analyzer, executor, this, defaultFlashlight(), given, device, clock)
             process.foreground=foreground
             processes[process.pid]=process
             process
@@ -149,7 +153,7 @@ class ProcessManager(
         }
 
     private fun analyzer(config: Config): AnalyzerRuntime {
-        Process.validateMemory(config)
+        Process.validate(config)
         try {
             return createAnalyzer(config)
             }
@@ -219,6 +223,7 @@ class ProcessManager(
                     AndroidOperationExecutor(appContext),
                     ToastingListener(appContext),
                     { settings.useFlashlight },
+                    AndroidDeviceMonitor(appContext),
                     lastImage=lastImage,
                     )
                 }

@@ -42,7 +42,7 @@ class CommandInterpreterTest {
         val manager=ProcessManager(
             Arguments(GlobalMemory(StaticImageSource(ImageData.fromEncoded(byteArrayOf(1))), LastImage())),
             { object: AnalyzerRuntime {
-                override suspend fun analyze(input: AnalysisInput): AnalysisResult = AnalysisResult("A", true)
+                override suspend fun analyze(input: AnalysisInput): AnalysisResult = AnalysisResult("A", { true })
                 }},
             object: OperationExecutor {
                 override suspend fun execute(operation: Operation, scope: ScriptScope, process: Process) {}
@@ -52,8 +52,8 @@ class CommandInterpreterTest {
                 override fun onEnd(process: Process) {}
                 },
             { false },
-            this,
-            { testScheduler.currentTime },
+            scope=this,
+            clock={ testScheduler.currentTime },
             )
 
         this@CommandInterpreterTest.manager=manager

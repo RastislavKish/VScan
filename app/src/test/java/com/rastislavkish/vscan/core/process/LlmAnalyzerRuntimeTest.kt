@@ -71,8 +71,8 @@ class LlmAnalyzerRuntimeTest {
     private val camera=StaticImageSource(photo)
     private val other=StaticImageSource(frame)
 
-    private fun input(variables: Map<String, Any?>, lastOutput: String?=null): AnalysisInput {
-        return AnalysisInput(mapOf("image" to camera)+variables, lastOutput) { source: ImageSource -> source.capture(false) }
+    private fun input(variables: Map<String, Any?>): AnalysisInput {
+        return AnalysisInput(mapOf("image" to camera)+variables) { source: ImageSource -> source.capture(false) }
         }
 
     private fun parts(backend: FakeBackend): List<CompositeMessage.Part> {
@@ -92,7 +92,7 @@ class LlmAnalyzerRuntimeTest {
         val result=LlmAnalyzerRuntime(analyzer, backend).analyze(input(mapOf("object" to "keys", "strict" to true)))
 
         assertEquals("Bus 42", result.output)
-        assertTrue(result.changed)
+        assertTrue(result.isChange(null))
         assertEquals(7, result.usage.totalTokens)
         assertEquals("Be brief.", backend.conversation!!.messages.first().text)
 
@@ -128,10 +128,12 @@ class LlmAnalyzerRuntimeTest {
     fun detectsChanges() = runTest {
         val unchanged=FakeBackend(AssistantMessage("Unchanged", "", "stop"))
         val llmDriven=LlmAnalyzer(changeDetection=LlmChangeDetection(mode=LlmChangeDetectionMode.LLM_DRIVEN))
-        assertFalse(LlmAnalyzerRuntime(llmDriven, unchanged).analyze(input(mapOf(), "42")).changed)
+        assertFalse(LlmAnalyzerRuntime(llmDriven, unchanged).analyze(input(mapOf())).isChange("42"))
 
         val same=FakeBackend(AssistantMessage("42", "", "stop"))
-        assertFalse(LlmAnalyzerRuntime(LlmAnalyzer(), same).analyze(input(mapOf(), "42")).changed)
+        val sameResult=LlmAnalyzerRuntime(LlmAnalyzer(), same).analyze(input(mapOf()))
+        assertFalse(sameResult.isChange("42"))
+        assertTrue(sameResult.isChange("41"))
         }
 
     @Test

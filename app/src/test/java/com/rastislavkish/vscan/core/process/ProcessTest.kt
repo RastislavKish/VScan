@@ -28,12 +28,17 @@ import org.junit.Test
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
+import com.rastislavkish.vscan.core.config.IterationMode
 import com.rastislavkish.vscan.core.config.Lifetime
+import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.config.LlmChangeDetection
+import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
 import com.rastislavkish.vscan.core.config.Operation
 import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.config.ParameterType
 import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.config.ToastOperation
+import com.rastislavkish.vscan.core.device.DeviceMonitor
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.openai.Usage
@@ -58,7 +63,7 @@ class ProcessTest {
             val output=outputs[minOf(inputs.size, outputs.size)-1]
             ?: throw ProcessException("Failed")
 
-            return AnalysisResult(output, output!=input.lastOutput, Usage(totalTokens=tokens))
+            return AnalysisResult(output, { it!=output }, Usage(totalTokens=tokens))
             }
         }
 
@@ -179,7 +184,7 @@ class ProcessTest {
         process.join()
 
         assertEquals(listOf("1", "2"), process.history)
-        assertEquals(listOf(null, "1", "1"), analyzer.inputs.map { it.lastOutput })
+        assertEquals(listOf(null, "1", "1"), analyzer.inputs.map { it.variables["lastOutput"] })
         assertEquals(listOf("1", "2"), executor.executed.map { it["rawOutput"] })
         assertEquals(listOf(1.0, 3.0), executor.executed.map { it["iteration"] })
         }
@@ -244,10 +249,186 @@ class ProcessTest {
         val byTokens=analyzer("A", tokens=40)
         process(Config(lifetime=Lifetime(interval=2.0, maxTokens=100)), byTokens).join()
         assertEquals(3, byTokens.inputs.size)
+        }
 
-        val byCondition=analyzer("A")
-        process(Config(lifetime=Lifetime(interval=2.0, iterationCondition="iteration<=2")), byCondition).join()
-        assertEquals(2, byCondition.inputs.size)
+    @Test
+    fun iterationConditionHoldsTheIterations() = runTest {
+        val analyzer=analyzer("A")
+        val config=Config(lifetime=Lifetime(interval=2.0, maxIterations=4, iterationCondition="elapsed<3 || elapsed>=10"))
+        process(config, analyzer).join()
+
+        // Held from 4 s, resumed as soon as the condition holds again
+        assertEquals(listOf(0L, 2000L, 10000L, 12000L), analyzer.times)
+        }
+
+    @Test
+    fun iterationConditionErrorsAreReportedOnce() = runTest {
+        val analyzer=analyzer("A")
+        val process=process(Config(lifetime=Lifetime(interval=1.0, iterationCondition="missing>1")), analyzer)
+
+        advanceTimeBy(5000)
+        process.kill()
+        process.join()
+
+        assertEquals(0, analyzer.inputs.size)
+        assertEquals(1, listener.errors.size)
+        assertTrue(listener.errors[0].startsWith("Error in the iteration condition"))
+        }
+
+    // Returns the given outputs in turn, a null one failing, each after its duration
+    private class SlowAnalyzer(
+        private val outputs: List<String?>,
+        private val durations: List<Long>,
+        private val clock: () -> Long,
+        ): AnalyzerRuntime {
+
+        val starts=mutableListOf<Long>()
+        val inputs=mutableListOf<AnalysisInput>()
+
+        override suspend fun analyze(input: AnalysisInput): AnalysisResult {
+            val index=starts.size
+            starts.add(clock())
+            inputs.add(input)
+            delay(durations[minOf(index, durations.size-1)])
+
+            val output=outputs[minOf(index, outputs.size-1)] ?: throw ProcessException("Failed")
+            return AnalysisResult(output, { it!=output })
+            }
+        }
+
+    private fun asynchronous(maxIterations: Int, maxInFlight: Int=3) = Config(lifetime=Lifetime(interval=1.0, mode=IterationMode.ASYNC, maxInFlight=maxInFlight, maxIterations=maxIterations))
+
+    @Test
+    fun asyncResultsAreCommittedInOrder() = runTest {
+        val analyzer=SlowAnalyzer(listOf("A", "B", "C"), listOf(3000, 500, 500)) { testScheduler.currentTime }
+        val process=process(asynchronous(3), analyzer)
+        process.join()
+
+        assertEquals(listOf(0L, 1000L, 2000L), analyzer.starts)
+        assertEquals(listOf("A", "B", "C"), executor.executed.map { it["rawOutput"] })
+        assertEquals(listOf(1.0, 2.0, 3.0), executor.executed.map { it["iteration"] })
+        assertEquals("C", process.lastOutput)
+        assertEquals(3000L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun asyncIterationsWaitForRoom() = runTest {
+        val analyzer=SlowAnalyzer(listOf("A", "B", "C", "D"), listOf(3000)) { testScheduler.currentTime }
+        process(asynchronous(4, maxInFlight=2), analyzer).join()
+
+        assertEquals(listOf(0L, 1000L, 3000L, 4000L), analyzer.starts)
+        }
+
+    @Test
+    fun asyncChangesAreDetectedWhenCommitted() = runTest {
+        val analyzer=SlowAnalyzer(listOf("A", "A"), listOf(2000)) { testScheduler.currentTime }
+        process(asynchronous(2), analyzer).join()
+
+        // The second prompt didn't see the first output yet, the commit did
+        assertEquals(listOf(null, null), analyzer.inputs.map { it.variables["lastOutput"] })
+        assertEquals(listOf(true, false), executor.executed.map { it["changed"] })
+        }
+
+    @Test
+    fun failedAsyncIterationsAreSkipped() = runTest {
+        val analyzer=SlowAnalyzer(listOf(null, "B"), listOf(3000, 500)) { testScheduler.currentTime }
+        val process=process(asynchronous(2), analyzer)
+        process.join()
+
+        assertEquals(listOf("Failed"), listener.errors)
+        assertEquals(listOf("B"), executor.executed.map { it["rawOutput"] })
+        assertEquals(ProcessStatus.FINISHED, process.status)
+        }
+
+    @Test
+    fun scansAreCommittedAfterTheRunningIterations() = runTest {
+        val analyzer=SlowAnalyzer(listOf("Loop", "Scan"), listOf(3000, 100)) { testScheduler.currentTime }
+        val process=process(asynchronous(1), analyzer)
+
+        advanceTimeBy(500)
+        assertTrue(process.scan(true))
+        assertEquals(listOf("Loop", "Scan"), executor.executed.map { it["rawOutput"] })
+        assertEquals(3000L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun slowAnalysesTimeOut() = runTest {
+        val analyzer=SlowAnalyzer(listOf("A"), listOf(5000)) { testScheduler.currentTime }
+        val process=process(Config(lifetime=Lifetime(analysisTimeout=1.5)), analyzer)
+        process.join()
+
+        assertEquals(ProcessStatus.FAILED, process.status)
+        assertEquals(listOf("Analysis timed out after 1.5 s"), listener.errors)
+        assertEquals(1500L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun failuresUseTheErrorInterval() = runTest {
+        val analyzer=analyzer(null, null, null, "A", "A")
+        val lifetime=Lifetime(interval=10.0, errorInterval=1.0, errorBackoff=2.0, maxErrorInterval=3.0, maxIterations=5)
+        process(Config(lifetime=lifetime), analyzer).join()
+
+        assertEquals(listOf(0L, 1000L, 3000L, 6000L, 16000L), analyzer.times)
+        }
+
+    private class FakeDevice: DeviceMonitor {
+
+        var pitch=0.0
+        var listening=0
+
+        override fun listen(): Closeable {
+            listening++
+            return Closeable { listening-- }
+            }
+        override suspend fun awaitReadings() {}
+        override fun state(): Map<String, Any?> = mapOf("pitch" to pitch)
+        }
+
+    @Test
+    fun deviceVariableIsListenedToWhenUsed() = runTest {
+        val device=FakeDevice()
+        val analyzer=analyzer("A")
+        val config=Config(lifetime=Lifetime(interval=1.0, iterationCondition="device.pitch>60"))
+        val process=Process(1, config, mapOf(), analyzer, executor, listener, false, device=device) { testScheduler.currentTime }
+        process.start(this)
+
+        advanceTimeBy(3000)
+        assertEquals(1, device.listening)
+        assertEquals(0, analyzer.inputs.size)
+
+        device.pitch=80.0
+        advanceTimeBy(300)
+        assertEquals(1, analyzer.inputs.size)
+        assertEquals(80.0, (analyzer.inputs[0].variables["device"] as Map<*, *>)["pitch"])
+
+        process.kill()
+        process.join()
+        assertEquals(0, device.listening)
+
+        // Configs not using it don't listen
+        val other=Process(2, Config(), mapOf(), analyzer("A"), executor, listener, false, device=device) { testScheduler.currentTime }
+        other.start(this)
+        other.join()
+        assertEquals(0, device.listening)
+        }
+
+    @Test
+    fun invalidLifetimes() {
+        fun assertInvalid(messagePart: String, config: Config) {
+            try {
+                Process.validate(config)
+                fail("Should have failed")
+                }
+            catch (e: ProcessException) {
+                assertTrue("\"${e.message}\" should mention \"$messagePart\"", e.message!!.contains(messagePart))
+                }
+            }
+
+        val llmDriven=LlmAnalyzer(changeDetection=LlmChangeDetection(mode=LlmChangeDetectionMode.LLM_DRIVEN))
+        assertInvalid("llm_driven", Config(analyzer=llmDriven, lifetime=Lifetime(mode=IterationMode.ASYNC)))
+        assertInvalid("max_in_flight", Config(lifetime=Lifetime(maxInFlight=0)))
+        Process.validate(Config(analyzer=llmDriven))
+        Process.validate(asynchronous(0))
         }
 
     @Test
@@ -260,7 +441,7 @@ class ProcessTest {
                 // The same source within an iteration gives the same image
                 input.capture(source)
                 input.capture(source)
-                return AnalysisResult("A", true)
+                return AnalysisResult("A", { true })
                 }
             }
 
@@ -279,7 +460,7 @@ class ProcessTest {
         val analyzer=object: AnalyzerRuntime {
             override suspend fun analyze(input: AnalysisInput): AnalysisResult {
                 input.capture(source)
-                return AnalysisResult("A", true)
+                return AnalysisResult("A", { true })
                 }
             }
 
@@ -332,7 +513,7 @@ class ProcessTest {
         val analyzer=object: AnalyzerRuntime {
             override suspend fun analyze(input: AnalysisInput): AnalysisResult {
                 input.capture(source)
-                return AnalysisResult("A", true)
+                return AnalysisResult("A", { true })
                 }
             }
         val captured=mutableListOf<ImageData>()
@@ -357,8 +538,8 @@ class ProcessTest {
         process.kill()
 
         assertEquals(1, first.inputs.size)
-        // Waits the old interval once, then the new one
-        assertEquals(listOf(2000L, 3000L), second.times)
+        // The new interval counts from the last start already
+        assertEquals(listOf(1000L, 2000L, 3000L), second.times)
         assertEquals("B", process.lastOutput)
         }
 

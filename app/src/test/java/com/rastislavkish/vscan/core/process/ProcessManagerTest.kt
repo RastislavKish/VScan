@@ -34,7 +34,7 @@ import com.rastislavkish.vscan.core.script.ScriptScope
 class ProcessManagerTest {
 
     private object ConstantAnalyzer: AnalyzerRuntime {
-        override suspend fun analyze(input: AnalysisInput): AnalysisResult = AnalysisResult("A", true)
+        override suspend fun analyze(input: AnalysisInput): AnalysisResult = AnalysisResult("A", { true })
         }
     private object IgnoringExecutor: OperationExecutor {
         override suspend fun execute(operation: Operation, scope: ScriptScope, process: Process) {}
@@ -44,7 +44,7 @@ class ProcessManagerTest {
     private object CapturingAnalyzer: AnalyzerRuntime {
         override suspend fun analyze(input: AnalysisInput): AnalysisResult {
             input.capture(input.variables["image"] as ImageSource)
-            return AnalysisResult("A", input.lastOutput!="A")
+            return AnalysisResult("A", { it!="A" })
             }
         }
 
@@ -61,9 +61,9 @@ class ProcessManagerTest {
             override fun onEnd(process: Process) { ended.add(process.pid) }
             },
         { false },
-        this,
-        { testScheduler.currentTime },
-        lastImage,
+        scope=this,
+        clock={ testScheduler.currentTime },
+        lastImage=lastImage,
         )
 
     @Test

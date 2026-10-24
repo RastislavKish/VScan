@@ -27,8 +27,13 @@ import kotlinx.serialization.json.*
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
+import com.rastislavkish.vscan.core.config.IterationMode
+import com.rastislavkish.vscan.core.config.LlmAnalyzer
+import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
 import com.rastislavkish.vscan.core.config.Parameter
 import com.rastislavkish.vscan.core.config.SetOperation
+import com.rastislavkish.vscan.core.device.DeviceMonitor
+import com.rastislavkish.vscan.core.device.NoDeviceMonitor
 import com.rastislavkish.vscan.core.image.ImageData
 import com.rastislavkish.vscan.core.imagesource.ImageSource
 import com.rastislavkish.vscan.core.openai.Conversation
@@ -54,8 +59,10 @@ interface ProcessListener {
     }
 
 // A running config
-// Iterations run one after another, each analyzing the input and running the operations on the result
-// The state is changed only by the running iteration, other threads may read it
+// Each iteration analyzes the input and then commits the result: change detection, the state and the operations
+// In the sync mode an iteration starts once the previous one has been committed, in the async mode the analyses overlap
+// Either way, iterations are committed one at a time in the order they started, the state being changed only by commits
+// The iteration condition holds the iterations while it's false, only the limits and the user end a looping process
 // The foreground process is the one the scan screen works with: it runs iterations on demand, loops only when started, and stays when its iterations end
 class Process(
     val pid: Int,
@@ -69,11 +76,29 @@ class Process(
     private val defaultFlashlight: Boolean,
     // The argument texts it was called with
     val given: Map<String, String> = mapOf(),
+    private val device: DeviceMonitor=NoDeviceMonitor,
     private val clock: () -> Long,
     ) {
 
     // The config and its analyzer, replaced together
-    private class Program(val config: Config, val analyzer: AnalyzerRuntime)
+    private class Program(val config: Config, val analyzer: AnalyzerRuntime) {
+
+        // Whether the device variable is used, so its sensors need to be listened to
+        val usesDevice=usesDevice(config)
+        }
+
+    // From its start to its commit
+    private class Iteration(
+        val number: Int,
+        val program: Program,
+        val input: AnalysisInput,
+        val reportAsChange: Boolean,
+        // Asked for by the user, so its errors are always reported
+        val manual: Boolean,
+        // Completed once the iteration started before it has been committed
+        val previous: Deferred<Unit>,
+        val committed: CompletableDeferred<Unit>,
+        )
 
     @Volatile private var program=Program(config, analyzer)
 
@@ -108,11 +133,17 @@ class Process(
 
     private val startTime=clock()
     @Volatile private var job: Job?=null
-    // Iterations on demand and the own ones take turns
-    private val iterationMutex=Mutex()
-    // Errors of the previous and the current iteration
+    // The commit of the last started iteration, the next one waiting for it
+    private var lastCommit: Deferred<Unit> = CompletableDeferred(Unit)
+    // Errors of the previous and the current commit
     private var previousErrors=setOf<String>()
     private var currentErrors=mutableSetOf<String>()
+    // Failed iterations in a row, for the error interval
+    @Volatile private var failures=0
+    // The last reported error of the iteration condition, reported again only when it changes
+    private var conditionError: String?=null
+    // Held while the own iterations run and the config uses the device variable
+    private var deviceHandle: Closeable?=null
 
     val elapsedSeconds: Double
     get() = (clock()-startTime)/1000.0
@@ -164,16 +195,19 @@ class Process(
     get() = job?.isActive==true
 
     // Runs one iteration now, taking photos, and returns whether it succeeded
+    // It's committed after the own iterations started before it, and the iteration condition doesn't hold it
     // reportAsChange makes the operations see the result as a change even when the output stayed the same, lastOutput and history still changing only with the output
     // onCapture is called with the image taken for the image parameter
     suspend fun scan(reportAsChange: Boolean, onCapture: (ImageData) -> Unit = {}): Boolean {
-        return iterationMutex.withLock {
-            // Asked for, so its errors are always reported
-            previousErrors=setOf()
-            val succeeded=runIteration(CaptureMode.PHOTO, reportAsChange, onCapture)
-            previousErrors=currentErrors
-            currentErrors=mutableSetOf()
-            succeeded
+        val handle=if (program.usesDevice) device.listen() else null
+        try {
+            if (handle!=null)
+            device.awaitReadings()
+
+            return runIteration(startIteration(CaptureMode.PHOTO, reportAsChange, true, onCapture))
+            }
+        finally {
+            handle?.close()
             }
         }
 
@@ -211,6 +245,8 @@ class Process(
         finally {
             for (handle in handles)
             handle.close()
+            deviceHandle?.close()
+            deviceHandle=null
 
             status=if (foreground) ProcessStatus.RUNNING else endStatus
             executor.release(this)
@@ -219,26 +255,62 @@ class Process(
         }
 
     // Returns false when a single-shot process failed
-    private suspend fun iterate(captureMode: CaptureMode): Boolean {
-        while (true) {
-            val iterationStart=clock()
-            val succeeded=iterationMutex.withLock {
-                if (limitReached())
-                return true
+    private suspend fun iterate(captureMode: CaptureMode): Boolean = coroutineScope {
+        val inFlight=Semaphore(if (lifetime.mode==IterationMode.ASYNC) maxOf(1, lifetime.maxInFlight) else 1)
+        var lastStart: Long?=null
 
-                val succeeded=runIteration(captureMode, false)
-                previousErrors=currentErrors
-                currentErrors=mutableSetOf()
-                succeeded
+        while (true) {
+            // Released once the iteration is committed
+            inFlight.acquire()
+            if (!awaitStart(lastStart)) {
+                inFlight.release()
+                break
                 }
 
-            if (!lifetime.isLooping)
-            return succeeded
-            if (lifetime.maxIterations>0 && iteration>=lifetime.maxIterations)
+            lastStart=clock()
+            val iteration=startIteration(captureMode, false, false)
+
+            if (!lifetime.isLooping) {
+                inFlight.release()
+                return@coroutineScope runIteration(iteration)
+                }
+
+            val job=launch { runIteration(iteration) }
+            // Also when it's cancelled before it starts, so nothing waits for its commit forever
+            job.invokeOnCompletion {
+                iteration.committed.complete(Unit)
+                inFlight.release()
+                }
+            }
+
+        // The iterations still running are committed before the process ends
+        true
+        }
+
+    // Waits for the interval since the last start and for the iteration condition, returning false when a limit is reached
+    private suspend fun awaitStart(lastStart: Long?): Boolean {
+        while (true) {
+            updateDeviceHandle()
+            if (limitReached())
+            return false
+
+            val remaining=if (lastStart==null) 0L else lastStart+(lifetime.intervalAfter(failures)*1000).toLong()-clock()
+            if (remaining<=0L && conditionHolds())
             return true
 
-            val nextStart=iterationStart+(lifetime.interval*1000).toLong()
-            delay(maxOf(0L, nextStart-clock()))
+            delay(if (remaining>0L) minOf(remaining, CONDITION_CHECK_INTERVAL) else CONDITION_CHECK_INTERVAL)
+            }
+        }
+
+    // Listens to the device while the own iterations run and the config uses it, which an edit may change
+    private suspend fun updateDeviceHandle() {
+        if (program.usesDevice && deviceHandle==null) {
+            deviceHandle=device.listen()
+            device.awaitReadings()
+            }
+        else if (!program.usesDevice && deviceHandle!=null) {
+            deviceHandle?.close()
+            deviceHandle=null
             }
         }
 
@@ -248,55 +320,112 @@ class Process(
         if (lifetime.maxTokens>0 && usage.totalTokens>=lifetime.maxTokens)
         return true
 
-        val condition=lifetime.iterationCondition
-        if (condition!=null) {
-            // Seen as before the next iteration
-            val variables=variables()+mapOf("iteration" to (iteration+1).toDouble())
-            return !evaluateOrReport("iteration condition") {
-                ScriptEngine.newScope(variables).evaluateBoolean(condition)
-                }
-            }
-
         return false
         }
 
-    private suspend fun runIteration(captureMode: CaptureMode, reportAsChange: Boolean, onCapture: (ImageData) -> Unit = {}): Boolean {
-        iteration++
-        val program=program
+    // A failing condition counts as false
+    private fun conditionHolds(): Boolean {
+        val condition=lifetime.iterationCondition ?: return true
 
-        val imageArgument=arguments[Parameter.IMAGE_PARAMETER_NAME]
-        val captures=IdentityHashMap<ImageSource, ImageData>()
-        val input=AnalysisInput(variables(), lastOutput) { source ->
-            captures.getOrPut(source) {
-                capture(source, captureMode).also { image ->
-                    if (source===imageArgument) {
-                        onCapture(image)
-                        listener.onCapture(this, image)
+        // Seen as before the next iteration
+        val variables=variables()+mapOf("iteration" to (iteration+1).toDouble())
+        try {
+            val holds=ScriptEngine.newScope(variables).evaluateBoolean(condition)
+            conditionError=null
+            return holds
+            }
+        catch (e: Exception) {
+            val message="Error in the iteration condition: ${e.message}"
+            if (message!=conditionError)
+            listener.onError(this, message)
+            conditionError=message
+            return false
+            }
+        }
+
+    private fun startIteration(captureMode: CaptureMode, reportAsChange: Boolean, manual: Boolean, onCapture: (ImageData) -> Unit = {}): Iteration {
+        synchronized(this) {
+            iteration++
+            val program=program
+            val previous=lastCommit
+            val committed=CompletableDeferred<Unit>()
+            lastCommit=committed
+
+            val imageArgument=arguments[Parameter.IMAGE_PARAMETER_NAME]
+            val captures=IdentityHashMap<ImageSource, ImageData>()
+            val input=AnalysisInput(variables()) { source ->
+                captures.getOrPut(source) {
+                    capture(source, captureMode).also { image ->
+                        if (source===imageArgument) {
+                            onCapture(image)
+                            listener.onCapture(this, image)
+                            }
                         }
                     }
                 }
-            }
 
-        val result=try {
-            program.analyzer.analyze(input)
+            return Iteration(iteration, program, input, reportAsChange, manual, previous, committed)
             }
-        catch (e: CancellationException) {
-            throw e
+        }
+
+    // Analyzes, waits for the previous iteration's commit and commits, returning whether the iteration succeeded
+    private suspend fun runIteration(iteration: Iteration): Boolean {
+        try {
+            var error: String?=null
+            val result=try {
+                analyze(iteration)
+                }
+            catch (e: CancellationException) {
+                throw e
+                }
+            catch (e: Exception) {
+                error=e.message ?: "Analysis failed"
+                null
+                }
+
+            iteration.previous.await()
+
+            if (iteration.manual)
+            previousErrors=setOf()
+            if (result!=null)
+            commit(iteration, result)
+            else
+            reportError(error ?: "Analysis failed")
+            previousErrors=currentErrors
+            currentErrors=mutableSetOf()
+
+            failures=if (result!=null) 0 else failures+1
+            return result!=null
             }
-        catch (e: Exception) {
-            reportError(e.message ?: "Analysis failed")
-            return false
+        finally {
+            iteration.committed.complete(Unit)
             }
+        }
+
+    private suspend fun analyze(iteration: Iteration): AnalysisResult {
+        val analyzer=iteration.program.analyzer
+        val timeout=iteration.program.config.lifetime.analysisTimeout
+        if (timeout<=0.0)
+        return analyzer.analyze(iteration.input)
+
+        return withTimeoutOrNull((timeout*1000).toLong()) { analyzer.analyze(iteration.input) }
+        ?: throw ProcessException("Analysis timed out after ${formatSeconds(timeout)} s")
+        }
+
+    private suspend fun commit(iteration: Iteration, result: AnalysisResult) {
+        val program=iteration.program
+        val changed=result.isChange(lastOutput)
 
         usage=usage+result.usage
         lastConversation=result.conversation
-        if (result.changed) {
+        if (changed) {
             lastOutput=result.output
             history=(history+result.output).takeLast(MAX_HISTORY)
             }
         val scope=ScriptEngine.newScope(variables()+mapOf(
+            "iteration" to iteration.number.toDouble(),
             "rawOutput" to result.output,
-            "changed" to (result.changed || reportAsChange),
+            "changed" to (changed || iteration.reportAsChange),
             ))
 
         // A failing operation doesn't keep the others from running
@@ -318,8 +447,6 @@ class Process(
                 reportError(e.message ?: "Operation failed")
                 }
             }
-
-        return true
         }
 
     private fun set(operation: SetOperation, scope: ScriptScope) {
@@ -346,12 +473,14 @@ class Process(
         }
 
     private fun variables(): Map<String, Any?> {
-        return arguments+memory+mapOf(
+        val variables=arguments+memory+mapOf(
             "lastOutput" to lastOutput,
             "history" to history,
             "iteration" to iteration.toDouble(),
             "elapsed" to elapsedSeconds,
             )
+
+        return if (program.usesDevice) variables+("device" to device.state()) else variables
         }
 
     private fun imageSourceArguments(): List<ImageSource> {
@@ -369,7 +498,7 @@ class Process(
             }
         }
 
-    // A looping process failing the same way in consecutive iterations reports it once
+    // A looping process failing the same way in consecutive commits reports it once
     private fun reportError(message: String) {
         val repeated=message in previousErrors
         currentErrors.add(message)
@@ -381,9 +510,19 @@ class Process(
     companion object {
 
         const val MAX_HISTORY=20
+        // Milliseconds between checks of a false iteration condition
+        private const val CONDITION_CHECK_INTERVAL=250L
 
         // Names of the process variables, which parameters and the memory can't take
-        val reservedNames=setOf("lastOutput", "rawOutput", "changed", "history", "iteration", "elapsed")
+        val reservedNames=setOf("lastOutput", "rawOutput", "changed", "history", "iteration", "elapsed", "device")
+
+        private val deviceReference=Regex("\\bdevice\\.[A-Za-z]")
+
+        // Throws ProcessException when the config can't run
+        fun validate(config: Config) {
+            validateMemory(config)
+            validateLifetime(config)
+            }
 
         // Throws ProcessException when the memory declarations or the set operations don't fit
         fun validateMemory(config: Config) {
@@ -402,6 +541,21 @@ class Process(
                 throw ProcessException("The set operation changes ${operation.name}, which is not declared in the memory")
                 }
             }
+
+        fun validateLifetime(config: Config) {
+            val lifetime=config.lifetime
+            if (lifetime.maxInFlight<1)
+            throw ProcessException("max_in_flight must be at least 1")
+
+            val analyzer=config.analyzer
+            if (lifetime.mode==IterationMode.ASYNC && analyzer is LlmAnalyzer && analyzer.changeDetection.mode==LlmChangeDetectionMode.LLM_DRIVEN)
+            throw ProcessException("The async mode can't be used with llm_driven change detection, the model wouldn't see the latest output")
+            }
+
+        // Whether any text of the config refers to the device variable
+        private fun usesDevice(config: Config): Boolean = deviceReference.containsMatchIn(Json.encodeToString(Config.serializer(), config))
+
+        private fun formatSeconds(seconds: Double): String = if (seconds%1.0==0.0) seconds.toLong().toString() else seconds.toString()
 
         // The values of the memory variables declared in the config, taken from the previous memory where it has them
         private fun initialMemory(config: Config, previous: Map<String, Any?>): Map<String, Any?> {
