@@ -111,6 +111,13 @@ iteration_condition = "device.pitch > -30"   # optional JavaScript expression, h
 max_iterations = 0                    # limits end the process; 0 = unlimited
 max_duration = 0                      # seconds
 max_tokens = 0
+
+# --- Debug ------------------------------------------------------------------
+
+# Aids for developing the config, apart from what it does
+[debug]
+iteration_start_sound = "tick"        # optional, played as each iteration starts
+iteration_end_sound = "low-beep"      # optional, played as each iteration ends, after its operations or its failure
 ```
 
 Default values may be omitted. The defaults make up the built-in Base config.
@@ -128,7 +135,7 @@ While the `iteration_condition` is false, the iterations are held: it's checked 
 
 ## Sounds and vibrations
 
-A sound is looked up in the config's `assets` folder, then in the global `assets` folder, then among the sounds built into the app: `beep`, `low-beep`, `high-beep` and `tick`. Names may omit the extension and may lead through subfolders. Sounds play at the accessibility volume or the media volume, following the speech setting.
+A sound is looked up in the config's `assets` folder, then in the global `assets` folder, then among the sounds built into the app: `beep`, `low-beep`, `high-beep` and `tick`. Names may omit the extension and may lead through subfolders; the debugging sounds are looked up the same way. Sounds play at the accessibility volume or the media volume, following the speech setting.
 
 When a process finishes, its last sounds and vibrations play out; only looping ones are stopped. A killed process stops all of them.
 

@@ -28,6 +28,7 @@ import org.junit.Test
 import com.rastislavkish.vscan.core.Config
 import com.rastislavkish.vscan.core.FlashlightMode
 import com.rastislavkish.vscan.core.config.CaptureMode
+import com.rastislavkish.vscan.core.config.Debug
 import com.rastislavkish.vscan.core.config.IterationMode
 import com.rastislavkish.vscan.core.config.Lifetime
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
@@ -35,6 +36,7 @@ import com.rastislavkish.vscan.core.config.LlmChangeDetection
 import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
 import com.rastislavkish.vscan.core.config.Operation
 import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.PlayOperation
 import com.rastislavkish.vscan.core.config.ParameterType
 import com.rastislavkish.vscan.core.config.SetOperation
 import com.rastislavkish.vscan.core.config.ToastOperation
@@ -410,6 +412,30 @@ class ProcessTest {
         other.start(this)
         other.join()
         assertEquals(0, device.listening)
+        }
+
+    @Test
+    fun debuggingSoundsMarkTheIterations() = runTest {
+        val played=mutableListOf<Pair<String?, Long>>()
+        val soundExecutor=object: OperationExecutor {
+            override suspend fun execute(operation: Operation, scope: ScriptScope, process: Process) {
+                if (operation is PlayOperation)
+                played.add(operation.sound to testScheduler.currentTime)
+                if ((operation as? PlayOperation)?.sound=="missing")
+                throw ProcessException("No sound missing")
+                }
+            }
+
+        val analyzer=SlowAnalyzer(listOf("A", null), listOf(500)) { testScheduler.currentTime }
+        val config=looping(maxIterations=2).copy(operations=listOf(), debug=Debug(iterationStartSound="start", iterationEndSound="end"))
+        Process(1, config, mapOf(), analyzer, soundExecutor, listener, false) { testScheduler.currentTime }.also { it.start(this) }.join()
+
+        // Failed iterations end too
+        assertEquals(listOf("start" to 0L, "end" to 500L, "start" to 2000L, "end" to 2500L), played)
+
+        val missing=Config(operations=listOf(), lifetime=Lifetime(interval=1.0, maxIterations=3), debug=Debug(iterationStartSound="missing"))
+        Process(2, missing, mapOf(), analyzer("A"), soundExecutor, listener, false) { testScheduler.currentTime }.also { it.start(this) }.join()
+        assertEquals(1, listener.errors.count { it=="Debugging sound: No sound missing" })
         }
 
     @Test

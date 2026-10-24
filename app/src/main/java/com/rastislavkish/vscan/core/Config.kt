@@ -21,6 +21,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 import com.rastislavkish.vscan.core.config.Analyzer
 import com.rastislavkish.vscan.core.config.ConfigLens
+import com.rastislavkish.vscan.core.config.Debug
 import com.rastislavkish.vscan.core.config.Lifetime
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
 import com.rastislavkish.vscan.core.config.Operation
@@ -46,6 +47,7 @@ data class Config(
     val analyzer: Analyzer=LlmAnalyzer(),
     val operations: List<Operation> = listOf(ToastOperation()),
     val lifetime: Lifetime=Lifetime(),
+    val debug: Debug=Debug(),
     ) {
 
     // The declared parameters, with the image parameter first unless the config declares it itself

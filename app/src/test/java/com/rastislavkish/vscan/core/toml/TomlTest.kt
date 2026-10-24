@@ -62,6 +62,7 @@ class TomlTest {
             ToastOperation(text="{{ rawOutput }}"),
             ),
         lifetime=Lifetime(interval=2.0, capture=CaptureMode.PHOTO, iterationCondition="iteration<10", maxIterations=5, maxDuration=60.0, maxTokens=1000),
+        debug=Debug(iterationStartSound="tick", iterationEndSound="alerts/end.ogg"),
         )
 
     private fun <T> roundTrip(serializer: KSerializer<T>, value: T): T = Toml.decode(serializer, Toml.encode(serializer, value))
@@ -88,6 +89,7 @@ class TomlTest {
         assertTrue(text, text.contains("\n[[operations]]\ntype = \"say\"\ncondition = \"changed\"\n"))
         assertTrue(text, text.contains("pan = { extract = \"regex\", pattern = 'x=(\\d+)' }"))
         assertTrue(text, text.contains("operations = [{ type = \"zoom\", zoom = 2.0, center_x = 0.5, center_y = 0.4 }]"))
+        assertTrue(text, text.contains("\n[debug]\niteration_start_sound = \"tick\"\n"))
         // Null values are left out
         assertFalse(text, text.contains("expression"))
         }

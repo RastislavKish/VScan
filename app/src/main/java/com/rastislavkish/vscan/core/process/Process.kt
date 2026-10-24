@@ -31,7 +31,9 @@ import com.rastislavkish.vscan.core.config.IterationMode
 import com.rastislavkish.vscan.core.config.LlmAnalyzer
 import com.rastislavkish.vscan.core.config.LlmChangeDetectionMode
 import com.rastislavkish.vscan.core.config.Parameter
+import com.rastislavkish.vscan.core.config.PlayOperation
 import com.rastislavkish.vscan.core.config.SetOperation
+import com.rastislavkish.vscan.core.config.SoundInstance
 import com.rastislavkish.vscan.core.device.DeviceMonitor
 import com.rastislavkish.vscan.core.device.NoDeviceMonitor
 import com.rastislavkish.vscan.core.image.ImageData
@@ -144,6 +146,8 @@ class Process(
     private var conditionError: String?=null
     // Held while the own iterations run and the config uses the device variable
     private var deviceHandle: Closeable?=null
+    // Errors of the debugging sounds, each reported once
+    private val debugErrors=mutableSetOf<String>()
 
     val elapsedSeconds: Double
     get() = (clock()-startTime)/1000.0
@@ -370,7 +374,10 @@ class Process(
 
     // Analyzes, waits for the previous iteration's commit and commits, returning whether the iteration succeeded
     private suspend fun runIteration(iteration: Iteration): Boolean {
+        val debug=iteration.program.config.debug
         try {
+            playDebugSound(debug.iterationStartSound)
+
             var error: String?=null
             val result=try {
                 analyze(iteration)
@@ -395,10 +402,30 @@ class Process(
             currentErrors=mutableSetOf()
 
             failures=if (result!=null) 0 else failures+1
+            playDebugSound(debug.iterationEndSound)
             return result!=null
             }
         finally {
             iteration.committed.complete(Unit)
+            }
+        }
+
+    private suspend fun playDebugSound(sound: String?) {
+        if (sound==null)
+        return
+
+        try {
+            // New instances, so overlapping iterations each get theirs
+            executor.execute(PlayOperation(sound=sound, instance=SoundInstance.NEW), ScriptEngine.newScope(variables()), this)
+            }
+        catch (e: CancellationException) {
+            throw e
+            }
+        catch (e: Exception) {
+            val message="Debugging sound: ${e.message}"
+            val first=synchronized(debugErrors) { debugErrors.add(message) }
+            if (first)
+            listener.onError(this, message)
             }
         }
 
