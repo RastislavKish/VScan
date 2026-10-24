@@ -133,4 +133,35 @@ class ArgumentsTest {
         lastImage.set(image)
         assertSame(image, arguments.resolve(config, mapOf("object" to "x", "count" to "1", "ratio" to "1", "picture" to "\$lastImage"))["picture"])
         }
+
+    @Test
+    fun anyParameters() {
+        val image=ImageData.fromEncoded(byteArrayOf(2))
+        memory.set("photo", Variable(ParameterType.IMAGE, image))
+        memory.set("two", Variable(ParameterType.INT, 2.0))
+
+        val config=Config(parameters=listOf(Parameter("value", ParameterType.ANY, default="keys")))
+        fun value(text: String): Any? = arguments.resolve(config, mapOf("value" to text))["value"]
+
+        // Texts are read like assigned values
+        assertEquals("keys", arguments.resolve(config)["value"])
+        assertEquals(3.0, value("3"))
+        assertEquals(0.5, value("0.5"))
+        assertEquals(true, value("true"))
+        assertEquals("3", value("'3'"))
+        assertEquals("red keys", value("red keys"))
+        assertEquals("\$5", value("\\\$5"))
+
+        // Variables pass as they are
+        assertEquals(2.0, value("\$two"))
+        assertSame(image, value("\$photo"))
+        assertSame(defaultSource, value("\$defaultImageSource"))
+        assertFails("Unknown variable") { value("\$missing") }
+
+        // The lens applies to image sources given to Any parameters when it applies to all
+        val lens=ConfigLens(listOf(Zoom(2f)), LensTarget.ALL)
+        val lensed=arguments.resolve(config.copy(lens=lens), mapOf("value" to "\$defaultImageSource"))
+        assertTrue(lensed["value"] is LensSource)
+        assertSame(image, arguments.resolve(config.copy(lens=lens), mapOf("value" to "\$photo"))["value"])
+        }
     }

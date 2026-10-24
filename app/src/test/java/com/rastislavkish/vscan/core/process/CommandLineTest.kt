@@ -109,4 +109,16 @@ class CommandLineTest {
         assertEquals(listOf("red", "keys"), line.arguments.map { it.text })
         assertEquals(mapOf("object" to "red keys"), line.bind(Config(parameters=listOf(Parameter("object", ParameterType.STRING, positional=true, rest=true)))))
         }
+
+    @Test
+    fun anyArgumentsKeepTheirQuotes() {
+        val config=Config(parameters=listOf(
+            Parameter("value", ParameterType.ANY, positional=true),
+            Parameter("rest", ParameterType.ANY, positional=true, rest=true),
+            Parameter("named", ParameterType.ANY, short="n", default="0"),
+            ))
+
+        assertEquals(mapOf("value" to "'3'", "rest" to "\"a b\"", "named" to "\"x\""), CommandLine.parse("c -n \"x\" '3' \"a b\"").bind(config))
+        assertEquals(mapOf("value" to "3", "rest" to "red keys"), CommandLine.parse("c 3 red keys").bind(config))
+        }
     }

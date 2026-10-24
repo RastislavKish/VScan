@@ -27,6 +27,8 @@ enum class ParameterType {
     @SerialName("Bool") BOOL,
     @SerialName("Image") IMAGE,
     @SerialName("ImageSource") IMAGE_SOURCE,
+    // Takes whatever it's given: a variable's value as it is, a text read like a value assigned on the command prompt
+    @SerialName("Any") ANY,
     }
 
 // A value a config is called with, visible to its templates and expressions under its name

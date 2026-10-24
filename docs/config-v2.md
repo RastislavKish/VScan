@@ -15,12 +15,15 @@ description = "Reports the line number of approaching buses"   # optional
 # Declare it only to change its default or description.
 [[parameters]]
 name = "object"
-type = "String"                       # String | Int | Double | Bool | Image | ImageSource
+type = "String"                       # String | Int | Double | Bool | Image | ImageSource | Any
 positional = true                     # false = named only (--object / -o)
 short = "o"                           # optional
 rest = true                           # positional only, the last one: takes the rest of the line
 default = "keys"                      # optional, command-language text such as $door; no default = required
 description = "What to look for"
+
+# Any takes whatever it's given: a variable's value as it is (e.g. $door, an image), a text read like an
+# assigned value (3 is a number, '3' a string). Templates render images and image sources as images, the rest as text.
 
 # --- Memory -----------------------------------------------------------------
 
@@ -34,7 +37,7 @@ mode = "near"
 
 [lens]
 operations = [ { type = "zoom", zoom = 2.0, center_y = 0.4 } ]   # crop | zoom | downscale
-applies_to = "image"                  # image: the image parameter only | all: every ImageSource parameter
+applies_to = "image"                  # image: the image parameter only | all: every ImageSource parameter, and Any one given an image source
 
 # --- Analyzer ---------------------------------------------------------------
 

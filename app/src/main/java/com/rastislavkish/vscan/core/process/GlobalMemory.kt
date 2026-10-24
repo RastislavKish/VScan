@@ -41,6 +41,36 @@ class Variable(
         ParameterType.INT -> (value as Double).toLong().toString()
         ParameterType.DOUBLE, ParameterType.BOOL -> value.toString()
         ParameterType.IMAGE, ParameterType.IMAGE_SOURCE -> null
+        ParameterType.ANY -> throw IllegalStateException("A variable has a concrete type")
+        }
+
+    companion object {
+
+        private val integerPattern=Regex("-?[0-9]+")
+        private val numberPattern=Regex("-?[0-9]+\\.[0-9]+([eE][-+]?[0-9]+)?|-?[0-9]+[eE][-+]?[0-9]+")
+
+        // A value as typed on the command prompt, without variable references
+        // A quoted text is a string, an unquoted word a bool or a number when it looks like one, several words a string as typed
+        fun parse(text: String): Variable {
+            val token=CommandLine.parseArguments(text).arguments.singleOrNull()
+            return when {
+                token==null -> Variable(ParameterType.STRING, text.trim())
+                token.quoted -> Variable(ParameterType.STRING, token.text)
+                else -> literal(token.text)
+                }
+            }
+
+        private fun literal(text: String): Variable {
+            if (text.startsWith("\\$"))
+            return Variable(ParameterType.STRING, text.substring(1))
+            if (text=="true" || text=="false")
+            return Variable(ParameterType.BOOL, text=="true")
+            if (integerPattern.matches(text))
+            text.toLongOrNull()?.let { return Variable(ParameterType.INT, it.toDouble()) }
+            if (numberPattern.matches(text))
+            return Variable(ParameterType.DOUBLE, text.toDouble())
+            return Variable(ParameterType.STRING, text)
+            }
         }
     }
 

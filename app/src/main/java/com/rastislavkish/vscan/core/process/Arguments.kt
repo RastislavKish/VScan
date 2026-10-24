@@ -25,6 +25,7 @@ import com.rastislavkish.vscan.core.imagesource.StaticImageSource
 
 // Turns the texts a config is called with into the values of its parameters
 // A text like $door takes the value of the global variable
+// An Any parameter takes a variable's value as it is, and reads a text like a value assigned on the command prompt
 class Arguments(
     val memory: GlobalMemory,
     ) {
@@ -80,6 +81,7 @@ class Arguments(
         fun invalid(): Nothing = throw ProcessException("${parameter.name}: \"$literal\" is not ${typeDescription(parameter.type)}")
 
         return when (parameter.type) {
+            ParameterType.ANY -> Variable.parse(literal).value
             ParameterType.STRING -> literal
             // Numbers are doubles in JavaScript
             ParameterType.INT -> (literal.trim().toIntOrNull() ?: invalid()).toDouble()
@@ -96,6 +98,9 @@ class Arguments(
     // Strings, numbers and bools convert as their texts, an image serves as an image source always giving it
     private fun convert(parameter: Parameter, variable: Variable): Any? {
         val text=variable.text
+        if (parameter.type==ParameterType.ANY)
+        return variable.value
+
         val takesImages=parameter.type==ParameterType.IMAGE || parameter.type==ParameterType.IMAGE_SOURCE
         if (text!=null && !takesImages)
         return convertText(parameter, text)
@@ -114,5 +119,6 @@ class Arguments(
         ParameterType.BOOL -> "true or false"
         ParameterType.IMAGE -> "an image"
         ParameterType.IMAGE_SOURCE -> "an image source"
+        ParameterType.ANY -> "a value"
         }
     }

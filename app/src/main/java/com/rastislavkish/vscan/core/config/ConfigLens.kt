@@ -24,7 +24,7 @@ import com.rastislavkish.vscan.core.imagesource.LensOperation
 enum class LensTarget {
     // Only the image parameter
     @SerialName("image") IMAGE,
-    // Every ImageSource parameter
+    // Every ImageSource parameter, and every Any parameter given one
     @SerialName("all") ALL,
     }
 
@@ -42,7 +42,7 @@ data class ConfigLens(
     get() = operations.isEmpty()
 
     fun appliesTo(parameter: Parameter): Boolean {
-        if (isEmpty || parameter.type!=ParameterType.IMAGE_SOURCE)
+        if (isEmpty || (parameter.type!=ParameterType.IMAGE_SOURCE && parameter.type!=ParameterType.ANY))
         return false
 
         return when (appliesTo) {

@@ -16,6 +16,8 @@ Arguments are separated by spaces. Quote them with `"` or `'` to include spaces,
 
 An argument like `$door` takes the value of a variable. Strings, numbers and bools are used as if typed, and an image serves as an image source always giving that image. To pass text starting with a dollar, write `\$`.
 
+A parameter of type Any takes whatever it's given: a variable's value as it is, and a text read like the value of an assignment (below), so `3` is a number and `'3'` a string.
+
 ## Variables
 
 ```

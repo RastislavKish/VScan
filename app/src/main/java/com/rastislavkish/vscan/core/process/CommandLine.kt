@@ -23,6 +23,7 @@ import com.rastislavkish.vscan.core.config.ParameterType
 // Arguments are separated by spaces and can be quoted with " or ', a backslash escaping the next character inside quotes
 // Named arguments are --name value, --name=value, -s value or -s=value, a Bool one may omit the value (true or false) to mean true
 // Positional arguments fill the positional parameters in order, and a rest parameter takes the rest of the line as typed
+// Any parameters get their arguments as typed, quotes included, since quoting makes a text a string for them
 class CommandLine private constructor(
     val line: String,
     val tokens: List<Token>,
@@ -32,8 +33,9 @@ class CommandLine private constructor(
 
     class Token(
         val text: String,
-        // Where the token starts in the line, including an opening quote
+        // Where the token starts and ends in the line, including its quotes
         val start: Int,
+        val end: Int,
         val quoted: Boolean,
         )
 
@@ -56,6 +58,9 @@ class CommandLine private constructor(
         var positionalIndex=0
         var i=0
 
+        fun text(parameter: Parameter, token: Token): String =
+        if (parameter.type==ParameterType.ANY) line.substring(token.start, token.end) else token.text
+
         fun put(parameter: Parameter, value: String) {
             if (result.containsKey(parameter.name))
             throw ProcessException("${parameter.name} given twice")
@@ -76,7 +81,7 @@ class CommandLine private constructor(
                     parameter.type==ParameterType.BOOL && arguments.getOrNull(i+1)?.text?.lowercase() !in setOf("true", "false") -> "true"
                     else -> {
                         i++
-                        arguments.getOrNull(i)?.text ?: throw ProcessException("${token.text} needs a value")
+                        arguments.getOrNull(i)?.let { text(parameter, it) } ?: throw ProcessException("${token.text} needs a value")
                         }
                     }
 
@@ -88,12 +93,12 @@ class CommandLine private constructor(
 
                 if (parameter.rest) {
                     // A single quoted argument is taken unquoted
-                    val value=if (i==arguments.lastIndex) token.text else line.substring(token.start).trim()
+                    val value=if (i==arguments.lastIndex) text(parameter, token) else line.substring(token.start).trim()
                     put(parameter, value)
                     break
                     }
 
-                put(parameter, token.text)
+                put(parameter, text(parameter, token))
                 }
 
             i++
@@ -141,13 +146,13 @@ class CommandLine private constructor(
                             }
                         }
 
-                    tokens.add(Token(text.toString(), start, true))
+                    tokens.add(Token(text.toString(), start, i, true))
                     }
                 else {
                     while (i<line.length && !line[i].isWhitespace())
                     i++
 
-                    tokens.add(Token(line.substring(start, i), start, false))
+                    tokens.add(Token(line.substring(start, i), start, i, false))
                     }
                 }
 

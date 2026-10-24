@@ -129,27 +129,13 @@ class CommandInterpreter(
         val token=tokens.singleOrNull()
         val reference=if (token!=null && !token.quoted) GlobalMemory.reference(token.text) else null
 
-        val variable=when {
-            reference!=null -> memory.get(reference) ?: return "Unknown variable \$$reference"
-            token==null -> Variable(ParameterType.STRING, valueText.trim())
-            token.quoted -> Variable(ParameterType.STRING, token.text)
-            else -> literal(token.text)
-            }
+        val variable=if (reference!=null)
+        memory.get(reference) ?: return "Unknown variable \$$reference"
+        else
+        Variable.parse(valueText)
 
         memory.set(name, variable)
         return "$name = ${describe(variable)}"
-        }
-
-    private fun literal(text: String): Variable {
-        if (text.startsWith("\\$"))
-        return Variable(ParameterType.STRING, text.substring(1))
-        if (text=="true" || text=="false")
-        return Variable(ParameterType.BOOL, text=="true")
-        if (integerPattern.matches(text))
-        text.toLongOrNull()?.let { return Variable(ParameterType.INT, it.toDouble()) }
-        if (numberPattern.matches(text))
-        return Variable(ParameterType.DOUBLE, text.toDouble())
-        return Variable(ParameterType.STRING, text)
         }
 
     private fun vars(): String {
@@ -200,7 +186,5 @@ class CommandInterpreter(
 
         // A name and =, e.g. door = $lastImage or count=3
         private val assignmentPattern=Regex("\\s*([A-Za-z][A-Za-z0-9_]*)\\s*=(.*)", RegexOption.DOT_MATCHES_ALL)
-        private val integerPattern=Regex("-?[0-9]+")
-        private val numberPattern=Regex("-?[0-9]+\\.[0-9]+([eE][-+]?[0-9]+)?|-?[0-9]+[eE][-+]?[0-9]+")
         }
     }
