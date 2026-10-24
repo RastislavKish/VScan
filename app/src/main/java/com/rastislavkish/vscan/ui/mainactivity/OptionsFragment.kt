@@ -226,8 +226,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
 
         form.label { "Change detection" }
         form.choice("Change detection mode", listOf(
-            "The app compares the output with the last one" to LlmChangeDetectionMode.APP_DRIVEN,
-            "The model marks changes" to LlmChangeDetectionMode.LLM_DRIVEN,
+            "App driven (the app compares the output with the last one)" to LlmChangeDetectionMode.APP_DRIVEN,
+            "LLM driven (the model marks changes)" to LlmChangeDetectionMode.LLM_DRIVEN,
             ), { detection().mode }) { value -> editDetection { it.copy(mode=value) } }
         val marker=form.text("Change marker", { detection().changeMarker }, { value -> editDetection { it.copy(changeMarker=value) } })
         val markerMeaning=form.choice("The marker means", listOf(

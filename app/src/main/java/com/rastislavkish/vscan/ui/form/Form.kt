@@ -110,9 +110,7 @@ class Form(
         val labelView=TextView(context)
         labelView.text=label
         val spinner=Spinner(context, Spinner.MODE_DROPDOWN)
-        spinner.id=View.generateViewId()
         spinner.isSaveEnabled=false
-        labelView.labelFor=spinner.id
 
         val adapter=ArrayAdapter(context, android.R.layout.simple_spinner_item, options.map { it.first })
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
