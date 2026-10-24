@@ -84,7 +84,7 @@ import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityI
 import com.rastislavkish.vscan.ui.modelselectionactivity.ModelSelectionActivityOutput
 import com.rastislavkish.vscan.ui.settingsactivity.SettingsActivity
 
-// The editor of the foreground process' config, a heading per section
+// The editor of the foreground process' config, with a heading per section: identity, analyzer, output operations and lifetime, in the order of the config file
 // The form works with its own copy of the config, every edit applied to the copy at once and to the process' config under the adapter's mutex
 class OptionsFragment: Fragment(), CoroutineScope {
 
@@ -169,7 +169,41 @@ class OptionsFragment: Fragment(), CoroutineScope {
         val problem=form.label { processManager.problem(config)?.let { "Problem: $it" } }
         problem.accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
 
-        form.heading("Instructions")
+        form.heading("Identity")
+        form.text("Config name", { config.name }, { value -> edit { it.copy(name=value) } })
+        form.optionalText("Command", { config.command }, { value -> edit { it.copy(command=value) } })
+        form.text("Description", { config.description }, { value -> edit { it.copy(description=value) } }, multiLine=true)
+
+        form.label { "Parameters" }
+        form.list({ config.allParameters }, Descriptions::parameter, { index ->
+            val parameter=config.allParameters[index]
+            startItemEditorActivity(ItemKind.PARAMETER, "Parameter ${parameter.name}", ItemForm.encode(parameter), index)
+            }) { from, to -> edit { withParameters(it, moved(it.allParameters, from, to)) } }
+        form.button("Add parameter") {
+            startItemEditorActivity(ItemKind.PARAMETER, "New parameter", ItemForm.encode(Parameter("", ParameterType.STRING)))
+            }
+
+        form.label { "Memory" }
+        form.list({ memoryVariables(config) }, { Descriptions.memoryVariable(it.name, it.value) }, { index ->
+            val variable=memoryVariables(config)[index]
+            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "Memory variable ${variable.name}", ItemForm.encode(variable), index)
+            })
+        form.button("Add memory variable") {
+            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "New memory variable", ItemForm.encode(MemoryVariable("", JsonPrimitive(""))))
+            }
+
+        form.label { "Lens" }
+        form.choice("Lens applies to", listOf(
+            "The image parameter" to LensTarget.IMAGE,
+            "All image source parameters" to LensTarget.ALL,
+            ), { config.lens.appliesTo }) { value -> edit { it.copy(lens=it.lens.copy(appliesTo=value)) } }
+        form.list({ config.lens.operations }, Descriptions::lensOperation, { index ->
+            val operation=config.lens.operations[index]
+            startItemEditorActivity(ItemKind.LENS_OPERATION, lensOperationName(operation), ItemForm.encode(operation), index)
+            }) { from, to -> edit { it.copy(lens=it.lens.copy(operations=moved(it.lens.operations, from, to))) } }
+        form.button("Add lens operation") { addLensOperation() }
+
+        form.heading("Analyzer")
         form.link({ "System prompt: ${summarizeOrNone(config.llm.systemPrompt)}" }) {
             startTextInputActivity("System prompt", config.llm.systemPrompt, "system-prompt")
             }
@@ -177,12 +211,6 @@ class OptionsFragment: Fragment(), CoroutineScope {
             startTextInputActivity("User prompt", config.llm.userPrompt, "user-prompt")
             }
         form.switch("Append the image to the user prompt, unless it places an image itself", { llm().appendImage }) { value -> editLlm { it.copy(appendImage=value) } }
-
-        form.heading("Camera")
-        form.choice("Flashlight mode", listOf("Default" to FlashlightMode.DEFAULT, "On" to FlashlightMode.ON, "Off" to FlashlightMode.OFF), { lifetime().flashlight }) { value -> editLifetime { it.copy(flashlight=value) } }
-        form.choice("Capture", listOf("Auto" to CaptureMode.AUTO, "Photo" to CaptureMode.PHOTO, "Stream frame" to CaptureMode.FRAME), { lifetime().capture }) { value -> editLifetime { it.copy(capture=value) } }
-
-        form.heading("Model")
         form.text("Model", { llm().model }, { value -> editLlm { it.copy(model=value) } })
         form.button("Select model") { startModelSelectionActivity() }
         form.int("Max completion tokens", { llm().maxCompletionTokens }) { value -> editLlm { it.copy(maxCompletionTokens=value) } }
@@ -196,8 +224,8 @@ class OptionsFragment: Fragment(), CoroutineScope {
             "Xhigh" to ReasoningEffort.XHIGH,
             ), { llm().reasoningEffort }) { value -> editLlm { it.copy(reasoningEffort=value) } }
 
-        form.heading("Change detection")
-        form.choice("Mode", listOf(
+        form.label { "Change detection" }
+        form.choice("Change detection mode", listOf(
             "The app compares the output with the last one" to LlmChangeDetectionMode.APP_DRIVEN,
             "The model marks changes" to LlmChangeDetectionMode.LLM_DRIVEN,
             ), { detection().mode }) { value -> editDetection { it.copy(mode=value) } }
@@ -213,7 +241,7 @@ class OptionsFragment: Fragment(), CoroutineScope {
             ), { detection().changeMarkerMatch }) { value -> editDetection { it.copy(changeMarkerMatch=value) } }
         form.visibleWhen({ detection().mode==LlmChangeDetectionMode.LLM_DRIVEN }, marker, markerMeaning, markerMatch)
 
-        form.heading("Operations")
+        form.heading("Output operations")
         form.list({ config.operations }, Descriptions::operation, { index ->
             val operation=config.operations[index]
             startItemEditorActivity(ItemKind.OPERATION, operationName(operation), ItemForm.encode(operation), index)
@@ -230,47 +258,15 @@ class OptionsFragment: Fragment(), CoroutineScope {
         form.double("Error interval in seconds, 0 for the interval", { lifetime().errorInterval }) { value -> editLifetime { it.copy(errorInterval=value) } }
         form.double("Error backoff", { lifetime().errorBackoff }) { value -> editLifetime { it.copy(errorBackoff=value) } }
         form.double("Max error interval in seconds, 0 for none", { lifetime().maxErrorInterval }) { value -> editLifetime { it.copy(maxErrorInterval=value) } }
+        form.choice("Capture", listOf("Auto" to CaptureMode.AUTO, "Photo" to CaptureMode.PHOTO, "Stream frame" to CaptureMode.FRAME), { lifetime().capture }) { value -> editLifetime { it.copy(capture=value) } }
+        form.choice("Flashlight mode", listOf("Default" to FlashlightMode.DEFAULT, "On" to FlashlightMode.ON, "Off" to FlashlightMode.OFF), { lifetime().flashlight }) { value -> editLifetime { it.copy(flashlight=value) } }
         form.int("Max iterations, 0 for no limit", { lifetime().maxIterations }) { value -> editLifetime { it.copy(maxIterations=value) } }
         form.double("Max duration in seconds, 0 for no limit", { lifetime().maxDuration }) { value -> editLifetime { it.copy(maxDuration=value) } }
         form.int("Max tokens, 0 for no limit", { lifetime().maxTokens }) { value -> editLifetime { it.copy(maxTokens=value) } }
 
-        form.heading("Parameters")
-        form.list({ config.allParameters }, Descriptions::parameter, { index ->
-            val parameter=config.allParameters[index]
-            startItemEditorActivity(ItemKind.PARAMETER, "Parameter ${parameter.name}", ItemForm.encode(parameter), index)
-            }) { from, to -> edit { withParameters(it, moved(it.allParameters, from, to)) } }
-        form.button("Add parameter") {
-            startItemEditorActivity(ItemKind.PARAMETER, "New parameter", ItemForm.encode(Parameter("", ParameterType.STRING)))
-            }
-
-        form.heading("Lens")
-        form.choice("Applies to", listOf(
-            "The image parameter" to LensTarget.IMAGE,
-            "All image source parameters" to LensTarget.ALL,
-            ), { config.lens.appliesTo }) { value -> edit { it.copy(lens=it.lens.copy(appliesTo=value)) } }
-        form.list({ config.lens.operations }, Descriptions::lensOperation, { index ->
-            val operation=config.lens.operations[index]
-            startItemEditorActivity(ItemKind.LENS_OPERATION, lensOperationName(operation), ItemForm.encode(operation), index)
-            }) { from, to -> edit { it.copy(lens=it.lens.copy(operations=moved(it.lens.operations, from, to))) } }
-        form.button("Add lens operation") { addLensOperation() }
-
-        form.heading("Memory")
-        form.list({ memoryVariables(config) }, { Descriptions.memoryVariable(it.name, it.value) }, { index ->
-            val variable=memoryVariables(config)[index]
-            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "Memory variable ${variable.name}", ItemForm.encode(variable), index)
-            })
-        form.button("Add memory variable") {
-            startItemEditorActivity(ItemKind.MEMORY_VARIABLE, "New memory variable", ItemForm.encode(MemoryVariable("", JsonPrimitive(""))))
-            }
-
-        form.heading("Debug")
+        form.label { "Debugging" }
         form.optionalText("Iteration start sound", { config.debug.iterationStartSound }, { value -> edit { it.copy(debug=it.debug.copy(iterationStartSound=value)) } })
         form.optionalText("Iteration end sound", { config.debug.iterationEndSound }, { value -> edit { it.copy(debug=it.debug.copy(iterationEndSound=value)) } })
-
-        form.heading("Config")
-        form.text("Config name", { config.name }, { value -> edit { it.copy(name=value) } })
-        form.optionalText("Command", { config.command }, { value -> edit { it.copy(command=value) } })
-        form.text("Description", { config.description }, { value -> edit { it.copy(description=value) } }, multiLine=true)
         }
 
     // Applies the change to the form's copy at once, and to the process' config as soon as the adapter is free
